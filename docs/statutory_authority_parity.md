@@ -14,7 +14,35 @@ The statutory assistant must use one governed mechanism for official-source disc
 6. **Version:** preserve version snapshots and support review, approval, activation and rollback through the existing `liveRegulatoryFeed` and `sourceVersioning` models. Query-time candidates must **not** be silently persisted or auto-promoted.
 7. **Answer:** require sourced claims and disclose unresolved issues or dates; keep distinct authority workstreams separate in mixed questions.
 
-## Status (14 October 2026)
+## Current alignment baseline (17 October 2026)
+
+The agreed sequence is: settle ACRA, bring the other authorities to the same common stage, then raise them together to IRAS parity. The current implementation is that first alignment stage: it closes shared question-time evidence gaps for ACRA, CPF, MOM and MAS while preserving IRAS unchanged. IRAS remains the later full-parity target; its remaining update, date/coverage and live acceptance gaps are not prerequisites for declaring this narrower engineering stage validated. This section supersedes the earlier implementation and release statuses below; the older checkpoints are retained as historical evidence.
+
+| Authority | Common answer baseline | Boundaries retained |
+| --- | --- | --- |
+| ACRA | Company discovery, fetched-page admission and standalone/mixed statutory evidence presentation | Company pages cannot establish VCC, foreign-company or accounting-standard requirements. PR #12 and its fresh live acceptance remain release gates. |
+| CPF | Employer/member discovery, fetched-page admission and standalone/mixed statutory evidence presentation | Tax relief remains an independently governed IRAS issue; current pages cannot establish unsupported historical rates. |
+| MOM | Official discovery, fetched-page admission and standalone/mixed statutory evidence presentation | Topic, employee population, missing facts and historical applicability remain independently checked. |
+| MAS | Official discovery, fetched-page admission and standalone/mixed statutory evidence presentation | Managed document approval/version/hash/locator controls remain in force; the manual catalog still covers only two reviewed provisions. |
+| SSO / AGC | Shared exact-Act/section legislation extraction and publisher attribution | This is a cross-authority publisher, not broad Act navigation or a complete separately supported question workstream. |
+| ASC / accounting standards | Existing accounting source path and separate publisher identity | Corporate ACRA discovery cannot establish paragraph-level accounting requirements. |
+| Customs | Coverage topics only | No approved discovery provider or supported default authority workstream; no full-support claim. |
+
+Standalone routing requires an explicit statutory advisory classification, no accounting/journal requirement, and a mapped governing authority and domain corroborated by the classifier. Images and established IRAS/accounting routes keep their existing paths. Every remaining material issue still contributes to whole-question gaps.
+
+The four agency paths require the same actual-page, authority, topic, subject, date, provenance and per-request retrieval-trace checks. A discovered source remains `LIVE_EXTERNAL / NEEDS_REVIEW / CANDIDATE` even when its passage verifies a query-time claim. Display links only through the existing exact verified-URL provenance check; do not promote stored URLs or permanent source records merely to show a link.
+
+Where a standalone question previously received an editorial statutory directive from an unreviewed local rule, the common path now reports incomplete evidence until a reviewed record or separately fetched official passage passes admission. Offline tests must not require unsupported thresholds, citations or a deterministic authority stamp for those questions. This changes the answer contract, not the statutory rules or accounting calculations.
+
+The common regression cases cover successful fetched evidence, metadata-only and wrong-authority rejection, unverified historical dates, local-only network isolation, independent mixed-authority coverage and verified-link presentation. These are deterministic engineering checks, not a representative live accuracy benchmark.
+
+PR #15's shared discovery and PR #21's MAS integration are merged in the baseline used by this work. The MAS browser approval, separate activation, current-version citation and rollback exercise succeeded for two bounded provisions on 16 October; that session was rolled back afterwards. It does not approve future fetches or establish broad MAS coverage. See `mas-integration-stopping-point-20261016.md` for the accepted session and its exact bindings.
+
+Update handling is not declared fully aligned: CPF/MOM checks are daily while ACRA/AGC checks are weekly, and all run only while the app is open. MAS remains manual. Approval and active-version state are session-local; durable review/version storage and reviewed monitor catalogs must precede broader scheduling. No new monitor, automatic approval, source rate/rule or production deployment is enabled here.
+
+The preserved canonical captures and run bindings under `artifacts/canonical-acceptance-2026-10-16/` target commit `1062648`. They are historical evidence for that head, not acceptance of the subsequent alignment changes. Any release acceptance must bind the final reviewed code and preview to fresh run metadata without overwriting or reusing those records.
+
+## Earlier status (14 October 2026)
 
 | Scope | State on main prior to catch-up | Current catch-up scope |
 | --- | --- | --- |

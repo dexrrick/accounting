@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import type { JournalEntryGroup, AccountingStandard, ExplicitAssumption } from '../types/accounting';
+import type { JournalEntryGroup, AccountingScenarioState, AccountingStandard, ExplicitAssumption } from '../types/accounting';
 import { AlertOctagon, Calendar, BookOpen, Info, AlertTriangle, CheckCircle2, Cpu } from 'lucide-react';
 import { formatSingaporeDate } from '../utils/dateUtils';
+import { formatFxRateEquation } from '../utils/fxRatePresentation';
 
 interface JournalTableProps {
   groups: JournalEntryGroup[];
   standard: AccountingStandard;
   functionalCurrency: string;
+  scenarioType?: AccountingScenarioState['scenarioType'];
   assumptions?: ExplicitAssumption[];
 }
 
@@ -14,6 +16,7 @@ export const JournalTable: React.FC<JournalTableProps> = ({
   groups,
   standard,
   functionalCurrency,
+  scenarioType,
   assumptions = []
 }) => {
   const [showMobileNotes, setShowMobileNotes] = useState(false);
@@ -73,6 +76,13 @@ export const JournalTable: React.FC<JournalTableProps> = ({
                 <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800">
                   <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                   <span>Conditional</span>
+                </span>
+              )}
+
+              {group.isHypothetical && (
+                <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800">
+                  <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                  <span>Hypothetical projection</span>
                 </span>
               )}
 
@@ -187,7 +197,10 @@ export const JournalTable: React.FC<JournalTableProps> = ({
                           {line.foreignCurrency && line.exchangeRate && (
                             <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-workspace-raised dark:bg-workspace-input text-[10px] sm:text-xs font-mono text-slate-700 dark:text-workspace-secondary border border-workspace-border dark:border-workspace-border">
                               <span>
-                                FX: {line.foreignCurrency} {(line.foreignDebit || line.foreignCredit || 0).toLocaleString()} @ {line.exchangeRate}
+                                FX: {line.foreignCurrency} {(line.foreignDebit || line.foreignCredit || 0).toLocaleString()}
+                                {scenarioType === 'EQUITY_INVESTMENT_FX'
+                                  ? ` (${formatFxRateEquation(line.exchangeRate, line.foreignCurrency, functionalCurrency)})`
+                                  : ` @ ${line.exchangeRate}`}
                               </span>
                             </div>
                           )}

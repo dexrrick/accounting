@@ -1,0 +1,160 @@
+{
+  "status": "LOCAL_FIXES_REVIEWED_AND_VALIDATED_UNCOMMITTED",
+  "branch": "codex/statutory-knowledge-expansion-20261030",
+  "baseHead": "ece1aa9fb98532794055db650d8c861b4b7a22de",
+  "changes": [
+    "Bind PR dates to natural employee names across case and full-name variations; withhold another employee’s personal dates.",
+    "Retain explicit employment-income reporting requests after restrictive relative clauses while suppressing descriptive-only IRAS topics.",
+    "Reject future payroll dates relative to a PR anniversary boundary from the current-workflow evidence exception, including conjunction/comma fragmentation."
+  ],
+  "files": [
+    {
+      "path": "src/retrieval/cpfPayrollKnowledge20261027b.ts",
+      "sha256": "f8e3706bdd78e132d3ec6fb1a572d873fbbb6cb7191afe2f3c630f190117b48b"
+    },
+    {
+      "path": "src/retrieval/targetDateResolver.ts",
+      "sha256": "2f7c5114ecc82cf4f2bd888a5cde4756d664856e41c920af374d078395b5a44c"
+    },
+    {
+      "path": "src/services/semanticQuestionUnderstanding.ts",
+      "sha256": "061b756697f78dcd1e62723af514c94a9b74b4f081d8b1af02c8d9227647fdd5"
+    },
+    {
+      "path": "tests/regression/test_statutory_cpf_expansion_20261101.mjs",
+      "sha256": "44a9651d6ff60d8b579d4fbcbe32d15d495eaaa6fcc84e8efcc623589ad52436"
+    },
+    {
+      "path": "tests/regression/test_statutory_multipart_issue_refinements_20261030.mjs",
+      "sha256": "16ca68f7104508fc505f40ed5c90ee123cd9ba5f86b3f5c336a6e9788c4030b1"
+    }
+  ],
+  "checks": [
+    {
+      "check": "root-lint",
+      "exitCode": 1,
+      "startedUTC": "2026-11-02T12:36:53.1567917Z",
+      "completedUTC": "2026-11-02T12:37:03.6889372Z"
+    },
+    {
+      "check": "maintained-lint",
+      "exitCode": 0,
+      "startedUTC": "2026-11-02T12:37:03.723746Z",
+      "completedUTC": "2026-11-02T12:37:04.0685876Z"
+    },
+    {
+      "check": "typecheck",
+      "exitCode": 0,
+      "startedUTC": "2026-11-02T12:37:04.0795584Z",
+      "completedUTC": "2026-11-02T12:37:11.2774536Z"
+    },
+    {
+      "check": "vite-build",
+      "exitCode": 0,
+      "startedUTC": "2026-11-02T12:37:11.2829127Z",
+      "completedUTC": "2026-11-02T12:37:29.9746456Z"
+    },
+    {
+      "check": "worker-build",
+      "exitCode": 0,
+      "startedUTC": "2026-11-02T12:37:29.9762938Z",
+      "completedUTC": "2026-11-02T12:37:30.9071724Z"
+    },
+    {
+      "check": "smoke",
+      "exitCode": 1,
+      "startedUTC": "2026-11-02T12:37:30.9088273Z",
+      "completedUTC": "2026-11-02T12:41:34.0671937Z"
+    },
+    {
+      "check": "mas-diagnostic-host-recheck",
+      "exitCode": 0,
+      "note": "Synthetic MAS diagnostic passed with normal Windows process access; see mas-diagnostic-host-check.log."
+    },
+    {
+      "check": "full",
+      "exitCode": 0,
+      "startedUTC": "2026-11-02T12:43:01.8104910Z",
+      "completedUTC": "2026-11-02T12:47:25.8813212Z",
+      "environment": "Normal Windows process access, Node 22.23.3, existing offline fetch guard"
+    }
+  ],
+  "suiteCounts": {
+    "smoke": {
+      "passed": 160,
+      "failed": 1
+    },
+    "full": {
+      "passed": 184,
+      "failed": 0
+    }
+  },
+  "independentReview": {
+    "baseHead": "ece1aa9fb98532794055db650d8c861b4b7a22de",
+    "target": "Uncommitted working-tree delta",
+    "reviewer": "Independent reviewer agent",
+    "status": "PASSED",
+    "finalResult": "No remaining material findings in the final scoped delta after targeted corrections and independent re-review.",
+    "resolutions": [
+      "Natural-name recognition precedes compact-ID fallback, preserving case-insensitive full names and withholding cross-owner personal dates.",
+      "Main reporting predicate restoration uses modal-question and relative-clause grammar, without a time-token allowlist.",
+      "Nearby sentence context keeps relative payroll dates attached across conjunctions and commas, while unrelated yearful wage facts retain their scope."
+    ],
+    "finalIndependentControls": [
+      "Lowercase, mixed-case, uppercase and internally mixed-capitalization full names: cross-owner withholding and same-owner date retention.",
+      "E1/E-1 compact alias preservation.",
+      "Restrictive reporting with yesterday/recently, and descriptive modal/to-infinitive negatives.",
+      "Relative future bonus dates including due and payable the following day and The next day, his bonus becomes payable.",
+      "Current-wage and independent anniversary-boundary controls.",
+      "Updated application regression suite independently executed and passed."
+    ],
+    "initialFindings": [
+      {
+        "severity": "P1",
+        "finding": "Lowercase natural names and shared first names still allowed a different employee's PR date to be borrowed.",
+        "probes": [
+          "Employee alice / Employee bob",
+          "Employee Alice / Employee bob",
+          "Employee Alice Lee / Employee Alice Tan"
+        ],
+        "observed": "Fresh fixture-backed application responses included 15/03/2026 proration and 31/03/2027 boundary for the foreign employee."
+      },
+      {
+        "severity": "P2",
+        "finding": "Reporting-predicate restoration required a recognized time token.",
+        "probes": [
+          "Should the annual bonus that we paid yesterday be reported as employment income, and does CPF apply?",
+          "Should the annual bonus that was paid recently be reported as employment income, and does CPF apply?"
+        ],
+        "observed": "Only CPF_PAYROLL survived in direct reconciled issue plans."
+      },
+      {
+        "severity": "P2",
+        "finding": "Conjunction/comma clause splitting separated a relative future date from its payroll predicate.",
+        "probes": [
+          "His bonus is due and payable the following day.",
+          "The next day, his bonus becomes payable."
+        ],
+        "context": "2026 PR grant followed by first contribution-year boundary on 31 March 2027.",
+        "observed": "Fresh fixture-backed application responses marked CPF evidence VERIFIED without the 2027 applicability limitation."
+      }
+    ],
+    "limits": "Targeted offline helper, reconciled-plan and full-application probes only. Broad validation and preservation are supervisor-owned. No live/model/CI/production verification."
+  },
+  "preservation": {
+    "configurations": 5,
+    "answers": 350,
+    "unchanged": 350,
+    "priorCorrectPreserved": 213,
+    "inputDrift": [],
+    "method": "Full answer comparison under identical frozen source profiles. Prior grades are inherited after hash equality, not freshly assigned."
+  },
+  "limitations": [
+    "Root lint still reports the pre-existing untracked archive parsing errors; maintained src/scripts/tests lint is reported separately.",
+    "Restricted smoke run passed 160/161 suites. Its sole MAS diagnostic failure was reproduced as a Windows user-profile lookup failure in the isolated child, passed individually with normal Windows process access, and was included in the subsequent full-suite run. The original failed smoke result is retained.",
+    "The mixed IRAS/CPF reporting prompt retains both issues but its available fixture evidence remains incomplete; issue retention does not establish answer completeness.",
+    "Validation uses Node 22.23.3 with the retained userInfo compatibility preload and offline fetch guard; the final full suite uses normal Windows process access.",
+    "No live-source/browser/model acceptance, CI dispatch/inspection, source activation, commit, push, merge or deployment occurred."
+  ],
+  "publicationNote": "This is the pre-publication validation snapshot. Its UNCOMMITTED status and no-publication limitation describe that point in time; see review-handoff.txt for the published review target."
+}

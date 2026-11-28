@@ -1,0 +1,4 @@
+
+ WARN  inlineDynamicImports option is deprecated, please use codeSplitting: false instead.
+
+Built Cloudflare static-asset worker at dist/_worker.js

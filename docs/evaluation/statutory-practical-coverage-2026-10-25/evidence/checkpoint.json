@@ -1,0 +1,155 @@
+{
+  "dateSingapore": "25/10/2026",
+  "status": "OFFLINE_CYCLE_IMPLEMENTED_REVIEWED_VALIDATED_LIMITED_COVERAGE_LIVE_NOT_RUN",
+  "workspace": "D:\\Accounting\\.worktrees\\review-corrections-20261025",
+  "branch": "codex/review-corrections-20261025",
+  "baseCommit": "9f5f8a3309cf28b5dcf56eb3a78da6c693801208",
+  "committed": false,
+  "pushed": false,
+  "productionChanged": false,
+  "liveAcceptance": "NOT_RUN",
+  "corpusQuestions": 100,
+  "questionsPerAuthority": 20,
+  "routing": {
+    "IRAS": {
+      "total": 20,
+      "routedOnOriginalQuestion": 20,
+      "baselineRoutedOnOriginalQuestion": 17
+    },
+    "CPF": {
+      "total": 20,
+      "routedOnOriginalQuestion": 20,
+      "baselineRoutedOnOriginalQuestion": 9
+    },
+    "MOM": {
+      "total": 20,
+      "routedOnOriginalQuestion": 20,
+      "baselineRoutedOnOriginalQuestion": 12
+    },
+    "ACRA": {
+      "total": 20,
+      "routedOnOriginalQuestion": 20,
+      "baselineRoutedOnOriginalQuestion": 11
+    },
+    "MAS": {
+      "total": 20,
+      "routedOnOriginalQuestion": 20,
+      "baselineRoutedOnOriginalQuestion": 9
+    }
+  },
+  "evidenceStatuses": {
+    "IRAS": {
+      "INSUFFICIENT": 15,
+      "VERIFIED": 5
+    },
+    "CPF": {
+      "INSUFFICIENT": 12,
+      "VERIFIED": 8
+    },
+    "MOM": {
+      "INSUFFICIENT": 14,
+      "VERIFIED": 6
+    },
+    "ACRA": {
+      "INSUFFICIENT": 15,
+      "VERIFIED": 5
+    },
+    "MAS": {
+      "INSUFFICIENT": 16,
+      "VERIFIED": 4
+    }
+  },
+  "additionalEvidenceCandidates": [
+    "cpf-additional-wages-definition-01",
+    "cpf-additional-wages-definition-03",
+    "cpf-additional-wages-definition-04",
+    "cpf-cpf-aw-ceiling-02",
+    "cpf-cpf-aw-ceiling-03",
+    "mom-final-salary-02",
+    "mom-salary-deductions-04",
+    "mas-fund-management-licence-02",
+    "mas-fund-management-licence-04"
+  ],
+  "additionalCorrectIndependentlyReviewed": 7,
+  "additionalCorrectCaseIds": [
+    "cpf-additional-wages-definition-01",
+    "cpf-additional-wages-definition-03",
+    "cpf-additional-wages-definition-04",
+    "cpf-cpf-aw-ceiling-02",
+    "cpf-cpf-aw-ceiling-03",
+    "mas-fund-management-licence-02",
+    "mas-fund-management-licence-04"
+  ],
+  "staleReviewsNotApplied": [
+    "mom-final-salary-01"
+  ],
+  "replayInputIntegrity": true,
+  "MOMCorrection": "Deduction-only evidence no longer verifies final-salary payment timing; remaining unsupported final-salary cases stay insufficient.",
+  "comparisonLimit": "Resolver-catalog comparison in same current application with synthetic source fixtures and supplied semantic interpretations; not a full previous-version or live-model comparison.",
+  "remainingCoverage": [
+    "Historical applicability and numerical contribution calculations",
+    "IRAS input-tax and GST-filing evidence paths",
+    "CPF due-date evidence and qualitative rate factors",
+    "ACRA annual-return and officer-particulars evidence",
+    "MAS VCFM, exemptions, QDC and regulatory notifications"
+  ],
+  "validationDirectory": "D:\\Accounting\\artifacts\\practical-question-wave-2026-10-25\\post-mom-scope-fix",
+  "usageUsedPercentAtLastCheck": 92,
+  "minimumReservePercent": 5,
+  "validation": [
+    {
+      "check": "preflight",
+      "exitCode": 0,
+      "startedAtUTC": "2026-10-25T12:40:38.9816545Z",
+      "completedAtUTC": "2026-10-25T12:40:39.0501336Z",
+      "log": "D:\\Accounting\\artifacts\\practical-question-wave-2026-10-25\\post-mom-scope-fix\\preflight.log"
+    },
+    {
+      "check": "lint",
+      "exitCode": 0,
+      "startedAtUTC": "2026-10-25T12:40:39.0652623Z",
+      "completedAtUTC": "2026-10-25T12:40:39.187565Z",
+      "log": "D:\\Accounting\\artifacts\\practical-question-wave-2026-10-25\\post-mom-scope-fix\\lint.log"
+    },
+    {
+      "check": "typecheck",
+      "exitCode": 0,
+      "startedAtUTC": "2026-10-25T12:40:39.1895443Z",
+      "completedAtUTC": "2026-10-25T12:40:43.0337169Z",
+      "log": "D:\\Accounting\\artifacts\\practical-question-wave-2026-10-25\\post-mom-scope-fix\\typecheck.log"
+    },
+    {
+      "check": "vite-build",
+      "exitCode": 0,
+      "startedAtUTC": "2026-10-25T12:40:43.0360071Z",
+      "completedAtUTC": "2026-10-25T12:40:44.9092042Z",
+      "log": "D:\\Accounting\\artifacts\\practical-question-wave-2026-10-25\\post-mom-scope-fix\\vite-build.log"
+    },
+    {
+      "check": "worker-build",
+      "exitCode": 0,
+      "startedAtUTC": "2026-10-25T12:40:44.9116163Z",
+      "completedAtUTC": "2026-10-25T12:40:45.515159Z",
+      "log": "D:\\Accounting\\artifacts\\practical-question-wave-2026-10-25\\post-mom-scope-fix\\worker-build.log"
+    },
+    {
+      "check": "smoke",
+      "exitCode": 0,
+      "startedAtUTC": "2026-10-25T12:40:45.516742Z",
+      "completedAtUTC": "2026-10-25T12:43:06.0242101Z",
+      "log": "D:\\Accounting\\artifacts\\practical-question-wave-2026-10-25\\post-mom-scope-fix\\smoke.log"
+    },
+    {
+      "check": "full",
+      "exitCode": 0,
+      "startedAtUTC": "2026-10-25T12:43:06.0253456Z",
+      "completedAtUTC": "2026-10-25T12:45:40.3606872Z",
+      "log": "D:\\Accounting\\artifacts\\practical-question-wave-2026-10-25\\post-mom-scope-fix\\full.log"
+    }
+  ],
+  "completedAtUTC": "2026-10-25T12:46:02.5321870Z",
+  "passedSuites": {
+    "smoke": 130,
+    "full": 153
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "full-regression",
+  "exitCode": 0,
+  "elapsedSeconds": 316.73,
+  "arguments": [
+    "scripts/run_all_tests.mjs",
+    "--tier=full"
+  ]
+}

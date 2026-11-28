@@ -1,0 +1,145 @@
+{
+  "status": "OFFLINE_BATCH_ACCEPTED_WITH_KNOWN_LINT_ARCHIVE_EXCEPTION",
+  "branch": "codex/statutory-knowledge-expansion-20261030",
+  "head": "2f8abb90a1af5303eaeeaf98c184644b5ea3e323",
+  "uncommitted": true,
+  "batchPublished": false,
+  "usageAtFinalCheck": {
+    "fiveHourRemainingPercent": 62,
+    "weeklyRemainingPercent": 5,
+    "fiveHourResetUTC": "2026-10-31T08:38:49Z",
+    "weeklyResetUTC": "2026-11-04T14:19:29Z",
+    "resetCreditConsumed": false
+  },
+  "counts": {
+    "final75": {
+      "CORRECT": 30,
+      "PARTIAL": 8,
+      "INCORRECT": 0,
+      "UNSUPPORTED": 37
+    },
+    "final60": {
+      "CORRECT": 59,
+      "PARTIAL": 0,
+      "INCORRECT": 0,
+      "UNSUPPORTED": 1
+    },
+    "fresh15": {
+      "CORRECT": 4,
+      "PARTIAL": 0,
+      "INCORRECT": 0,
+      "UNSUPPORTED": 11
+    },
+    "fixed100-original": {
+      "CORRECT": 50,
+      "PARTIAL": 12,
+      "INCORRECT": 0,
+      "UNSUPPORTED": 38
+    },
+    "fixed100-enriched": {
+      "CORRECT": 66,
+      "PARTIAL": 8,
+      "INCORRECT": 0,
+      "UNSUPPORTED": 26
+    }
+  },
+  "priorCorrectPreservation": {
+    "Frozen75": "22/22",
+    "Earlier60": "59/59",
+    "Fixed100Original": "50/50",
+    "Fixed100Enriched": "62/62",
+    "losses": []
+  },
+  "gains": {
+    "Frozen75": {
+      "beforeCorrect": 22,
+      "afterCorrect": 30,
+      "byAuthority": {
+        "IRAS": 1,
+        "CPF": 1,
+        "MOM": 3,
+        "ACRA": 2,
+        "MAS": 1
+      }
+    },
+    "Fixed100Original": {
+      "beforeCorrect": 50,
+      "afterCorrect": 50
+    },
+    "Fixed100Enriched": {
+      "beforeCorrect": 62,
+      "afterCorrect": 66,
+      "byAuthority": {
+        "ACRA": 4
+      }
+    }
+  },
+  "sourceIntegrity": {
+    "frozenInputsUnchanged": 66,
+    "newOfficialSourceCaptures": 9,
+    "allNewSourceHashesAndByteLengthsMatch": true
+  },
+  "validation": [
+    {
+      "check": "root-lint",
+      "exitCode": 1,
+      "startedUTC": "2026-10-31T03:53:28.869219Z",
+      "completedUTC": "2026-10-31T03:53:31.4770854Z"
+    },
+    {
+      "check": "maintained-lint",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T03:53:31.5031441Z",
+      "completedUTC": "2026-10-31T03:53:31.6688585Z"
+    },
+    {
+      "check": "typecheck",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T03:53:31.6714688Z",
+      "completedUTC": "2026-10-31T03:53:41.2699848Z"
+    },
+    {
+      "check": "vite-build",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T03:53:41.2741212Z",
+      "completedUTC": "2026-10-31T03:53:58.9544468Z"
+    },
+    {
+      "check": "worker-build",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T03:53:58.9561422Z",
+      "completedUTC": "2026-10-31T03:53:59.9237676Z"
+    },
+    {
+      "check": "smoke",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T03:53:59.9252599Z",
+      "completedUTC": "2026-10-31T03:57:45.9865923Z"
+    },
+    {
+      "check": "full",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T03:57:45.9877983Z",
+      "completedUTC": "2026-10-31T04:01:40.9679828Z"
+    }
+  ],
+  "smokeSuitesPassed": 159,
+  "fullSuitesPassed": 182,
+  "independentCodeReview": "All reported material findings resolved; resumed/final-code-review.json",
+  "knownLintException": "Root oxlint still fails parsing the pre-existing untracked artifacts/fresh-acceptance-2026-10-24/prepare.mjs archive. Maintained src/scripts/tests lint is checked separately.",
+  "qualityReport": "quality-report.json",
+  "isolatedNewBatchDiff": "new-batch.patch",
+  "preexistingUncommittedCorrections": "preexisting.patch",
+  "remainingLimitations": [
+    "Fixed100 uses guided issue/source replay; Frozen75/Earlier60/fresh15 use no-hint application-entry rules-only understanding.",
+    "Whole-answer grades are distinct from source/evidence-path status.",
+    "No network/model requests during corpus captures; no live-model/browser, CI or production acceptance.",
+    "Remaining unsupported and partial cases are explicitly retained; reaching30 does not imply general coverage."
+  ],
+  "remainingSeparateWork": [
+    "Commit and CI remain separate from accepted offline coverage batch.",
+    "Live-model/browser and production/release acceptance have not been performed.",
+    "Partial/unsupported questions remain explicitly recorded; see quality-report.json."
+  ],
+  "publication": "All batch changes and prior corrections remain uncommitted/unpushed; no PR/merge/deployment/source activation."
+}

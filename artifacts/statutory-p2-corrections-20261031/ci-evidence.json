@@ -1,0 +1,12 @@
+{
+  "repository": "dexrrick/accounting",
+  "implementationSha": "a4035b6e34d49373df0e4b2a0f3a3ee3e7800fc9",
+  "githubCombinedStatuses": [],
+  "githubPrTriggeredWorkflowRuns": [],
+  "workflowQueryLimitation": "Connector workflow query filters to PR-triggered runs; an empty result is not a universal CI-success claim.",
+  "repositoryCiTriggers": "Push to main/master or pull request targeting main/master",
+  "manualCiDispatched": false,
+  "prCreated": false,
+  "merged": false,
+  "deployed": false
+}

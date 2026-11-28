@@ -29,6 +29,11 @@ import { extractOfficialDocumentFromRetrieved } from './officialDocumentExtracto
 import type { ControlledFetchResult } from './controlledWebRetriever';
 import { getSingaporeDateString } from '../utils/dateUtils';
 import {
+  ACRA_2022_ANNUAL_RETURN_TIMELINES_URL,
+  deriveAcraFyeCohortApplicability,
+  supportsAcraAnnualReturnDeadlineEvidence
+} from './acraAnnualReturnFilingRule';
+import {
   compareMasLicensingHtml,
   decodeMasDocumentBytes,
   encodeMasDocumentBytes,
@@ -207,10 +212,25 @@ function hasMasManagedRecordIdentity(
   metadata?: SourceVersionMetadata
 ): boolean {
   return Boolean(record && (
-    record.authority === 'MAS' || record.sourceAuthority === 'MAS' || record.documentAdmissionRequired === true
+    record.authority === 'MAS' || record.sourceAuthority === 'MAS'
   ) || metadata && (
     metadata.sourceAuthority === 'MAS' || metadata.governingAuthority === 'MAS' ||
-    metadata.documentAdmissionRequired === true || metadata.documentAdmissionPackageId
+    metadata.documentAdmissionComparisonProfileVersion !== undefined
+  ));
+}
+
+function hasAcraManagedRecordIdentity(
+  record?: AuthoritativeSourceRecord,
+  metadata?: SourceVersionMetadata
+): boolean {
+  return Boolean(record && (record.officialSourceUrl === ACRA_2022_ANNUAL_RETURN_TIMELINES_URL ||
+    record.canonicalSourceUrl === ACRA_2022_ANNUAL_RETURN_TIMELINES_URL ||
+    record.acraFyeCohortApplicability?.kind === 'ACRA_FYE_ON_OR_AFTER' ||
+    record.documentAdmissionRequired === true && record.authority === 'ACRA' &&
+      record.sourceAuthority === 'ACRA' && record.domain === 'ACRA_CORP') || metadata && (
+    metadata.acraFyeCohortApplicability?.kind === 'ACRA_FYE_ON_OR_AFTER' ||
+    metadata.documentAdmissionRequired === true && metadata.governingAuthority === 'ACRA' &&
+      metadata.sourceAuthority === 'ACRA' && metadata.domain === 'ACRA_CORP'
   ));
 }
 
@@ -287,7 +307,7 @@ export class LiveRegulatoryFeedService {
     };
   }
 
-  private masCandidatesMatchStageSnapshot(packageId: string, pkg: RegulatoryUpdatePackage, requireVerified = false): boolean {
+  private managedCandidatesMatchStageSnapshot(packageId: string, pkg: RegulatoryUpdatePackage, requireVerified = false): boolean {
     const snapshots = this.packageCandidateSnapshots.get(packageId);
     const versionIds = this.packageVersionIds.get(packageId);
     if (!snapshots || !versionIds || snapshots.size !== pkg.updates.length || versionIds.size !== pkg.updates.length) return false;
@@ -312,10 +332,29 @@ export class LiveRegulatoryFeedService {
     return true;
   }
 
+  private hasAcraManagedIdentity(pkg: RegulatoryUpdatePackage): boolean {
+    return pkg.updates.some(record => {
+      if (hasAcraManagedRecordIdentity(record)) return true;
+      if (hasAcraManagedRecordIdentity(UNIFIED_SOURCE_REGISTRY[record.id])) return true;
+      if (this.versioningManager.getCandidates().some(candidate => candidate.record.id === record.id &&
+          hasAcraManagedRecordIdentity(candidate.record, candidate.metadata))) return true;
+      return this.versioningManager.getAllLedgerEntries().some(entry => entry.recordId === record.id &&
+        hasAcraManagedRecordIdentity(entry.recordSnapshot, entry.metadata));
+    });
+  }
+
   private nonMasManagedIdentityConflict(pkg: RegulatoryUpdatePackage): string | undefined {
-    if (pkg.authority === 'MAS') return undefined;
+    const hasAcraIdentity = this.hasAcraManagedIdentity(pkg);
+    const isAcraDeadlinePackage = pkg.authority === 'ACRA' &&
+      this.validateAcraDeadlinePackageShape(pkg) === undefined;
+    if (hasAcraIdentity && !isAcraDeadlinePackage) {
+      return 'ACRA annual-return managed source identity requires the exact byte-bound package and approval lifecycle';
+    }
+    if (pkg.authority === 'MAS') return hasAcraIdentity
+      ? 'ACRA-managed records cannot be included in a MAS package'
+      : undefined;
     for (const record of pkg.updates) {
-      if (record.documentAdmissionRequired === true) {
+      if (record.documentAdmissionRequired === true && !isAcraDeadlinePackage) {
         return `Non-MAS packages cannot contain document-admission record '${record.id}'`;
       }
       if (hasMasManagedRecordIdentity(UNIFIED_SOURCE_REGISTRY[record.id])) {
@@ -329,6 +368,50 @@ export class LiveRegulatoryFeedService {
           hasMasManagedRecordIdentity(entry.recordSnapshot, entry.metadata))) {
         return `Non-MAS packages cannot reuse MAS-managed ledger record ID '${record.id}'`;
       }
+    }
+    return undefined;
+  }
+
+  private validateAcraDeadlinePackageShape(pkg: RegulatoryUpdatePackage): string | undefined {
+    if (pkg.authority !== 'ACRA' || pkg.updates.length !== 1 || !/^\d{4}-\d{2}-\d{2}$/.test(pkg.releaseDate)) {
+      return 'ACRA annual-return admission requires one exact ACRA document and a distinct publication date';
+    }
+    const [record] = pkg.updates;
+    const request = pkg.extractionRequests?.[record.id];
+    const source = pkg.documentMetadata?.[record.id];
+    const cohort = deriveAcraFyeCohortApplicability(record.sourceText);
+    if (!request || !source || Object.keys(pkg.extractionRequests || {}).length !== 1 ||
+        Object.keys(pkg.documentMetadata || {}).length !== 1 ||
+        request.url !== ACRA_2022_ANNUAL_RETURN_TIMELINES_URL || request.authority !== 'ACRA' ||
+        request.domain !== 'ACRA_CORP' || request.documentKind !== 'HTML' ||
+        request.sectionHeading !== 'Reminder to file Annual Returns (AR)' ||
+        !request.topicIds?.includes('acra_annual-returns') ||
+        record.authority !== 'ACRA' || record.sourceAuthority !== 'ACRA' || record.domain !== 'ACRA_CORP' ||
+        record.officialSourceUrl !== ACRA_2022_ANNUAL_RETURN_TIMELINES_URL ||
+        record.canonicalSourceUrl !== ACRA_2022_ANNUAL_RETURN_TIMELINES_URL ||
+        record.provenance !== 'LIVE_EXTERNAL' || record.documentAdmissionRequired === true ||
+        record.extractionStatus !== 'EXACT' || record.isVerbatimText !== true || record.groundingEligible !== false ||
+        record.lifecycleState !== 'CANDIDATE' || record.sourceStatus !== 'NEEDS_REVIEW' ||
+        !record.relatedTopicIds?.includes('acra_annual-returns') || !cohort ||
+        stableJson(record.acraFyeCohortApplicability) !== stableJson(cohort) ||
+        !supportsAcraAnnualReturnDeadlineEvidence(record.sourceText) ||
+        record.effectiveDate !== undefined || record.validFrom !== undefined || record.validTo !== undefined ||
+        source.requestUrl !== ACRA_2022_ANNUAL_RETURN_TIMELINES_URL ||
+        source.sourceUrl !== ACRA_2022_ANNUAL_RETURN_TIMELINES_URL ||
+        source.finalUrl !== ACRA_2022_ANNUAL_RETURN_TIMELINES_URL ||
+        !/^text\/html(?:\s*;|$)/i.test(source.contentType) || !Number.isInteger(source.httpStatus) ||
+        source.httpStatus < 200 || source.httpStatus >= 300 || !source.retrievedAt ||
+        source.retrievedAt !== record.retrievedAt || !Number.isFinite(Date.parse(source.retrievedAt)) ||
+        !/^[a-f\d]{64}$/i.test(record.documentHash || '') ||
+        !/^[a-f\d]{64}$/i.test(record.provisionHash || '') ||
+        record.contentHash !== record.provisionHash ||
+        record.provisionHash !== computeProvisionHash(record.standardOrActCode, record.paragraphOrSection, record.sourceText) ||
+        !record.sourceLocator || record.sourceLocator.sourceType !== 'HTML' ||
+        record.sourceLocator.tableStructure !== 'PRESERVED' ||
+        record.sourceLocator.documentHash?.toLowerCase() !== record.documentHash?.toLowerCase() ||
+        !record.sourceLocator.boundary || record.sourceLocator.boundary.startOffset < 0 ||
+        record.sourceLocator.boundary.endOffset <= record.sourceLocator.boundary.startOffset) {
+      return 'ACRA annual-return package is incomplete or inconsistent with the exact source, topic, table, cohort, hashes, or capture metadata';
     }
     return undefined;
   }
@@ -582,6 +665,17 @@ export class LiveRegulatoryFeedService {
    */
   public computePackageHash(pkg: Omit<RegulatoryUpdatePackage, 'packageHash'>): string {
     if (pkg.authority === 'MAS') return computeMasRegulatoryPackageHash(pkg);
+    if (pkg.authority === 'ACRA' && pkg.extractionRequests && pkg.documentMetadata) {
+      return computeSha256(stableJson({
+        packageId: pkg.packageId,
+        releaseDate: pkg.releaseDate,
+        authority: pkg.authority,
+        updates: pkg.updates,
+        amendments: pkg.amendments,
+        extractionRequests: pkg.extractionRequests,
+        documentMetadata: pkg.documentMetadata
+      }));
+    }
     const payload = [
       pkg.packageId,
       pkg.releaseDate,
@@ -677,6 +771,11 @@ export class LiveRegulatoryFeedService {
     if (managedIdentityConflict) {
       return { success: false, packageId: stagedPackage.packageId, stagedRecordsCount: 0, error: managedIdentityConflict };
     }
+    const acraShapeError = (this.hasAcraManagedIdentity(stagedPackage) ||
+      stagedPackage.authority === 'ACRA' && stagedPackage.extractionRequests !== undefined)
+      ? this.validateAcraDeadlinePackageShape(stagedPackage)
+      : undefined;
+    if (acraShapeError) return { success: false, packageId: stagedPackage.packageId, stagedRecordsCount: 0, error: acraShapeError };
     this.bumpPackageGeneration(stagedPackage.packageId);
     if (stagedPackage.authority === 'MAS') {
       this.packageApprovals.delete(stagedPackage.packageId);
@@ -714,7 +813,7 @@ export class LiveRegulatoryFeedService {
         ? (rec.provisionHash || rec.contentHash || this.versioningManager.computeSourceHash(rec))
         : (rec.contentHash || this.versioningManager.computeSourceHash(rec));
       rec.contentHash = contentHash;
-      const masRetrieval = stagedPackage.authority === 'MAS'
+      const documentRetrieval = stagedPackage.authority === 'MAS' || stagedPackage.authority === 'ACRA'
         ? stagedPackage.documentMetadata?.[rec.id]
         : undefined;
 
@@ -728,26 +827,29 @@ export class LiveRegulatoryFeedService {
         canonicalSourceUrl: rec.officialSourceUrl,
         sourceAuthority: rec.sourceAuthority || stagedPackage.authority,
         verificationStatus: 'UNVERIFIED',
-        retrievedAt: stagedPackage.authority === 'MAS'
-          ? masRetrieval!.retrievedAt
+        retrievedAt: documentRetrieval
+          ? documentRetrieval.retrievedAt
           : rec.retrievedAt || new Date().toISOString(),
         amendmentSummary: stagedPackage.amendments.find((a) => a.recordId === rec.id)?.summary,
         // Preserve external provenance
-        sourceUrl: stagedPackage.authority === 'MAS'
-          ? masRetrieval!.sourceUrl
+        sourceUrl: documentRetrieval
+          ? documentRetrieval.sourceUrl
           : provenanceDetails?.sourceUrl || rec.officialSourceUrl,
-        httpStatus: stagedPackage.authority === 'MAS'
-          ? masRetrieval!.httpStatus
+        httpStatus: documentRetrieval
+          ? documentRetrieval.httpStatus
           : provenanceDetails?.httpStatus || 200,
-        etag: stagedPackage.authority === 'MAS' ? masRetrieval!.etag : provenanceDetails?.etag,
-        lastModified: stagedPackage.authority === 'MAS' ? masRetrieval!.lastModified : provenanceDetails?.lastModified,
+        etag: documentRetrieval?.etag || provenanceDetails?.etag,
+        lastModified: documentRetrieval?.lastModified || provenanceDetails?.lastModified,
         documentHash: rec.documentHash,
         provisionHash: rec.provisionHash || rec.contentHash,
         extractionStatus: rec.extractionStatus,
-        sourceLocator: rec.sourceLocator
+        sourceLocator: rec.sourceLocator,
+        ...(rec.acraFyeCohortApplicability ? { acraFyeCohortApplicability: rec.acraFyeCohortApplicability } : {})
       };
 
-      const requiresDocumentAdmission = stagedPackage.authority === 'MAS' && Boolean(stagedPackage.extractionRequests?.[rec.id]);
+      const requiresDocumentAdmission = (stagedPackage.authority === 'MAS' ||
+        stagedPackage.authority === 'ACRA' && this.validateAcraDeadlinePackageShape(stagedPackage) === undefined) &&
+        Boolean(stagedPackage.extractionRequests?.[rec.id]);
       const comparisonPolicy = stagedPackage.authority === 'MAS'
         ? stagedPackage.documentMetadata?.[rec.id]?.comparisonPolicy
         : undefined;
@@ -759,19 +861,22 @@ export class LiveRegulatoryFeedService {
           documentAdmissionPackageHash: stagedPackage.packageHash,
           governingAuthority: rec.authority,
           domain: rec.domain,
+          ...(rec.acraFyeCohortApplicability
+            ? { acraFyeCohortApplicability: rec.acraFyeCohortApplicability }
+            : {}),
           ...(comparisonPolicy ? {
             documentAdmissionComparisonRecordId: rec.id,
             documentAdmissionComparisonProfileVersion: comparisonPolicy.profileVersion,
             documentAdmissionComparisonHash: comparisonPolicy.comparisonHash,
-            documentAdmissionComparisonContentType: masRetrieval!.contentType
+            documentAdmissionComparisonContentType: documentRetrieval!.contentType
           } : {})
         });
       }
 
       this.versioningManager.registerCandidateVersion(candidateRecord, metadata);
-      if (stagedPackage.authority === 'MAS') {
+      if (requiresDocumentAdmission) {
         const candidate = this.versioningManager.getCandidates().find(item => item.metadata.versionId === versionId);
-        if (!candidate) return { success: false, packageId: stagedPackage.packageId, stagedRecordsCount: 0, error: `MAS candidate '${versionId}' was not registered` };
+        if (!candidate) return { success: false, packageId: stagedPackage.packageId, stagedRecordsCount: 0, error: `Managed candidate '${versionId}' was not registered` };
         candidateSnapshots.set(versionId, {
           record: recordClone(candidate.record),
           metadata: structuredClone(candidate.metadata)
@@ -780,7 +885,7 @@ export class LiveRegulatoryFeedService {
     }
 
     this.packageVersionIds.set(stagedPackage.packageId, versionIds);
-    if (stagedPackage.authority === 'MAS') this.packageCandidateSnapshots.set(stagedPackage.packageId, candidateSnapshots);
+    if (candidateSnapshots.size > 0) this.packageCandidateSnapshots.set(stagedPackage.packageId, candidateSnapshots);
     else this.packageCandidateSnapshots.delete(stagedPackage.packageId);
     const immutablePackage = packageSnapshot(stagedPackage);
     this.stagedPackages.set(immutablePackage.packageId, immutablePackage);
@@ -834,9 +939,11 @@ export class LiveRegulatoryFeedService {
     this.verifiedPackages.delete(packageId);
     this.packageComparisonEvidence.delete(packageId);
 
-    if (pkg.authority === 'MAS') {
-      if (!this.masCandidatesMatchStageSnapshot(packageId, pkg)) {
-        return reject('MAS candidate records or metadata differ from the package-bound stage snapshot');
+    const hasAcraManagedDocuments = this.hasAcraManagedIdentity(pkg) ||
+      pkg.authority === 'ACRA' && pkg.extractionRequests !== undefined;
+    if (pkg.authority === 'MAS' || hasAcraManagedDocuments) {
+      if (!this.managedCandidatesMatchStageSnapshot(packageId, pkg)) {
+        return reject('Managed candidate records or metadata differ from the package-bound stage snapshot');
       }
       for (const versionId of versionIds.values()) {
         const candidate = this.versioningManager.getCandidates().find(item => item.metadata.versionId === versionId);
@@ -845,8 +952,10 @@ export class LiveRegulatoryFeedService {
           delete candidate.metadata.verificationMethod;
         }
       }
-      const masValidationError = this.validateMasPackageShape(pkg);
-      if (masValidationError) return reject(masValidationError);
+      const managedShapeError = pkg.authority === 'MAS'
+        ? this.validateMasPackageShape(pkg)
+        : this.validateAcraDeadlinePackageShape(pkg);
+      if (managedShapeError) return reject(managedShapeError);
     } else if (containsMasAuthorityIdentity(pkg)) {
       return reject('Non-MAS packages cannot contain MAS-governed records or MAS-published source URLs');
     }
@@ -880,39 +989,42 @@ export class LiveRegulatoryFeedService {
     for (let i = 0; i < pkg.updates.length; i++) {
       const rec = pkg.updates[i];
       let rawDoc: string | undefined;
-      let masDocument: RetrievedOfficialDocument | undefined;
-      if (pkg.authority === 'MAS') {
+      let managedDocument: RetrievedOfficialDocument | undefined;
+      const hasAcraManagedDocument = this.hasAcraManagedIdentity(pkg) &&
+        (hasAcraManagedRecordIdentity(rec) || pkg.extractionRequests?.[rec.id] !== undefined);
+      if (pkg.authority === 'MAS' || hasAcraManagedDocument) {
         const supplied = typeof rawDocuments === 'string' ? undefined : rawDocuments[rec.id];
         const request = pkg.extractionRequests?.[rec.id];
         const metadata = pkg.documentMetadata?.[rec.id];
         if (!isRetrievedOfficialDocument(supplied) || !request || !metadata) {
-          return reject(`Atomic validation failure on record '${rec.id}': Raw MAS document bytes and bound request provenance are required`, rec.id);
+          return reject(`Atomic validation failure on record '${rec.id}': Raw official document bytes and bound request provenance are required`, rec.id);
         }
-        masDocument = supplied;
-        const actualDocumentHash = computeSha256Bytes(masDocument.contentBytes);
+        managedDocument = supplied;
+        const actualDocumentHash = computeSha256Bytes(managedDocument.contentBytes);
         const comparisonPolicy = metadata.comparisonPolicy;
         if ((!comparisonPolicy && actualDocumentHash.toLowerCase() !== (rec.documentHash || '').toLowerCase()) ||
-            normalizedUrl(masDocument.sourceUrl) !== normalizedUrl(request.url) ||
-            normalizedUrl(masDocument.finalUrl) !== normalizedUrl(metadata.finalUrl) ||
-            normalizedUrl(masDocument.finalUrl) !== normalizedUrl(rec.officialSourceUrl) ||
-            masDocument.contentType !== metadata.contentType || masDocument.httpStatus !== metadata.httpStatus) {
+            normalizedUrl(managedDocument.sourceUrl) !== normalizedUrl(request.url) ||
+            normalizedUrl(managedDocument.finalUrl) !== normalizedUrl(metadata.finalUrl) ||
+            normalizedUrl(managedDocument.finalUrl) !== normalizedUrl(rec.officialSourceUrl) ||
+            managedDocument.contentType !== metadata.contentType || managedDocument.httpStatus !== metadata.httpStatus ||
+            hasAcraManagedDocument && managedDocument.retrievedAt && managedDocument.retrievedAt !== metadata.retrievedAt) {
           return reject(`Atomic validation failure on record '${rec.id}': Raw bytes, URL, MIME type, status, or document hash differs from the staged provenance`, rec.id);
         }
         const replay: ControlledFetchResult = {
           status: 'SUCCESS',
-          sourceUrl: masDocument.sourceUrl,
-          finalUrl: masDocument.finalUrl,
-          contentBytes: new Uint8Array(masDocument.contentBytes),
-          contentType: masDocument.contentType,
-          httpStatus: masDocument.httpStatus,
-          retrievedAt: masDocument.retrievedAt || rec.retrievedAt || new Date().toISOString(),
-          etag: masDocument.etag,
-          lastModified: masDocument.lastModified
+          sourceUrl: managedDocument.sourceUrl,
+          finalUrl: managedDocument.finalUrl,
+          contentBytes: new Uint8Array(managedDocument.contentBytes),
+          contentType: managedDocument.contentType,
+          httpStatus: managedDocument.httpStatus,
+          retrievedAt: managedDocument.retrievedAt || rec.retrievedAt || new Date().toISOString(),
+          etag: managedDocument.etag,
+          lastModified: managedDocument.lastModified
         };
         let comparison: ReturnType<typeof compareMasLicensingHtml> | undefined;
         if (comparisonPolicy) {
           const baselineBytes = decodeMasDocumentBytes(comparisonPolicy.originalBodyBase64);
-          comparison = baselineBytes && compareMasLicensingHtml(baselineBytes, masDocument.contentBytes, computeSha256Bytes);
+          comparison = baselineBytes && compareMasLicensingHtml(baselineBytes, managedDocument.contentBytes, computeSha256Bytes);
           if (!baselineBytes || !comparison?.isValid ||
               comparison.profileVersion !== comparisonPolicy.profileVersion ||
               comparison.comparisonHash?.toLowerCase() !== comparisonPolicy.comparisonHash.toLowerCase() ||
@@ -938,7 +1050,7 @@ export class LiveRegulatoryFeedService {
         }
         const replayedRecord = { ...extracted.record, id: rec.id };
         if (comparisonPolicy) {
-          if (!masDocument.retrievedAt) return reject(`Atomic validation failure on record '${rec.id}': The comparison receipt requires an official retrieval timestamp`, rec.id);
+          if (!managedDocument.retrievedAt) return reject(`Atomic validation failure on record '${rec.id}': The comparison receipt requires an official retrieval timestamp`, rec.id);
           if (!comparison?.isValid || !comparison.baselineDocumentHash || !comparison.verificationDocumentHash || !comparison.comparisonHash ||
               !this.masRecordMatchesDynamicComparison(rec, replayedRecord)) {
             return reject(`Atomic validation failure on record '${rec.id}': The exact provision, dates, locator, or extraction differs outside the reviewed raw dynamic values`, rec.id);
@@ -947,17 +1059,17 @@ export class LiveRegulatoryFeedService {
             packageId: pkg.packageId,
             packageHash: pkg.packageHash,
             recordId: rec.id,
-            sourceUrl: masDocument.sourceUrl,
-            finalUrl: masDocument.finalUrl,
-            contentType: masDocument.contentType,
-            httpStatus: masDocument.httpStatus,
+            sourceUrl: managedDocument.sourceUrl,
+            finalUrl: managedDocument.finalUrl,
+            contentType: managedDocument.contentType,
+            httpStatus: managedDocument.httpStatus,
             profileVersion: comparisonPolicy.profileVersion,
             baselineDocumentHash: comparison.baselineDocumentHash,
             verificationDocumentHash: comparison.verificationDocumentHash,
             comparisonHash: comparison.comparisonHash,
-            retrievedAt: masDocument.retrievedAt,
+            retrievedAt: managedDocument.retrievedAt,
             originalBodyBase64: comparisonPolicy.originalBodyBase64,
-            verificationBodyBase64: encodeMasDocumentBytes(masDocument.contentBytes)
+            verificationBodyBase64: encodeMasDocumentBytes(managedDocument.contentBytes)
           };
           verificationComparisonEvidence.set(rec.id, {
             ...evidence,
@@ -967,7 +1079,7 @@ export class LiveRegulatoryFeedService {
           return reject(`Atomic validation failure on record '${rec.id}': Re-extracted body, authority, date, hash, or locator differs from the staged record`, rec.id);
         }
         if (rec.sourceLocator?.sourceType === 'HTML' || rec.sourceLocator?.sourceType === 'TEXT') {
-          try { rawDoc = new TextDecoder('utf-8', { fatal: true }).decode(masDocument.contentBytes); }
+          try { rawDoc = new TextDecoder('utf-8', { fatal: true }).decode(managedDocument.contentBytes); }
           catch { return reject(`Atomic validation failure on record '${rec.id}': HTML bytes are not valid UTF-8`, rec.id); }
         }
       } else {
@@ -1025,8 +1137,9 @@ export class LiveRegulatoryFeedService {
 
     // All records passed verification! Promote candidate statuses to VERIFIED
     if (!isCurrent()) return this.staleVerificationResult(packageId);
-    if (pkg.authority === 'MAS' && !this.masCandidatesMatchStageSnapshot(packageId, pkg)) {
-      return reject('MAS candidate records or metadata changed during verification');
+    if ((pkg.authority === 'MAS' || hasAcraManagedDocuments) &&
+        !this.managedCandidatesMatchStageSnapshot(packageId, pkg)) {
+      return reject('Managed candidate records or metadata changed during verification');
     }
     const validComparisonEvidence = this.currentPackageComparisonEvidence(pkg, verificationComparisonEvidence);
     if (!validComparisonEvidence) return reject('MAS licensing verification comparison receipt failed its package, raw-artifact, profile, or hash binding');
@@ -1091,7 +1204,7 @@ export class LiveRegulatoryFeedService {
     this.packageComparisonEvidence.delete(packageId);
 
     if (pkg.authority === 'MAS') {
-      if (!this.masCandidatesMatchStageSnapshot(packageId, pkg)) {
+      if (!this.managedCandidatesMatchStageSnapshot(packageId, pkg)) {
         return reject('MAS candidate records or metadata differ from the package-bound stage snapshot');
       }
       const masValidationError = this.validateMasPackageShape(pkg);
@@ -1168,10 +1281,13 @@ export class LiveRegulatoryFeedService {
     return true;
   }
 
-  /** Explicit human approval required before any MAS candidate can be activated. */
+  /** Explicit human approval required before a managed MAS or exact ACRA candidate can be activated. */
   public approveUpdatePackage(packageId: string, reviewer: string, reason: string): boolean {
     const pkg = this.verifiedPackages.get(packageId);
-    if (!pkg || pkg.authority !== 'MAS' || !reviewer.trim() || !reason.trim()) return false;
+    const isManagedPackage = pkg?.authority === 'MAS' || Boolean(pkg?.authority === 'ACRA' &&
+      this.hasAcraManagedIdentity(pkg) && this.validateAcraDeadlinePackageShape(pkg) === undefined);
+    if (!pkg || !isManagedPackage || !reviewer.trim() || !reason.trim() ||
+        !this.managedCandidatesMatchStageSnapshot(packageId, pkg, true)) return false;
     const comparisonEvidence = this.currentPackageComparisonEvidence(pkg, this.packageComparisonEvidence.get(packageId));
     if (!comparisonEvidence) return false;
     const comparisonEvidenceHash = this.packageComparisonEvidenceHash(comparisonEvidence);
@@ -1199,9 +1315,12 @@ export class LiveRegulatoryFeedService {
   public getPackageApprovalReceipt(packageId: string): RegulatoryPackageApprovalReceipt | undefined {
     const pkg = this.verifiedPackages.get(packageId);
     const approval = this.packageApprovals.get(packageId);
-    if (!pkg || pkg.authority !== 'MAS' || !approval || !this.masCandidatesMatchStageSnapshot(packageId, pkg, true)) return undefined;
+    const isManagedPackage = pkg?.authority === 'MAS' || Boolean(pkg?.authority === 'ACRA' &&
+      this.hasAcraManagedIdentity(pkg) && this.validateAcraDeadlinePackageShape(pkg) === undefined);
+    if (!pkg || !isManagedPackage || !approval || !this.managedCandidatesMatchStageSnapshot(packageId, pkg, true)) return undefined;
     const comparisonEvidence = this.currentPackageComparisonEvidence(pkg, this.packageComparisonEvidence.get(packageId));
-    if (!comparisonEvidence || this.packageComparisonEvidenceHash(comparisonEvidence) !== approval.comparisonEvidenceHash) return undefined;
+    if (!comparisonEvidence ||
+        this.packageComparisonEvidenceHash(comparisonEvidence) !== approval.comparisonEvidenceHash) return undefined;
 
     const packageWithoutHash = { ...pkg } as RegulatoryUpdatePackage;
     delete (packageWithoutHash as Partial<RegulatoryUpdatePackage>).packageHash;
@@ -1239,14 +1358,18 @@ export class LiveRegulatoryFeedService {
       };
     }
 
-    if (pkg.authority === 'MAS') {
-      const masValidationError = this.validateMasPackageShape(pkg);
-      if (masValidationError || !this.masCandidatesMatchStageSnapshot(packageId, pkg, true)) {
+    const hasAcraManagedDocuments = this.hasAcraManagedIdentity(pkg) ||
+      pkg.authority === 'ACRA' && pkg.extractionRequests !== undefined;
+    if (pkg.authority === 'MAS' || hasAcraManagedDocuments) {
+      const managedValidationError = pkg.authority === 'MAS'
+        ? this.validateMasPackageShape(pkg)
+        : this.validateAcraDeadlinePackageShape(pkg);
+      if (managedValidationError || !this.managedCandidatesMatchStageSnapshot(packageId, pkg, true)) {
         return {
           success: false,
           packageId,
           activatedRecordsCount: 0,
-          error: masValidationError || 'MAS candidate records or metadata differ from the package-bound stage snapshot'
+          error: managedValidationError || 'Managed candidate records or metadata differ from the package-bound stage snapshot'
         };
       }
     } else if (containsMasAuthorityIdentity(pkg)) {
@@ -1258,20 +1381,23 @@ export class LiveRegulatoryFeedService {
       };
     }
 
-    const masApproval = pkg.authority === 'MAS' ? this.packageApprovals.get(packageId) : undefined;
-    if (pkg.authority === 'MAS') {
+    const managedApproval = pkg.authority === 'MAS' || hasAcraManagedDocuments
+      ? this.packageApprovals.get(packageId)
+      : undefined;
+    if (pkg.authority === 'MAS' || hasAcraManagedDocuments) {
       const comparisonEvidence = this.currentPackageComparisonEvidence(pkg, this.packageComparisonEvidence.get(packageId));
       const comparisonEvidenceHash = comparisonEvidence && this.packageComparisonEvidenceHash(comparisonEvidence);
       const packageWithoutHash = { ...pkg } as RegulatoryUpdatePackage;
       delete (packageWithoutHash as Partial<RegulatoryUpdatePackage>).packageHash;
       const currentHash = this.computePackageHash(packageWithoutHash);
-      if (!comparisonEvidence || !masApproval || masApproval.packageHash !== currentHash || pkg.packageHash !== currentHash ||
-          masApproval.comparisonEvidenceHash !== comparisonEvidenceHash) {
+      if (!comparisonEvidence || !managedApproval ||
+          managedApproval.packageHash !== currentHash || pkg.packageHash !== currentHash ||
+          managedApproval.comparisonEvidenceHash !== comparisonEvidenceHash) {
         return {
           success: false,
           packageId,
           activatedRecordsCount: 0,
-          error: 'MAS package requires current explicit reviewer approval after verification'
+          error: `${pkg.authority} package requires current explicit reviewer approval after verification`
         };
       }
     }
@@ -1281,7 +1407,7 @@ export class LiveRegulatoryFeedService {
     const packageRegistrySnapshot: Record<string, AuthoritativeSourceRecord | null> = {};
     const approvedCandidateRecords = new Map<string, AuthoritativeSourceRecord>();
     for (const rec of pkg.updates) {
-      if (pkg.authority === 'MAS') {
+      if (pkg.authority === 'MAS' || hasAcraManagedDocuments) {
         const versionId = this.packageVersionIds.get(pkg.packageId)?.get(rec.id);
         const candidate = versionId && this.versioningManager.getCandidates().find(item => item.metadata.versionId === versionId);
         if (candidate) approvedCandidateRecords.set(rec.id, recordClone(candidate.record));
@@ -1300,12 +1426,12 @@ export class LiveRegulatoryFeedService {
 
     for (const rec of pkg.updates) {
       const versionId = this.packageVersionIds.get(pkg.packageId)?.get(rec.id) || `${pkg.packageId}-${rec.id}`;
-      if (pkg.authority === 'MAS' && (!masApproval || !this.versioningManager.recordDocumentReviewApproval(versionId, {
+      if ((pkg.authority === 'MAS' || hasAcraManagedDocuments) && (!managedApproval || !this.versioningManager.recordDocumentReviewApproval(versionId, {
         packageId: pkg.packageId,
-        packageHash: masApproval.packageHash,
-        reviewer: masApproval.reviewer,
-        reason: masApproval.reason,
-        approvedAt: masApproval.approvedAt,
+        packageHash: managedApproval.packageHash,
+        reviewer: managedApproval.reviewer,
+        reason: managedApproval.reason,
+        approvedAt: managedApproval.approvedAt,
         ...(this.packageComparisonEvidence.get(pkg.packageId)?.has(rec.id) ? {
           comparisonEvidence: structuredClone(this.packageComparisonEvidence.get(pkg.packageId)!.get(rec.id)!),
           comparisonEvidenceHash: this.packageComparisonEvidence.get(pkg.packageId)!.get(rec.id)!.evidenceHash
@@ -1324,21 +1450,21 @@ export class LiveRegulatoryFeedService {
 
       // Update the active in-memory registry: preserve sourceType and evidenceTier intact
       const activeRecord: AuthoritativeSourceRecord = {
-        ...(pkg.authority === 'MAS' ? approvedCandidateRecords.get(rec.id)! : rec),
+        ...(pkg.authority === 'MAS' || hasAcraManagedDocuments ? approvedCandidateRecords.get(rec.id)! : rec),
         versionId,
         version: pkg.packageId,
         provenance: 'LIVE_PATCH',
         sourceStatus: 'VERIFIED',
         sourceType: rec.sourceType,
         evidenceTier: rec.evidenceTier,
-        ...(pkg.authority === 'MAS' ? {
+        ...(pkg.authority === 'MAS' || hasAcraManagedDocuments ? {
           lifecycleState: 'ACTIVE' as const,
           documentAdmissionRequired: true as const,
           groundingEligible: true,
-          lastVerifiedDate: masApproval ? getSingaporeDateString(new Date(masApproval.approvedAt)) : undefined,
+          lastVerifiedDate: managedApproval ? getSingaporeDateString(new Date(managedApproval.approvedAt)) : undefined,
           verificationMethod: 'OFFICIAL_STATUTORY_PACKAGE_VERIFICATION',
           urlVerificationStatus: 'VERIFIED' as const,
-          urlVerifiedDate: masApproval ? getSingaporeDateString(new Date(masApproval.approvedAt)) : undefined,
+          urlVerifiedDate: managedApproval ? getSingaporeDateString(new Date(managedApproval.approvedAt)) : undefined,
           urlVerificationMethod: 'OFFICIAL_STATUTORY_PACKAGE_VERIFICATION',
           urlVerificationEvidence: `Document URL and byte-bound package verified before reviewer approval (${versionId})`
         } : {})
@@ -1364,7 +1490,7 @@ export class LiveRegulatoryFeedService {
       }
 
       this.rejectedPackages.set(packageId, `Atomic activation failure: ${activationError}`);
-      if (pkg.authority === 'MAS') {
+      if (pkg.authority === 'MAS' || hasAcraManagedDocuments) {
         this.packageApprovals.delete(packageId);
         this.packageComparisonEvidence.delete(packageId);
         this.verifiedPackages.delete(packageId);
@@ -1387,7 +1513,7 @@ export class LiveRegulatoryFeedService {
     // Remove from available feeds if present
     this.availableFeeds = this.availableFeeds.filter((f) => f.packageId !== packageId);
     this.syncState = 'SYNCED';
-    this.recordAuditEvent(packageId, 'ACTIVATED', masApproval?.reviewer || 'system', masApproval?.reason || 'Verified package activated atomically');
+    this.recordAuditEvent(packageId, 'ACTIVATED', managedApproval?.reviewer || 'system', managedApproval?.reason || 'Verified package activated atomically');
 
     return {
       success: true,

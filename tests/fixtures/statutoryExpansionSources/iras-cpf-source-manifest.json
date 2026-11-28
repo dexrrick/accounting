@@ -1,0 +1,31 @@
+{
+  "accessedOn": "2026-10-26",
+  "retrievalMethod": "Complete IRAS HTML pages were captured from current official HTTPS URLs on 2026-10-26 using a Mozilla user agent; excerpt files preserve source markup for bounded relevant sections. Full-response and excerpt SHA-256 hashes are recorded separately. CPF wording is an excerpt transcribed from its official page read on the same date.",
+  "sources": [
+    {
+      "authority": "IRAS",
+      "title": "Conditions for Claiming Input Tax",
+      "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "file": "iras-gst-input-tax-native.html",
+      "sha256": "555b359e9042a5f0ba717a379857902833c5e813a1f97d2e5b456a76648749c6",
+      "fullPageFile": "iras-gst-input-tax-page.html",
+      "sourceHtmlSha256": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc"
+    },
+    {
+      "authority": "IRAS",
+      "title": "Estimated Chargeable Income (ECI) Filing",
+      "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing",
+      "file": "iras-eci-filing-native.html",
+      "sha256": "43845c83661d3c49a75f3b564d1c64c882a926056cbca25335ce3350b9cf6ca7",
+      "fullPageFile": "iras-eci-filing-page.html",
+      "sourceHtmlSha256": "81c4bd3d744a3a93cdad18406302447c4671a6f4dc08dcb75d81f06c233c60d0"
+    },
+    {
+      "authority": "CPF Board",
+      "title": "What constitutes wages for CPF contributions",
+      "url": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+      "file": "cpf-wage-classification.txt",
+      "sha256": "67e8dbbb06449244a56995440ec9ff62e475660cc00382665b8faa1a33e7f7bd"
+    }
+  ]
+}

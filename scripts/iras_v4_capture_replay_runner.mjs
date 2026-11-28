@@ -42,6 +42,7 @@ export const ACTIVATION_PROFILE = 'iras-v4-capture-activation';
 export const ACTIVATION_CONFIGURATION_STATUS = 'FROZEN_ACTIVATION_CONFIGURATION';
 export const BASELINE_COMMIT = '42637dfb552dae45ed3cb72f4f495d6528a14272';
 export const EXPECTED_BRANCH = 'codex/multi-authority-workstreams';
+export const FRESH_ACCEPTANCE_EXPECTED_BRANCH = 'codex/acra-official-source-discovery';
 export const EXECUTION_NODE_MAJOR = 22;
 export const CAPTURE_POLICY = Object.freeze({
   transportMode: 'frozenContemporaneousCapture',
@@ -106,19 +107,42 @@ const MAX_RETAINED_CASE_RESULT_BYTES = 256_000;
 const TRACKED_DIRS = Object.freeze(['src', 'tests/evaluation/singapore', 'tests/regression', 'scripts']);
 const ARTIFACT_NAMESPACE = 'artifacts/iras-v4-runner-integrity-2026-10-06/';
 const FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE = 'artifacts/iras-v4-acceptance-repaired-2026-10-06/';
+const CANONICAL_ACCEPTANCE_ARTIFACT_NAMESPACE = 'artifacts/canonical-acceptance-2026-10-16/';
+const FRESH_ALIGNMENT_ACCEPTANCE_ARTIFACT_NAMESPACE = 'artifacts/canonical-acceptance-2026-10-17/';
+const MIXED_REPAIR_ACCEPTANCE_ARTIFACT_NAMESPACE = 'artifacts/canonical-acceptance-mixed-repair-2026-10-18/';
+const TIMEOUT_RECEIPT_ACCEPTANCE_ARTIFACT_NAMESPACE = 'artifacts/canonical-timeout-receipt-acceptance-2026-10-18/';
+export const CANONICAL_ACCEPTANCE_SEMANTIC_NAMESPACE =
+  CANONICAL_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4';
+export const ALIGNMENT_ACCEPTANCE_SEMANTIC_NAMESPACE =
+  FRESH_ALIGNMENT_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4';
+export const MIXED_REPAIR_ACCEPTANCE_SEMANTIC_NAMESPACE =
+  MIXED_REPAIR_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4';
+export const TIMEOUT_RECEIPT_ACCEPTANCE_SEMANTIC_NAMESPACE =
+  TIMEOUT_RECEIPT_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4';
 const RETRY_ACCEPTANCE_SEMANTIC_NAMESPACE =
   FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4-retry-2026-10-08';
 const POST_REPAIR_ACCEPTANCE_SEMANTIC_NAMESPACE =
   FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4-post-repair-2026-10-08';
 const APPROVED_ARTIFACT_NAMESPACES = Object.freeze([
   ARTIFACT_NAMESPACE,
-  FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE
+  FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE,
+  CANONICAL_ACCEPTANCE_ARTIFACT_NAMESPACE,
+  FRESH_ALIGNMENT_ACCEPTANCE_ARTIFACT_NAMESPACE,
+  MIXED_REPAIR_ACCEPTANCE_ARTIFACT_NAMESPACE,
+  TIMEOUT_RECEIPT_ACCEPTANCE_ARTIFACT_NAMESPACE
 ]);
+const EXPECTED_BRANCH_BY_SEMANTIC_NAMESPACE = Object.freeze({
+  [ARTIFACT_NAMESPACE + 'semantic-run-v4']: EXPECTED_BRANCH,
+  [FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4']: EXPECTED_BRANCH,
+  [RETRY_ACCEPTANCE_SEMANTIC_NAMESPACE]: EXPECTED_BRANCH,
+  [POST_REPAIR_ACCEPTANCE_SEMANTIC_NAMESPACE]: EXPECTED_BRANCH,
+  [CANONICAL_ACCEPTANCE_SEMANTIC_NAMESPACE]: FRESH_ACCEPTANCE_EXPECTED_BRANCH,
+  [ALIGNMENT_ACCEPTANCE_SEMANTIC_NAMESPACE]: FRESH_ACCEPTANCE_EXPECTED_BRANCH,
+  [MIXED_REPAIR_ACCEPTANCE_SEMANTIC_NAMESPACE]: FRESH_ACCEPTANCE_EXPECTED_BRANCH,
+  [TIMEOUT_RECEIPT_ACCEPTANCE_SEMANTIC_NAMESPACE]: FRESH_ACCEPTANCE_EXPECTED_BRANCH
+});
 const APPROVED_SEMANTIC_NAMESPACES = Object.freeze([
-  ARTIFACT_NAMESPACE + 'semantic-run-v4',
-  FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4',
-  RETRY_ACCEPTANCE_SEMANTIC_NAMESPACE,
-  POST_REPAIR_ACCEPTANCE_SEMANTIC_NAMESPACE
+  ...Object.keys(EXPECTED_BRANCH_BY_SEMANTIC_NAMESPACE)
 ]);
 let ambientNetworkBlockInProgress = false;
 const explicitTransportNetworkContext = new AsyncLocalStorage();
@@ -272,6 +296,13 @@ export function assertReviewedSemanticNamespace(semanticNamespace) {
   return semanticNamespace;
 }
 
+export function expectedBranchForSemanticNamespace(semanticNamespace) {
+  assertReviewedSemanticNamespace(semanticNamespace);
+  assert.ok(Object.hasOwn(EXPECTED_BRANCH_BY_SEMANTIC_NAMESPACE, semanticNamespace),
+    'V4_SEMANTIC_NAMESPACE_BRANCH_CONFIGURATION_INVALID');
+  return EXPECTED_BRANCH_BY_SEMANTIC_NAMESPACE[semanticNamespace];
+}
+
 function assertNode22() {
   const major = Number(process.versions.node.split('.')[0]);
   assert.equal(major, EXECUTION_NODE_MAJOR, 'V4_EXECUTION_REQUIRES_NODE_22');
@@ -295,16 +326,24 @@ async function runGit(gitExecutable, root, args, options = {}) {
     const stdout = [];
     const stderr = [];
     let outputSize = 0;
+    let outputTooLarge = false;
+    let inputError;
+    let spawnError;
     child.stdout.on('data', chunk => {
+      if (outputTooLarge) return;
       outputSize += chunk.length;
       if (outputSize > MAX_GIT_OUTPUT_BYTES) {
+        outputTooLarge = true;
         child.kill();
-        reject(new Error('V4_GIT_OUTPUT_TOO_LARGE'));
       } else stdout.push(chunk);
     });
     child.stderr.on('data', chunk => stderr.push(chunk));
-    child.on('error', reject);
+    child.stdin.on('error', error => { inputError ??= error; });
+    child.on('error', error => { spawnError ??= error; });
     child.on('close', code => {
+      if (spawnError) return reject(spawnError);
+      if (outputTooLarge) return reject(new Error('V4_GIT_OUTPUT_TOO_LARGE'));
+      if (inputError) return reject(new Error('V4_GIT_INPUT_FAILED:' + args[0] + ':' + String(inputError.message || inputError).slice(0, 200)));
       const result = {
         code,
         stdout: Buffer.concat(stdout).toString(options.encoding || 'utf8'),
@@ -314,8 +353,12 @@ async function runGit(gitExecutable, root, args, options = {}) {
       else if (code !== 0) reject(new Error('V4_GIT_COMMAND_FAILED:' + args[0] + ':' + result.stderr.slice(0, 300)));
       else resolve(result);
     });
-    if (options.input !== undefined) child.stdin.end(options.input);
-    else child.stdin.end();
+    try {
+      if (options.input !== undefined) child.stdin.end(options.input);
+      else child.stdin.end();
+    } catch (error) {
+      inputError ??= error;
+    }
   });
 }
 
@@ -381,6 +424,56 @@ function parseGitPathBlob(raw, relative) {
   return blob;
 }
 
+function parseGitBatchCheckZ(rawOutput, requests) {
+  assert.equal(typeof rawOutput, 'string', 'V4_GIT_BATCH_CHECK_OUTPUT_REQUIRED');
+  assert.ok(Array.isArray(requests), 'V4_GIT_BATCH_CHECK_REQUESTS_REQUIRED');
+  const framedRecords = rawOutput.split('\0');
+  assert.equal(framedRecords.at(-1), '', 'V4_GIT_BATCH_CHECK_TRUNCATED');
+  framedRecords.pop();
+  assert.equal(framedRecords.length, requests.length, 'V4_GIT_BATCH_CHECK_RESPONSE_COUNT_MISMATCH');
+  assert.ok(framedRecords.every(record => record.length > 0), 'V4_GIT_BATCH_CHECK_EMPTY_RECORD');
+
+  return framedRecords.map((record, index) => {
+    const request = requests[index];
+    const { expression, role, relative, expectedBlob } = request;
+    const prefix = role === 'HEAD' ? 'V4_HEAD_GIT_BLOB' : 'V4_REVIEWED_GIT_BLOB';
+    if (record === expression + ' missing') throw new Error(prefix + '_MISSING:' + relative);
+
+    const fields = record.split(' ');
+    assert.equal(fields.length, 3, 'V4_GIT_BATCH_CHECK_RESPONSE_INVALID:' + relative);
+    const [objectId, objectType, objectSize] = fields;
+    assert.match(objectId, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i,
+      'V4_GIT_BATCH_CHECK_OBJECT_ID_INVALID:' + relative);
+    assert.equal(objectType, 'blob', 'V4_GIT_BATCH_CHECK_OBJECT_TYPE_MISMATCH:' + relative);
+    assert.match(objectSize, /^(?:0|[1-9]\d*)$/, 'V4_GIT_BATCH_CHECK_OBJECT_SIZE_INVALID:' + relative);
+    assert.equal(objectId.toLowerCase(), expectedBlob.toLowerCase(), prefix + '_OWNERSHIP_MISMATCH:' + relative);
+    return objectId.toLowerCase();
+  });
+}
+
+async function mapBounded(items, concurrency, mapper) {
+  const results = new Array(items.length);
+  const errors = new Array(items.length);
+  let nextIndex = 0;
+  let stopStarting = false;
+  const workerCount = Math.min(concurrency, items.length);
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (!stopStarting) {
+      const index = nextIndex++;
+      if (index >= items.length) return;
+      try {
+        results[index] = await mapper(items[index], index);
+      } catch (error) {
+        errors[index] = error instanceof Error ? error : new Error(String(error));
+        stopStarting = true;
+      }
+    }
+  }));
+  const firstError = errors.find(error => error !== undefined);
+  if (firstError) throw firstError;
+  return results;
+}
+
 /**
  * Generic low-level checkout verifier, useful for isolated offline repository tests.
  * Production freezes use collectReviewedRunnerBinding, which supplies the fixed
@@ -439,20 +532,30 @@ export async function collectCheckoutIntegritySnapshot({
     isExecutableInput(entry.path));
   assert.deepEqual(untrackedExecutableInputs, [], 'V4_UNTRACKED_EXECUTABLE_INPUT');
 
-  const fileRows = [];
-  for (const relative of canonicalPaths) {
+  const workingRows = await mapBounded(canonicalPaths, 4, async relative => {
     const absolute = await assertNoSymlinkPath(absoluteRoot, relative);
     const raw = await readFile(absolute);
     const workingGitBlob = parseGitPathBlob((await runGit(gitExecutable, absoluteRoot,
       ['hash-object', '--path=' + relative, '--stdin'], { input: raw })).stdout, relative);
-    const headGitBlob = parseGitPathBlob((await runGit(gitExecutable, absoluteRoot,
-      ['rev-parse', 'HEAD:' + relative])).stdout, relative);
-    const reviewedGitBlob = parseGitPathBlob((await runGit(gitExecutable, absoluteRoot,
-      ['rev-parse', reviewedCommit + ':' + relative])).stdout, relative);
-    assert.equal(workingGitBlob, headGitBlob, 'V4_HEAD_GIT_BLOB_OWNERSHIP_MISMATCH:' + relative);
-    assert.equal(workingGitBlob, reviewedGitBlob, 'V4_REVIEWED_GIT_BLOB_OWNERSHIP_MISMATCH:' + relative);
-    fileRows.push({ path: relative, sha256: sha256(raw), gitBlob: workingGitBlob, reviewedBlob: reviewedGitBlob });
-  }
+    return { path: relative, sha256: sha256(raw), gitBlob: workingGitBlob };
+  });
+  const batchRequests = workingRows.flatMap(row => [
+    { expression: head + ':' + row.path, role: 'HEAD', relative: row.path, expectedBlob: row.gitBlob },
+    { expression: reviewedCommit + ':' + row.path, role: 'REVIEWED', relative: row.path, expectedBlob: row.gitBlob }
+  ]);
+  const batchInputBytes = batchRequests.reduce((total, request) =>
+    total + Buffer.byteLength(request.expression, 'utf8') + 1, 0);
+  assert.ok(batchInputBytes <= MAX_GIT_OUTPUT_BYTES, 'V4_GIT_BATCH_CHECK_INPUT_TOO_LARGE');
+  const batchInput = Buffer.from(batchRequests.map(request => request.expression + '\0').join(''), 'utf8');
+  const batchOutput = await runGit(gitExecutable, absoluteRoot,
+    ['cat-file', '--batch-check', '--buffer', '-Z'], { input: batchInput });
+  const committedBlobs = parseGitBatchCheckZ(batchOutput.stdout, batchRequests);
+  const fileRows = workingRows.map((row, index) => ({
+    path: row.path,
+    sha256: row.sha256,
+    gitBlob: committedBlobs[index * 2],
+    reviewedBlob: committedBlobs[(index * 2) + 1]
+  }));
   return {
     head,
     branch,
@@ -530,7 +633,7 @@ function runnerConfigurationBody(snapshot, designProjectionValue, node, semantic
     status: RUNNER_CONFIGURATION_STATUS,
     baselineCommit: snapshot.baselineCommit,
     reviewedCommit: snapshot.reviewedCommit,
-    branch: EXPECTED_BRANCH,
+    branch: expectedBranchForSemanticNamespace(semanticNamespace),
     createdWithNode: node.nodeVersion,
     createdWithExecPath: node.execPath,
     executionNodeMajor: EXECUTION_NODE_MAJOR,
@@ -580,7 +683,7 @@ export async function collectReviewedRunnerBinding({
     reviewedCommit: reviewedCommit || (await runGit(gitExecutable, rootAbsolute, ['rev-parse', 'HEAD'])).stdout.trim(),
     paths: files,
     directories: TRACKED_DIRS,
-    expectedBranch: syntheticFixture ? undefined : EXPECTED_BRANCH
+    expectedBranch: syntheticFixture ? undefined : expectedBranchForSemanticNamespace(frozenSemanticNamespace)
   });
   const body = runnerConfigurationBody(snapshot, designProjection(design), node, frozenSemanticNamespace);
   return {
@@ -2483,15 +2586,36 @@ async function boundedSemanticSend(sendSemantic, args, { timeoutMs, maximumBytes
   let retainedBytes = 0;
   let semanticResponseObserved = false;
   let reader;
+  let providerResponseSnapshot;
+  let providerSnapshotOpen = true;
+  const retainProviderSnapshot = snapshot => {
+    if (!providerSnapshotOpen || snapshot?.kind !== 'GEMINI_HTTP_ENVELOPE' ||
+        !Number.isInteger(snapshot.status) || !Number.isSafeInteger(snapshot.bodyBytes) ||
+        snapshot.bodyBytes < 0 || snapshot.bodyBytes > maximumBytes ||
+        typeof snapshot.bodyBase64 !== 'string' || typeof snapshot.bodySha256 !== 'string') return;
+    providerResponseSnapshot = Object.freeze({ ...snapshot });
+  };
+  const attachProviderSnapshot = error => {
+    if (!error?.partialProviderResponse && providerResponseSnapshot) {
+      error.partialProviderResponse = Object.freeze({
+        ...providerResponseSnapshot,
+        failureCode: providerResponseSnapshot.failureCode || String(error?.message || error).slice(0, 120)
+      });
+    }
+  };
   const timeout = new Promise((_, reject) => {
     timeoutId = setTimeout(() => {
+      const error = new Error('V4_SEMANTIC_DEADLINE_EXCEEDED');
+      attachProviderSnapshot(error);
+      providerSnapshotOpen = false;
       controller.abort();
-      reject(new Error('V4_SEMANTIC_DEADLINE_EXCEEDED'));
+      reject(error);
     }, timeoutMs);
   });
   try {
     const value = await Promise.race([
-      Promise.resolve().then(() => explicitTransportCall(() => sendSemantic({ ...args, signal: controller.signal, timeoutMs }))),
+      Promise.resolve().then(() => explicitTransportCall(() => sendSemantic({ ...args,
+        signal: controller.signal, timeoutMs, onProviderResponseSnapshot: retainProviderSnapshot }))),
       timeout
     ]);
     semanticResponseObserved = true;
@@ -2531,6 +2655,8 @@ async function boundedSemanticSend(sendSemantic, args, { timeoutMs, maximumBytes
     return { text: value, bytes };
   } catch (error) {
     void reader?.cancel(error).catch(() => {});
+    attachProviderSnapshot(error);
+    providerSnapshotOpen = false;
     if (semanticResponseObserved) {
       const partial = Buffer.concat(chunks);
       error.partialResponse = {
@@ -2542,6 +2668,7 @@ async function boundedSemanticSend(sendSemantic, args, { timeoutMs, maximumBytes
     }
     throw error;
   } finally {
+    providerSnapshotOpen = false;
     clearTimeout(timeoutId);
     signal?.removeEventListener('abort', relayAbort);
   }
@@ -2664,7 +2791,8 @@ async function runFixedV4CaseLoop({
           } catch (error) {
             semanticState.failureStage = 'SEMANTIC_TRANSPORT';
             semanticState.failureCode = String(error?.message || error).slice(0, 160);
-            semanticState.providerResponsePartial = error?.partialProviderResponse || null;
+            semanticState.providerResponsePartial = error?.partialProviderResponse
+              ? Object.freeze({ ...error.partialProviderResponse }) : null;
             throw error;
           }
         });
@@ -2683,7 +2811,7 @@ async function runFixedV4CaseLoop({
           partialSemanticResponseBase64: error?.partialResponse?.bodyBase64,
           partialSemanticResponseSha256: error?.partialResponse?.bodySha256,
           partialSemanticResponseBytes: error?.partialResponse?.bodyBytes,
-          partialProviderResponse: error?.partialProviderResponse
+          partialProviderResponse: semanticState.providerResponsePartial
         });
       }).catch(() => {});
       semanticState.journalPromises.push(journalPromise);

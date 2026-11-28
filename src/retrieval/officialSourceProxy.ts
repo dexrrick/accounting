@@ -9,6 +9,7 @@ const MAX_DOCUMENT_BYTES = 1_500_000;
 const UPSTREAM_TIMEOUT_MS = 8_000;
 const SAFE_RESPONSE_HEADERS = ['content-type', 'etag', 'last-modified', 'location', 'cache-control'] as const;
 const MAS_COMPATIBILITY_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+const ACRA_IDENTIFYING_USER_AGENT = 'AccountingOfficialSourceRetriever/1.0';
 
 export interface OfficialSourceProxyLimits {
   requestBytes?: number;
@@ -156,6 +157,7 @@ export async function handleOfficialSourceProxyRequest(
   }
 
   const bodyResult = await readBoundedBody(request, requestLimit, requestTimeoutMs);
+  if (request.signal.aborted) return jsonResponse({ transportFailure: 'NETWORK_ERROR' }, 499);
   if (bodyResult.kind === 'TIMEOUT') return transportFailure('TIMEOUT');
   if (bodyResult.kind === 'TOO_LARGE') return new Response('Request too large', { status: 413 });
   if (bodyResult.kind === 'READ_ERROR') return new Response('Invalid request', { status: 400 });
@@ -183,9 +185,19 @@ export async function handleOfficialSourceProxyRequest(
 
   const controller = new AbortController();
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  let timedOut = false;
   let resolveTimeout!: (response: Response) => void;
   const timeoutPromise = new Promise<Response>(resolve => { resolveTimeout = resolve; });
+  let resolveCancellation!: (response: Response) => void;
+  const cancellationPromise = new Promise<Response>(resolve => { resolveCancellation = resolve; });
+  const onRequestAbort = () => {
+    controller.abort();
+    resolveCancellation(jsonResponse({ transportFailure: 'NETWORK_ERROR' }, 499));
+  };
+  if (request.signal.aborted) return jsonResponse({ transportFailure: 'NETWORK_ERROR' }, 499);
+  request.signal.addEventListener('abort', onRequestAbort, { once: true });
   timeoutId = setTimeout(() => {
+    timedOut = true;
     controller.abort();
     resolveTimeout(transportFailure('TIMEOUT'));
   }, timeoutMs);
@@ -197,7 +209,9 @@ export async function handleOfficialSourceProxyRequest(
           : 'text/html, text/plain, application/xhtml+xml, application/xml;q=0.9, */*;q=0.1'
       };
       const hostname = new URL(officialUrl).hostname.toLowerCase();
-      if (hostname === 'mas.gov.sg' || hostname === 'www.mas.gov.sg') {
+      if (hostname === 'acra.gov.sg' || hostname === 'www.acra.gov.sg') {
+        upstreamHeaders['user-agent'] = ACRA_IDENTIFYING_USER_AGENT;
+      } else if (hostname === 'mas.gov.sg' || hostname === 'www.mas.gov.sg') {
         upstreamHeaders['user-agent'] = MAS_COMPATIBILITY_USER_AGENT;
       }
       if (typeof requestPayload.ifNoneMatch === 'string') upstreamHeaders['if-none-match'] = requestPayload.ifNoneMatch;
@@ -208,6 +222,10 @@ export async function handleOfficialSourceProxyRequest(
         signal: controller.signal,
         headers: upstreamHeaders
       });
+      if (controller.signal.aborted) {
+        void upstream.body?.cancel().catch(() => undefined);
+        return transportFailure(timedOut ? 'TIMEOUT' : 'NETWORK_ERROR');
+      }
       if (upstream.status >= 300 && upstream.status < 400 && upstream.status !== 304) {
         const location = upstream.headers.get('location');
         if (!location) return transportFailure('REDIRECT_REJECTED');
@@ -250,12 +268,13 @@ export async function handleOfficialSourceProxyRequest(
           : { body: new TextDecoder().decode(responseBody) })
       });
     } catch {
-      return transportFailure(controller.signal.aborted ? 'TIMEOUT' : 'NETWORK_ERROR');
+      return transportFailure(timedOut ? 'TIMEOUT' : 'NETWORK_ERROR');
     }
   })();
   try {
-    return await Promise.race([upstreamWork, timeoutPromise]);
+    return await Promise.race([upstreamWork, timeoutPromise, cancellationPromise]);
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
+    request.signal.removeEventListener('abort', onRequestAbort);
   }
 }

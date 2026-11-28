@@ -1,6 +1,20 @@
 import type { QuestionClassificationResult } from '../classification/questionClassifier';
-import type { SemanticIssueReconciliation } from '../services/semanticQuestionUnderstanding';
-import { planAuthorityWorkstreams } from '../services/authorityWorkstreams';
+import {
+  isConservativeUnmappedAccountingRuleExplanationIntent,
+  type SemanticAuthority,
+  type SemanticIssueReconciliation,
+  type SemanticQuestionOperation,
+  type SemanticQuestionUnderstanding
+} from '../services/semanticQuestionUnderstanding';
+import { hasValidatedUnmappedGovernedAdvisoryIssue, planAuthorityWorkstreams } from '../services/authorityWorkstreams';
+import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
+import { hasSpecificIrasWhtTreatyScope } from '../retrieval/irasMasKnowledge20261027b';
+
+const NON_IRAS_STATUTORY_AUTHORITIES = new Set(['ACRA', 'CPF', 'MOM', 'MAS']);
+
+function isNonIrasStatutoryAuthority(authority: SemanticAuthority): authority is 'ACRA' | 'CPF' | 'MOM' | 'MAS' {
+  return NON_IRAS_STATUTORY_AUTHORITIES.has(authority);
+}
 
 function requestedScopeCount(issuePlan: SemanticIssueReconciliation): number {
   // Canonical domains are retained even for unmapped issues when their
@@ -29,6 +43,31 @@ function scopesAgreeWithClassification(issuePlan: SemanticIssueReconciliation, c
   );
 }
 
+function hasMappedGovernedStatutoryWorkstream(
+  issuePlan: SemanticIssueReconciliation,
+  classification: QuestionClassificationResult
+): boolean {
+  const classifiedDomains = new Set<string>(classification.domains);
+  return planAuthorityWorkstreams(issuePlan).some(workstream => {
+    const authority = workstream.authority;
+    if (!isNonIrasStatutoryAuthority(authority) ||
+        workstream.domain === 'UNKNOWN' ||
+        workstream.domain === 'ACCOUNTING' ||
+        !classifierIncludesAuthority(classification, workstream.authority) ||
+        ![workstream.domain, ...workstream.sourceSections].some(domain => classifiedDomains.has(domain))) {
+      return false;
+    }
+
+    return issuePlan.issues.some(issue => issue.status === 'MAPPED' &&
+      workstream.issueIds.includes(issue.id) &&
+      issue.governingAuthorities.includes(authority) &&
+      getCoverageTopicsByIds(issue.mappedTopicIds).some(topic =>
+        topic.authorities.includes(authority) &&
+        !topic.domainId.startsWith('ACCOUNTING_') &&
+        workstream.sourceSections.includes(topic.domainId)));
+  });
+}
+
 const FOCUSED_MAS_DOCUMENT_TOPICS = new Set([
   'mas-fund-management-licensing-admission-criteria',
   'mas-vcc-substantive-fund-management-activity'
@@ -40,15 +79,177 @@ function hasFocusedMasDocumentIssue(issuePlan: SemanticIssueReconciliation): boo
     issue.mappedTopicIds.some(topicId => FOCUSED_MAS_DOCUMENT_TOPICS.has(topicId)));
 }
 
+function hasMappedGeneralIrasRuleIssue(
+  issuePlan: SemanticIssueReconciliation,
+  classification: QuestionClassificationResult
+): boolean {
+  const irasIssues = issuePlan.issues.filter(issue => issue.status === 'MAPPED' &&
+    issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'IRAS');
+  if (irasIssues.length < 1) return false;
+  const classifiedDomains = new Set<string>(classification.domains);
+  const hasOtherRequestedIssue = issuePlan.issues.some(issue => !issue.governingAuthorities.includes('IRAS') &&
+    !(issue.operation === 'OTHER' && issue.mappedTopicIds.length === 0 && (issue.contextualTopicIds?.length || 0) > 0));
+  if (hasOtherRequestedIssue || !classification.authorities.includes('IRAS')) return false;
+  return irasIssues.every(issue => {
+    if (issue.operation !== 'EXPLAIN_RULE' || issue.population !== 'COMPANY' ||
+        issue.domain !== 'IRAS_GST' && issue.domain !== 'IRAS_INCOME_TAX' ||
+        !issue.mappedTopicIds.length) return false;
+    const topics = getCoverageTopicsByIds(issue.mappedTopicIds);
+    return topics.length === issue.mappedTopicIds.length && topics.every(topic =>
+      topic.authorities.includes('IRAS') && ['IRAS_GST', 'IRAS_CORPORATE_TAX'].includes(topic.domainId) &&
+      [topic.domainId, issue.domain, ...topic.legacyDomains].some(domain => classifiedDomains.has(domain))
+    );
+  });
+}
+
+function hasUnresolvedSpecificIrasWhtTreatyIssue(issuePlan: SemanticIssueReconciliation): boolean {
+  if (issuePlan.coverageEstablished || !issuePlan.hasUnmappedResidual || issuePlan.issues.length !== 1) return false;
+  const issue = issuePlan.issues[0];
+  return issue.status === 'UNRESOLVED' && issue.unresolvedReason === 'NO_COVERAGE_TOPIC' &&
+    issue.operation === 'EXPLAIN_RULE' && issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'COMPANY' &&
+    issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'IRAS' &&
+    issue.mappedTopicIds.includes('iras-wht-treaty-relief') &&
+    issue.mappedTopicIds.includes('iras-withholding-tax') &&
+    hasSpecificIrasWhtTreatyScope(issue.subject);
+}
+
+function hasBoundedCpfCalculationAndRefundIssues(
+  issuePlan: SemanticIssueReconciliation,
+  classification: QuestionClassificationResult
+): boolean {
+  if (!classification.calculationRequired || classification.journalEntryRequired ||
+      classification.accountingAnalysisRequired || classification.missingFacts.length === 0 ||
+      !classification.authorities.includes('CPF')) return false;
+  const calculation = issuePlan.issues.find(issue => issue.status === 'MAPPED' &&
+    issue.domain === 'CPF_PAYROLL' && issue.operation === 'CALCULATE' &&
+    issue.population === 'EMPLOYER' && issue.governingAuthorities.length === 1 &&
+    issue.governingAuthorities[0] === 'CPF' &&
+    issue.mappedTopicIds.some(topicId => ['cpf_contribution_rates', 'cpf-contribution-computation'].includes(topicId)));
+  const refund = issuePlan.issues.find(issue => issue.status === 'MAPPED' &&
+    issue.domain === 'CPF_PAYROLL' && issue.operation === 'EXPLAIN_RULE' &&
+    issue.population === 'EMPLOYER' && issue.governingAuthorities.length === 1 &&
+    issue.governingAuthorities[0] === 'CPF' &&
+    issue.mappedTopicIds.includes('cpf-adjustments-refunds'));
+  return Boolean(calculation && refund && calculation.id !== refund.id);
+}
+
+function hasBoundedMomFinalSalaryAndPayslipIssues(
+  issuePlan: SemanticIssueReconciliation,
+  classification: QuestionClassificationResult
+): boolean {
+  if (!classification.calculationRequired || classification.journalEntryRequired ||
+      classification.accountingAnalysisRequired || classification.taxAnalysisRequired ||
+      !classification.authorities.includes('MOM') ||
+      !classification.domains.includes('MOM_EMPLOYMENT')) return false;
+  return hasBoundedMomFinalSalaryAndPayslipPlan(issuePlan.issues);
+}
+
+function hasBoundedMomFinalSalaryAndPayslipPlan(issues: SemanticIssueReconciliation['issues']): boolean {
+  if (issues.length < 2 || issues.length > 3) return false;
+  const salary = issues.find(issue => issue.status === 'MAPPED' &&
+    issue.subject === 'Final salary amount calculation by termination reason' &&
+    issue.domain === 'MOM_EMPLOYMENT' && issue.operation === 'CALCULATE' &&
+    issue.population === 'EMPLOYER' && issue.governingAuthorities.length === 1 &&
+    issue.governingAuthorities[0] === 'MOM' && issue.mappedTopicIds.length === 1 &&
+    issue.mappedTopicIds[0] === 'mom-salary-payment');
+  const payslip = issues.find(issue => issue.status === 'MAPPED' &&
+    issue.domain === 'MOM_EMPLOYMENT' && issue.operation === 'EXPLAIN_RULE' &&
+    issue.population === 'EMPLOYER' && issue.governingAuthorities.length === 1 &&
+    issue.governingAuthorities[0] === 'MOM' && issue.mappedTopicIds.length === 1 &&
+    issue.mappedTopicIds[0] === 'mom-itemised-payslips');
+  if (!salary || !payslip || salary.id === payslip.id) return false;
+  if (issues.length === 2) return true;
+  const deduction = issues.find(issue => issue.status === 'MAPPED' &&
+    issue.subject === 'MOM employer salary deduction authorization, purpose and limits' &&
+    issue.domain === 'MOM_EMPLOYMENT' && issue.operation === 'EXPLAIN_RULE' &&
+    issue.population === 'EMPLOYER' && issue.governingAuthorities.length === 1 &&
+    issue.governingAuthorities[0] === 'MOM' && issue.mappedTopicIds.length === 1 &&
+    issue.mappedTopicIds[0] === 'mom-salary-payment');
+  return Boolean(deduction && deduction.id !== salary.id && deduction.id !== payslip.id);
+}
+
+export function hasMomRulesAndUnresolvedAccountingJournal(
+  issuePlan: SemanticIssueReconciliation,
+  classification: QuestionClassificationResult
+): boolean {
+  if (!classification.authorities.includes('MOM') ||
+      !classification.domains.includes('MOM_EMPLOYMENT')) return false;
+  const accounting = issuePlan.issues.filter(issue => issue.domain === 'ACCOUNTING');
+  if (accounting.length !== 1) return false;
+  const journal = accounting[0];
+  if (journal.operation !== 'PREPARE_JOURNAL' || journal.status !== 'UNRESOLVED' ||
+      journal.unresolvedReason !== 'NO_COVERAGE_TOPIC' || journal.mappedTopicIds.length !== 0 ||
+      journal.governingAuthorities.length !== 1 ||
+      journal.governingAuthorities[0] !== 'ACCOUNTING_STANDARDS') return false;
+  const momIssues = issuePlan.issues.filter(issue => issue.id !== journal.id && issue.status === 'MAPPED' &&
+    issue.domain === 'MOM_EMPLOYMENT' && issue.population === 'EMPLOYER' &&
+    issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'MOM');
+  const validSalaryIssues = momIssues.filter(issue =>
+    issue.mappedTopicIds.includes('mom-salary-payment') &&
+    ['CALCULATE', 'EXPLAIN_RULE', 'FILING_REQUIREMENT', 'OTHER'].includes(issue.operation));
+  const validPayslipIssues = momIssues.filter(issue =>
+    issue.mappedTopicIds.includes('mom-itemised-payslips') &&
+    ['EXPLAIN_RULE', 'OTHER'].includes(issue.operation));
+  return validSalaryIssues.some(salary =>
+    validPayslipIssues.some(payslip => salary.id !== payslip.id));
+}
+
 /** Guards the additive runtime so classifier fallback metadata alone cannot reroute ordinary journals. */
 export function shouldUseAuthorityEvidenceRuntime(input: {
   issuePlan: SemanticIssueReconciliation;
   classification: QuestionClassificationResult;
   explicitIrasEvidenceRequest: boolean;
   hasImages: boolean;
+  questionUnderstanding?: SemanticQuestionUnderstanding;
+  rawQuery?: string;
 }): boolean {
   const { issuePlan, classification } = input;
   if (input.hasImages) return false;
+
+  // The narrowly bounded payroll calculation path presents its unresolved
+  // inputs beside an independently requested, mapped employer refund rule.
+  // Missing calculation facts are mandatory, and ordinary journal/accounting
+  // requests remain on their established transaction path.
+  if (hasBoundedCpfCalculationAndRefundIssues(issuePlan, classification)) return true;
+
+  // A requested final-salary amount and a separate payslip rule need the
+  // same per-issue evidence path when transaction classification would
+  // otherwise bypass the independently answerable payslip obligation.
+  if (hasBoundedMomFinalSalaryAndPayslipIssues(issuePlan, classification)) return true;
+
+  // Resolve the independently supported MOM rules while retaining an explicit
+  // accounting journal gap. This route cannot turn the whole request into a
+  // standalone statutory answer or claim that a journal has been prepared.
+  if (hasMomRulesAndUnresolvedAccountingJournal(issuePlan, classification)) return true;
+
+  // A validated same-request semantic child with a known governor and canonical
+  // domain may use official discovery while its issue remains unresolved.
+  if (input.questionUnderstanding && input.rawQuery &&
+      classification.intent === 'STATUTORY_ADVISORY' && !classification.accountingAnalysisRequired &&
+      !classification.journalEntryRequired && !classification.calculationRequired &&
+      hasValidatedUnmappedGovernedAdvisoryIssue(issuePlan, input.questionUnderstanding, input.rawQuery)) return true;
+
+  if (input.explicitIrasEvidenceRequest &&
+      classification.intent === 'STATUTORY_ADVISORY' && classification.regulatoryAnalysisRequired &&
+      classification.authorities.includes('IRAS') && !classification.accountingAnalysisRequired &&
+      !classification.journalEntryRequired && !classification.calculationRequired &&
+      (hasMappedGeneralIrasRuleIssue(issuePlan, classification) ||
+        hasUnresolvedSpecificIrasWhtTreatyIssue(issuePlan))) {
+    return true;
+  }
+
+  // Standalone non-IRAS statutory questions can use the same evidence-backed
+  // response path when both classification and a governed mapped topic agree.
+  // This does not treat classifier metadata or contextual authorities as
+  // sufficient evidence of a requested authority scope.
+  if (!input.explicitIrasEvidenceRequest &&
+      classification.intent === 'STATUTORY_ADVISORY' &&
+      classification.regulatoryAnalysisRequired &&
+      !classification.accountingAnalysisRequired &&
+      !classification.journalEntryRequired &&
+      hasMappedGovernedStatutoryWorkstream(issuePlan, classification)) {
+    return true;
+  }
 
   // These two manually reviewed document topics use the usual per-issue
   // evidence pipeline even when a question contains only one MAS workstream.
@@ -67,6 +268,20 @@ export function shouldUseAuthorityEvidenceRuntime(input: {
   // generic path when any additional material issue is unresolved, even if
   // its authority/topic cannot be grouped into a second canonical stream.
   if (issuePlan.source === 'SEMANTIC_ISSUES') {
+    const requestedIssues = issuePlan.issues.filter(issue => issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC');
+    // A taxonomy residual is not an independent user request. Let the
+    // deterministic journal path handle its own missing transaction facts.
+    const onlyJournalRequestWithTaxonomyResidual = issuePlan.issues.length > requestedIssues.length &&
+      requestedIssues.length === 1 &&
+      requestedIssues[0].domain === 'ACCOUNTING' &&
+      requestedIssues[0].operation === 'PREPARE_JOURNAL' &&
+      classification.intent === 'TRANSACTION' &&
+      classification.accountingAnalysisRequired &&
+      classification.journalEntryRequired &&
+      !classification.taxAnalysisRequired &&
+      !classification.regulatoryAnalysisRequired &&
+      !input.explicitIrasEvidenceRequest;
+    if (onlyJournalRequestWithTaxonomyResidual) return false;
     return issuePlan.issues.length > 1 && (
       requestedScopeCount(issuePlan) > 1 || issuePlan.hasUnmappedResidual ||
       issuePlan.issues.some(issue => issue.status !== 'MAPPED' || issue.domain === 'UNKNOWN')
@@ -101,4 +316,48 @@ export function shouldUseAuthorityEvidenceRuntime(input: {
     !classification.authorities.includes('IRAS') &&
     classification.authorities.length > 1 &&
     classification.domains.length > 1;
+}
+
+/** Routes only one validated, unmapped accounting-standard rule explanation to the explicit gap renderer. */
+export function shouldUseUnmappedAccountingRuleExplanationRuntime(input: {
+  issuePlan: SemanticIssueReconciliation;
+  classification: QuestionClassificationResult;
+  rawQuery?: string;
+  semanticRequestedOperation?: SemanticQuestionOperation;
+  explicitIrasEvidenceRequest: boolean;
+  explicitJournalRequest: boolean;
+  outputJournalRequest: boolean;
+  hasImages: boolean;
+  isShortSemanticFollowUp: boolean;
+}): boolean {
+  const { issuePlan, classification } = input;
+  const deterministicFallbackRuleRequest = issuePlan.source === 'TAXONOMY_FALLBACK' &&
+    Boolean(input.rawQuery && isConservativeUnmappedAccountingRuleExplanationIntent(input.rawQuery));
+  if ((input.semanticRequestedOperation !== 'EXPLAIN_RULE' && !deterministicFallbackRuleRequest) ||
+      input.explicitIrasEvidenceRequest || input.explicitJournalRequest || input.outputJournalRequest ||
+      input.hasImages || input.isShortSemanticFollowUp ||
+      (issuePlan.source !== 'SEMANTIC_ISSUES' && !deterministicFallbackRuleRequest) ||
+      issuePlan.coverageEstablished || !issuePlan.hasUnmappedResidual ||
+      issuePlan.issues.length !== 1) {
+    return false;
+  }
+
+  const issue = issuePlan.issues[0];
+  if (!issue || issue.domain !== 'ACCOUNTING' || issue.operation !== 'EXPLAIN_RULE' ||
+      issue.status !== 'UNRESOLVED' || issue.unresolvedReason !== 'NO_COVERAGE_TOPIC' || issue.mappedTopicIds.length !== 0 ||
+      issue.governingAuthorities.length !== 1 ||
+      !['ACCOUNTING_STANDARDS', 'IFRS_FOUNDATION'].includes(issue.governingAuthorities[0])) {
+    return false;
+  }
+
+  const classifierConfirmsAccountingStandards = classification.primaryDomain === 'ACCOUNTING' &&
+    classification.domains.length === 1 && classification.domains.includes('ACCOUNTING_SFRS') &&
+    classification.authorities.length === 1 &&
+    ['ACRA', 'ASC', 'ACCOUNTING_STANDARDS', 'IFRS_FOUNDATION'].includes(classification.authorities[0]);
+  return classifierConfirmsAccountingStandards &&
+    classification.intent === 'STATUTORY_ADVISORY' &&
+    classification.accountingAnalysisRequired &&
+    !classification.taxAnalysisRequired &&
+    !classification.calculationRequired &&
+    !classification.journalEntryRequired;
 }

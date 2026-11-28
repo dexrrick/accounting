@@ -1,0 +1,393 @@
+{
+  "model": "gemini-3.5-flash-lite",
+  "baselineReplay": true,
+  "startedAt": "2026-11-04T12:06:51.867Z",
+  "scope": "Offline replay of captured live generations against a6fa330; no network calls.",
+  "cases": [
+    {
+      "authority": "IRAS",
+      "record": "GST_REG26_BLOCKED_INPUT_TAX",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "query": "Our company purchased a private motor car within the blocked input tax category and no exception applies. Does business use alone allow recovery of the GST?",
+      "mode": "live-answer",
+      "calls": [],
+      "messageText": "# Answer\n\nRegulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance, and business purpose alone does not make a blocked claim recoverable. [IRAS: GST (General) Regulations](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)\n\nBecause your company purchased a private motor car within the blocked input tax category and no exception applies, business use alone does not allow recovery of the GST. [IRAS: GST (General) Regulations](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_PACKET_CHECKS",
+        "providerCalls": 1,
+        "providerAttempts": 1,
+        "providerElapsedMs": 0,
+        "admittedClaimIds": [
+          "c1",
+          "c2"
+        ],
+        "withheldClaimIds": [],
+        "claims": [
+          {
+            "claimId": "c1",
+            "kind": "RULE",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ]
+          },
+          {
+            "claimId": "c2",
+            "kind": "APPLICATION",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ]
+          }
+        ]
+      },
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 11
+    },
+    {
+      "authority": "IRAS",
+      "record": "GST_REG26_BLOCKED_INPUT_TAX",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "query": "Our company purchased a private motor car within the blocked input tax category and no exception applies. Does business use alone allow recovery of the GST?",
+      "mode": "injected-contradiction-live-verifier",
+      "calls": [],
+      "messageText": "# Answer\n\nInput GST on a blocked private motor car purchase is always recoverable. [IRAS: GST (General) Regulations](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)\n\n### Conditions and unresolved points\n\n- Whether Our company purchased a private motor car within the blocked input tax category and no exception applies. Does business use alone allow recovery of the GST? applies to your circumstances remains unresolved from the available evidence.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_PACKET_CHECKS",
+        "providerCalls": 1,
+        "providerAttempts": 1,
+        "providerElapsedMs": 0,
+        "admittedClaimIds": [
+          "contradiction"
+        ],
+        "withheldClaimIds": [],
+        "claims": [
+          {
+            "claimId": "contradiction",
+            "kind": "RULE",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ]
+          }
+        ]
+      },
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 0
+    },
+    {
+      "authority": "CPF",
+      "record": "CPFA_SEC7_FIRST_SCHEDULE",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P12-#pr7-",
+      "query": "We employ a covered employee in Singapore. Who is responsible for paying the monthly CPF contribution to the Fund: the employer or the employee?",
+      "mode": "live-answer",
+      "calls": [],
+      "messageText": "# Answer\n\nEvery employer of an employee is responsible for paying monthly to the Fund in respect of each employee contributions at the respective rates prescribed in the First Schedule.\n\nBecause you employ a covered employee in Singapore, the employer is responsible for paying the monthly CPF contribution to the Fund.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_PACKET_CHECKS",
+        "providerCalls": 1,
+        "providerAttempts": 1,
+        "providerElapsedMs": 0,
+        "admittedClaimIds": [
+          "c1",
+          "c2"
+        ],
+        "withheldClaimIds": [],
+        "claims": [
+          {
+            "claimId": "c1",
+            "kind": "RULE",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ]
+          },
+          {
+            "claimId": "c2",
+            "kind": "APPLICATION",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ]
+          }
+        ]
+      },
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 1
+    },
+    {
+      "authority": "CPF",
+      "record": "CPFA_SEC7_FIRST_SCHEDULE",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P12-#pr7-",
+      "query": "We employ a covered employee in Singapore. Who is responsible for paying the monthly CPF contribution to the Fund: the employer or the employee?",
+      "mode": "injected-contradiction-live-verifier",
+      "calls": [],
+      "messageText": "# Answer\n\nThe employer never has to pay contributions to the Fund; only the employee is responsible.\n\n### Conditions and unresolved points\n\n- Whether We employ a covered employee in Singapore. Who is responsible for paying the monthly CPF contribution to the Fund: the employer or the employee? applies to your circumstances remains unresolved from the available evidence.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_PACKET_CHECKS",
+        "providerCalls": 1,
+        "providerAttempts": 1,
+        "providerElapsedMs": 0,
+        "admittedClaimIds": [
+          "contradiction"
+        ],
+        "withheldClaimIds": [],
+        "claims": [
+          {
+            "claimId": "contradiction",
+            "kind": "RULE",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ]
+          }
+        ]
+      },
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 1
+    },
+    {
+      "authority": "MOM",
+      "record": "MOM_SEC21_SALARY_TIMELINES",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P13-#pr21-",
+      "query": "Our covered employee worked overtime in the salary period. Should payroll track ordinary salary and overtime separately when arranging payment?",
+      "mode": "live-answer",
+      "calls": [],
+      "status": "ERROR_OR_WITHHELD",
+      "error": "Evidence-grounded synthesis produced no supportable claims.",
+      "elapsedMs": 4
+    },
+    {
+      "authority": "MOM",
+      "record": "MOM_SEC21_SALARY_TIMELINES",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P13-#pr21-",
+      "query": "Our covered employee worked overtime in the salary period. Should payroll track ordinary salary and overtime separately when arranging payment?",
+      "mode": "injected-contradiction-live-verifier",
+      "calls": [],
+      "messageText": "# Answer\n\nEmployers can defer ordinary salary indefinitely without a statutory payment deadline.\n\n### Conditions and unresolved points\n\n- Whether Our covered employee worked overtime in the salary period. Should payroll track ordinary salary and overtime separately when arranging payment? applies to your circumstances remains unresolved from the available evidence.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_PACKET_CHECKS",
+        "providerCalls": 1,
+        "providerAttempts": 1,
+        "providerElapsedMs": 0,
+        "admittedClaimIds": [
+          "contradiction"
+        ],
+        "withheldClaimIds": [],
+        "claims": [
+          {
+            "claimId": "contradiction",
+            "kind": "RULE",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ]
+          }
+        ]
+      },
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 0
+    },
+    {
+      "authority": "ACRA",
+      "record": "ACRA_SEC171_COMPANY_SECRETARY",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P15-#pr171-",
+      "query": "She is the sole director of our Singapore company and wants to act as its secretary too. Can we appoint her as secretary?",
+      "mode": "live-answer",
+      "calls": [],
+      "status": "ERROR_OR_WITHHELD",
+      "error": "Evidence-grounded synthesis produced no supportable claims.",
+      "elapsedMs": 1
+    },
+    {
+      "authority": "ACRA",
+      "record": "ACRA_SEC171_COMPANY_SECRETARY",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P15-#pr171-",
+      "query": "She is the sole director of our Singapore company and wants to act as its secretary too. Can we appoint her as secretary?",
+      "mode": "injected-contradiction-live-verifier",
+      "calls": [],
+      "messageText": "# Answer\n\nThe sole director is always allowed to act as the company secretary as well.\n\n### Conditions and unresolved points\n\n- Whether She is the sole director of our Singapore company and wants to act as its secretary too. Can we appoint her as secretary? applies to your circumstances remains unresolved from the available evidence.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_PACKET_CHECKS",
+        "providerCalls": 1,
+        "providerAttempts": 1,
+        "providerElapsedMs": 0,
+        "admittedClaimIds": [
+          "contradiction"
+        ],
+        "withheldClaimIds": [],
+        "claims": [
+          {
+            "claimId": "contradiction",
+            "kind": "RULE",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ]
+          }
+        ]
+      },
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 0
+    },
+    {
+      "authority": "MAS",
+      "record": "MAS_FMC_CMS_LICENSING",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/SFA2001",
+      "query": "Our Singapore company plans to start regulated fund management. What should it establish about licensing or exemptions before commencing?",
+      "mode": "live-answer",
+      "calls": [],
+      "messageText": "# Answer\n\nA person carrying on a regulated activity in Singapore must assess whether a Capital Markets Services licence, registration, or a statutory or MAS exemption applies before conducting fund management.\n\nBefore commencing regulated fund management, your Singapore company must establish whether a Capital Markets Services licence, registration, or a statutory or MAS exemption applies to its planned activities.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_PACKET_CHECKS",
+        "providerCalls": 1,
+        "providerAttempts": 1,
+        "providerElapsedMs": 0,
+        "admittedClaimIds": [
+          "c1",
+          "c2"
+        ],
+        "withheldClaimIds": [],
+        "claims": [
+          {
+            "claimId": "c1",
+            "kind": "RULE",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ]
+          },
+          {
+            "claimId": "c2",
+            "kind": "APPLICATION",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ]
+          }
+        ]
+      },
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 1
+    },
+    {
+      "authority": "MAS",
+      "record": "MAS_FMC_CMS_LICENSING",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/SFA2001",
+      "query": "Our Singapore company plans to start regulated fund management. What should it establish about licensing or exemptions before commencing?",
+      "mode": "injected-contradiction-live-verifier",
+      "calls": [],
+      "messageText": "# Answer\n\nAny Singapore company may start regulated fund management without checking licensing, registration or exemption requirements.\n\n### Conditions and unresolved points\n\n- Whether Our Singapore company plans to start regulated fund management. What should it establish about licensing or exemptions before commencing? applies to your circumstances remains unresolved from the available evidence.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_PACKET_CHECKS",
+        "providerCalls": 1,
+        "providerAttempts": 1,
+        "providerElapsedMs": 0,
+        "admittedClaimIds": [
+          "contradiction"
+        ],
+        "withheldClaimIds": [],
+        "claims": [
+          {
+            "claimId": "contradiction",
+            "kind": "RULE",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ]
+          }
+        ]
+      },
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 0
+    },
+    {
+      "authority": "IRAS",
+      "record": "GST_REG26_BLOCKED_INPUT_TAX",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "query": "A client incurred an expense. We have not established its nature, purpose, documentation or whether input tax restrictions apply. Is the client eligible for GST recovery today?",
+      "mode": "live-answer",
+      "calls": [],
+      "messageText": "# Answer\n\nRegulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance, and business purpose alone does not make a blocked claim recoverable. [IRAS: GST (General) Regulations](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)\n\nApplicability for the client expense remains unresolved under IRAS because the stated facts do not yet establish the outcome.\n\n### Conditions and unresolved points\n\nSome requested conclusions could not be supported by the admitted passages and stated facts, so they have been withheld.\n\n- Applicability remains unresolved for A client incurred an expense. We have not established its nature, purpose, documentation or whether input tax restrictions apply. Is the client eligible for GST recovery today?.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_PACKET_CHECKS",
+        "providerCalls": 1,
+        "providerAttempts": 1,
+        "providerElapsedMs": 0,
+        "admittedClaimIds": [
+          "c1",
+          "c3"
+        ],
+        "withheldClaimIds": [
+          "c2"
+        ],
+        "claims": [
+          {
+            "claimId": "c1",
+            "kind": "RULE",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ]
+          },
+          {
+            "claimId": "c3",
+            "kind": "LIMITATION",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": []
+          },
+          {
+            "claimId": "c2",
+            "kind": "APPLICATION",
+            "outcome": "WITHHELD",
+            "admittedPassageIds": []
+          }
+        ]
+      },
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 3
+    },
+    {
+      "authority": "IRAS",
+      "record": "GST_REG26_BLOCKED_INPUT_TAX",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "query": "A client incurred an expense. We have not established its nature, purpose, documentation or whether input tax restrictions apply. Is the client eligible for GST recovery today?",
+      "mode": "injected-contradiction-live-verifier",
+      "calls": [],
+      "messageText": "# Answer\n\nThe client may recover GST if conditions are met, and therefore is eligible today. [IRAS: GST (General) Regulations](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)\n\n### Conditions and unresolved points\n\n- Applicability remains unresolved for A client incurred an expense. We have not established its nature, purpose, documentation or whether input tax restrictions apply. Is the client eligible for GST recovery today?.\n\n- Whether A client incurred an expense. We have not established its nature, purpose, documentation or whether input tax restrictions apply. Is the client eligible for GST recovery today? applies to your circumstances remains unresolved from the available evidence.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_PACKET_CHECKS",
+        "providerCalls": 1,
+        "providerAttempts": 1,
+        "providerElapsedMs": 0,
+        "admittedClaimIds": [
+          "contradiction"
+        ],
+        "withheldClaimIds": [],
+        "claims": [
+          {
+            "claimId": "contradiction",
+            "kind": "RULE",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ]
+          }
+        ]
+      },
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 0
+    }
+  ],
+  "finishedAt": "2026-11-04T12:06:51.949Z"
+}

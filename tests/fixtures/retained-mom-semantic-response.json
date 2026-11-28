@@ -1,0 +1,31 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\n  \"schemaVersion\": 2,\n  \"jurisdiction\": [\n    \"Singapore\"\n  ],\n  \"authorityCandidates\": [\n    \"MOM\",\n    \"SSO\"\n  ],\n  \"contextualAuthorities\": [],\n  \"domain\": \"MOM_EMPLOYMENT\",\n  \"population\": \"EMPLOYEE\",\n  \"primarySubject\": \"Employment Act Part IV coverage for working hours and overtime\",\n  \"concepts\": [\n    {\n      \"concept\": \"Employment Act\",\n      \"role\": \"PRIMARY\"\n    },\n    {\n      \"concept\": \"Part IV coverage\",\n      \"role\": \"PRIMARY\"\n    },\n    {\n      \"concept\": \"working hours\",\n      \"role\": \"RELATED\"\n    },\n    {\n      \"concept\": \"overtime\",\n      \"role\": \"RELATED\"\n    }\n  ],\n  \"requestedOperation\": \"EXPLAIN_RULE\",\n  \"factsExplicitlyProvided\": [],\n  \"confidence\": 0.95,\n  \"issues\": [\n    {\n      \"subject\": \"Employment Act Part IV employee coverage criteria\",\n      \"population\": \"EMPLOYEE\",\n      \"domain\": \"MOM_EMPLOYMENT\",\n      \"governingAuthorities\": [\n        \"MOM\"\n      ],\n      \"contextualAuthorities\": [],\n      \"operation\": \"EXPLAIN_RULE\",\n      \"mappedTopicIds\": [],\n      \"evidenceRequirement\": \"AUTHORITATIVE_SOURCE\",\n      \"confidence\": 0.95\n    }\n  ]\n}",
+            "thoughtSignature": "EmAKXgFpFH0TWS2gWHMtsZ7JdaTDKXEIxnq/v2c4/v/7tY54ElMZ+P3F3Ex5YczP9i8XFdgxqAsbKsWzqXyiSnBrySStHw+1oM1qPrREQ2yZd4VmsAKvyVBrK2q9C8/zvis="
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 1904,
+    "candidatesTokenCount": 347,
+    "totalTokenCount": 2251,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 1904
+      }
+    ],
+    "serviceTier": "standard"
+  },
+  "modelVersion": "gemini-3.5-flash-lite",
+  "responseId": "xXLbauqnL9HW_uMP5tfP0QI"
+}

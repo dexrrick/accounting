@@ -81,6 +81,8 @@ export interface AuthoritativeSourceRecord {
   versionId?: string;
   /** Extracted source records remain ineligible unless the shared admission gate approves their active version. */
   documentAdmissionRequired?: true;
+  /** Derived only from the exact source-stated ACRA annual-return cohort quotation. */
+  acraFyeCohortApplicability?: AcraFyeCohortApplicability;
   legislationCode?: string;
   amendmentInstrument?: string;
   fxObservation?: any;
@@ -116,6 +118,13 @@ export interface VerifiedDocumentBinding {
   documentHash: string;
   provisionHash: string;
   sourceLocator: SourceLocator;
+}
+
+/** A source-stated ACRA financial-year-end cohort, separate from legal validity dates. */
+export interface AcraFyeCohortApplicability {
+  kind: 'ACRA_FYE_ON_OR_AFTER';
+  fyeStartDate: string;
+  sourceQuote: string;
 }
 
 /**

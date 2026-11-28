@@ -1,0 +1,309 @@
+{
+  "status": "PASS",
+  "capturedFixturesVerified": 33,
+  "sources": [
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "acra-officer-particulars.txt",
+      "manifest": "acra-mom-source-manifest.json",
+      "officialUrl": "https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026/",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "eab7036a1ddecf2be02d17f4e59757cf452d2d6dc7d2208e7f437b24111ba49e",
+      "adaptation": "Text excerpts receive a declared HTML identity envelope in offline replay; native PDF bytes remain native."
+    },
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "acra-annual-return-steps.txt",
+      "manifest": "acra-mom-source-manifest.json",
+      "officialUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/steps-to-file/",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "ceab11e8fa7f262a6b8ba57a4009c629a20eb3e80d2c34b7414342c577a387a0",
+      "adaptation": "Text excerpts receive a declared HTML identity envelope in offline replay; native PDF bytes remain native."
+    },
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "acra-xbrl-requirements.txt",
+      "manifest": "acra-mom-source-manifest.json",
+      "officialUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "adffff20762e5cddafc22fd0696185f13560ae23cd6a0ea81f83862e145e11c4",
+      "adaptation": "Text excerpts receive a declared HTML identity envelope in offline replay; native PDF bytes remain native."
+    },
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "mom-annual-leave.txt",
+      "manifest": "acra-mom-source-manifest.json",
+      "officialUrl": "https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "3860c323d002a58d0a1eded019ea05be74e3e066635c2768fc483e19be0887dd",
+      "adaptation": "Text excerpts receive a declared HTML identity envelope in offline replay; native PDF bytes remain native."
+    },
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "mom-sick-leave.txt",
+      "manifest": "acra-mom-source-manifest.json",
+      "officialUrl": "https://www.mom.gov.sg/employment-practices/leave/sick-leave/eligibility-and-entitlement",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "acc7a34bd7e233b0fc2055f53b9c1e0225c9c9f4f45399b19c250f37dd3cfefc",
+      "adaptation": "Text excerpts receive a declared HTML identity envelope in offline replay; native PDF bytes remain native."
+    },
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "mom-public-holidays.txt",
+      "manifest": "acra-mom-source-manifest.json",
+      "officialUrl": "https://www.mom.gov.sg/employment-practices/public-holidays-entitlement-and-pay",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "e39d68945cef9536932f8bc76e6defeae59c2aeb15f791e4461a5c9ed6d7961e",
+      "adaptation": "Text excerpts receive a declared HTML identity envelope in offline replay; native PDF bytes remain native."
+    },
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "mom-final-salary.txt",
+      "manifest": "acra-mom-source-manifest.json",
+      "officialUrl": "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "f9f276912ea150290ebdb692a5878492994e42b14b071d24a6ca6412511fe8f2",
+      "adaptation": "Text excerpts receive a declared HTML identity envelope in offline replay; native PDF bytes remain native."
+    },
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "acra-company-secretary.txt",
+      "manifest": "acra-mom-source-manifest.json",
+      "officialUrl": "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "706caa3d601fbea5d4659f987fb719396445c9b55695319c51a18ab644c361aa",
+      "adaptation": "Text excerpts receive a declared HTML identity envelope in offline replay; native PDF bytes remain native."
+    },
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "cpf-rates-native-2026.pdf",
+      "manifest": "cpf-source-manifest.json",
+      "officialUrl": "https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf",
+      "fixtureKind": "NATIVE_OFFICIAL_PDF",
+      "fixtureSha256": "7ab21a34bd830be773b5bf39020f590d61e744fb7df6c91922352cef82789496",
+      "excerptSha256": "b3e64036596beb1db169c43c168645369e0f7681c25e073079ba440f99124b3f",
+      "excerpt": "cpf-rate-tables-2026-extract.txt",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "cpf-computation-guidance-extract.txt",
+      "manifest": "cpf-source-manifest.json",
+      "officialUrl": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+      "fixtureKind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "e2fc3172ae35f62a264aa0029216114dfb3918a8455b54f8f6a91915447811d5",
+      "adaptation": "Text excerpts receive a declared HTML identity envelope in offline replay; native PDF bytes remain native."
+    },
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "cpf-ow-ceiling-extract.txt",
+      "manifest": "cpf-source-manifest.json",
+      "officialUrl": "https://www.cpf.gov.sg/service/article/what-is-the-ordinary-wage-ow-ceiling-mbr",
+      "fixtureKind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "6f9c5e65278421c7ced24676640c5df507aedc4bc09e1445041f94bc40612611",
+      "adaptation": "Text excerpts receive a declared HTML identity envelope in offline replay; native PDF bytes remain native."
+    },
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "cpf-aw-ceiling-native-2026.pdf",
+      "manifest": "cpf-source-manifest.json",
+      "officialUrl": "https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1",
+      "fixtureKind": "NATIVE_OFFICIAL_PDF",
+      "fixtureSha256": "98fc7777d8c6fb0f76f4770217570e26e94e91533345d98db7b1c451c8721220",
+      "excerptSha256": "5c1a0d0bce2362535cf2984cbbcf00db8ae08a56cf0dad9a1f8029855e441d00",
+      "excerpt": "cpf-aw-ceiling-2026-extract.txt",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "cpf-pr-year-status-extract.txt",
+      "manifest": "cpf-source-manifest.json",
+      "officialUrl": "https://www.cpf.gov.sg/service/article/i-have-successfully-applied-for-a-new-re-entry-permit-and-retained-my-singapore-permanent-resident-status-how-will-this-impact-my-cpf-contributions",
+      "fixtureKind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "1209fe78ae0c48f8579dd70d1c84794147dfb6d8588019bf7ae344e77cb3a359",
+      "adaptation": "Text excerpts receive a declared HTML identity envelope in offline replay; native PDF bytes remain native."
+    },
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "iras-mas-input-tax-native.html",
+      "manifest": "iras-mas-source-manifest.json",
+      "officialUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "fixtureKind": "IRAS_NATIVE_HTML_PAGE",
+      "fixtureSha256": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "iras-mas-eci-native.html",
+      "manifest": "iras-mas-source-manifest.json",
+      "officialUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing",
+      "fixtureKind": "IRAS_NATIVE_HTML_PAGE",
+      "fixtureSha256": "81c4bd3d744a3a93cdad18406302447c4671a6f4dc08dcb75d81f06c233c60d0",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "iras-mas-wht-services-native.html",
+      "manifest": "iras-mas-source-manifest.json",
+      "officialUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+      "fixtureKind": "IRAS_NATIVE_HTML_PAGE",
+      "fixtureSha256": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "iras-mas-wht-deadline-native.html",
+      "manifest": "iras-mas-source-manifest.json",
+      "officialUrl": "https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date",
+      "fixtureKind": "IRAS_NATIVE_HTML_PAGE",
+      "fixtureSha256": "dd21cb5953d1726d80b0633e27e2f18f4c62fe9c960f5e335a4e7e91aee95acf",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryKnowledge20261027b",
+      "fixture": "iras-mas-misconduct-native.pdf",
+      "manifest": "iras-mas-source-manifest.json",
+      "officialUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/notices/cmg/notice-sfa-04-n24/notice-sfa-04-n24-reporting-of-misconduct-of-representatives.pdf?hash=C027656887BDCD18A5742523AA08B2A1&sc_lang=en",
+      "fixtureKind": "MAS_OFFICIAL_NOTICE_PDF_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "160c25cd05295fb211e61b9c064fc22e63ba5ffa04e4c81600d65e62df232070",
+      "excerptSha256": "3c9ca1abb8fc0cf16b68ada1b74c65c679a3b948d2b32f91c3bf35b4c687d96d",
+      "excerpt": "iras-mas-misconduct.txt",
+      "adaptation": "Text excerpts receive a declared HTML identity envelope in offline replay; native PDF bytes remain native."
+    },
+    {
+      "directory": "tests/fixtures/statutoryWorkflows20261029",
+      "fixture": "mom-payslips.html",
+      "manifest": "workflows-source-manifest.json",
+      "officialUrl": "https://www.mom.gov.sg/employment-practices/salary/itemised-payslips",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "02f36e1b240e69f2a3c464bf9269808d6d7308162b4a27db0008aceb30b8c2a6",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryWorkflows20261029",
+      "fixture": "iras-company-records.html",
+      "manifest": "workflows-source-manifest.json",
+      "officialUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/record-keeping-requirements",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "b37188f95f578e77087a2637d6f78be78aacee621341cb3b702419499da1f94f",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryWorkflows20261029",
+      "fixture": "acra-entity-updates.html",
+      "manifest": "workflows-source-manifest.json",
+      "officialUrl": "https://www.acra.gov.sg/resources/guides-forms/updating-entitys-information/",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "1eda45c272875607b422bead9315e9241cdfae6f0d64790fcec68a3e91dcad32",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryWorkflows20261029",
+      "fixture": "cpf-refunds.html",
+      "manifest": "workflows-source-manifest.json",
+      "officialUrl": "https://www.cpf.gov.sg/employer/compliance-and-rectifications/applying-for-refund-of-cpf-contributions",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "c0f1d212d7265fee06b730946797a7c092a8227d19947eed690799dae36f02c8",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryWorkflows20261029",
+      "fixture": "mas-lfmc-toolkit.pdf",
+      "manifest": "workflows-source-manifest.json",
+      "officialUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_PDF",
+      "fixtureSha256": "bb0df7931e20f3d9602076716d11d55552d3acf7ddf74afae9bd54317ffdc651",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryDevelopment20261027",
+      "fixture": "acra-agm.txt",
+      "manifest": "acra-mom-source-manifest.json",
+      "officialUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings/due-dates-requirements/",
+      "fixtureSha256": "8c78d061f7448bc4c0ba14b0636ba1be647d9d33c353e97854e0dfdb8773d56f",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryDevelopment20261027",
+      "fixture": "acra-annual-returns.txt",
+      "manifest": "acra-mom-source-manifest.json",
+      "officialUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/",
+      "fixtureSha256": "121e5a4b9e258afbee6e1f9f407f29cdc564da3b6c57a57a8799c2eb247c21ff",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryDevelopment20261027",
+      "fixture": "mom-overtime.txt",
+      "manifest": "acra-mom-source-manifest.json",
+      "officialUrl": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+      "fixtureSha256": "3c1371f0b51ad071a72689fa8b974ce42af9a771c10cb2d6661eb4a7f3336a45",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryDevelopment20261027",
+      "fixture": "iras-gst-standard-rated.html",
+      "manifest": "iras-cpf-mas-source-manifest.json",
+      "officialUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-to-charge-goods-and-services-tax-(gst)",
+      "fixtureKind": "RAW_HTML_CAPTURE",
+      "fixtureSha256": "31e626247687ad1b15f5f9978a73d06305703395af93b6c5e808e6fa1933128e",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryDevelopment20261027",
+      "fixture": "iras-gst-zero-rated.html",
+      "manifest": "iras-cpf-mas-source-manifest.json",
+      "officialUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/filing-gst/completing-gst-returns",
+      "fixtureKind": "WEB_READ_LAYOUT_ADAPTED_VISIBLE_EXCERPT",
+      "fixtureSha256": "f90eb7cd923899c112a4ee1b709b91590502d979df955b7b3b9ac3d516b17ff1",
+      "adaptation": "Text excerpts receive a declared HTML identity envelope in offline replay; native PDF bytes remain native."
+    },
+    {
+      "directory": "tests/fixtures/statutoryDevelopment20261027",
+      "fixture": "iras-gst-basics-native.html",
+      "manifest": "iras-cpf-mas-source-manifest.json",
+      "officialUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/goods-and-services-tax-(gst)-what-it-is-and-how-it-works",
+      "fixtureKind": "RAW_HTML_CAPTURE",
+      "fixtureSha256": "ede5e4ff85f9bf69ad51f2803b533962e57b287ba110d99c4de934497a087a78",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryDevelopment20261027",
+      "fixture": "iras-gst-out-of-scope.html",
+      "manifest": "iras-cpf-mas-source-manifest.json",
+      "officialUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-is-gst-not-charged/out-of-scope-supplies",
+      "fixtureKind": "WEB_READ_LAYOUT_ADAPTED_VISIBLE_EXCERPT",
+      "fixtureSha256": "9a721f305528df76faa3df099a7c17b2ffceec45754e5f7b2d97a04710be9eab",
+      "adaptation": "Text excerpts receive a declared HTML identity envelope in offline replay; native PDF bytes remain native."
+    },
+    {
+      "directory": "tests/fixtures/statutoryDevelopment20261027",
+      "fixture": "cpf-employee-coverage.html",
+      "manifest": "iras-cpf-mas-source-manifest.json",
+      "officialUrl": "https://www.cpf.gov.sg/employer/employer-obligations/who-should-receive-cpf-contributions",
+      "fixtureKind": "RAW_HTML_CAPTURE",
+      "fixtureSha256": "1f84bbc5c18ac5e41070105606c4e997aeeb3ef5b83314002eec675a436dcde0",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryDevelopment20261027",
+      "fixture": "cpf-contribution-computation.html",
+      "manifest": "iras-cpf-mas-source-manifest.json",
+      "officialUrl": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+      "fixtureKind": "RAW_HTML_CAPTURE",
+      "fixtureSha256": "dd02d355cd51dd9452b97a71713e8302b376ccb07f8a43d80218da9b79abb91e",
+      "adaptation": "Native response retained."
+    },
+    {
+      "directory": "tests/fixtures/statutoryDevelopment20261027",
+      "fixture": "mas-lfmc-toolkit.pdf",
+      "manifest": "iras-cpf-mas-source-manifest.json",
+      "officialUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf",
+      "fixtureKind": "NATIVE_PDF_EXTRACT",
+      "fixtureSha256": "bb0df7931e20f3d9602076716d11d55552d3acf7ddf74afae9bd54317ffdc651",
+      "excerptSha256": "3a0139b256ec4c4e1c58eb2019683798a916e6aabb9f90e9cf618ecfa47dec45",
+      "excerpt": "mas-lfmc-native-extract.txt",
+      "adaptation": "Text excerpts receive a declared HTML identity envelope in offline replay; native PDF bytes remain native."
+    }
+  ],
+  "limits": "Retained bytes and declared digests verified. Text excerpt envelopes are explicitly identified. Unit and application regressions separately test exact URL, missing premises, reversed requirements, issue binding and single revision. No fixture retrieval date is used as a legal effective date. Public CPF/IRAS pages and MAS toolkit rows were checked read-only; no live application/model/browser acceptance or source activation occurred."
+}

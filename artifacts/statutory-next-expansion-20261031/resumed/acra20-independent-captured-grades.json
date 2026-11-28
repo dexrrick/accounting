@@ -1,0 +1,145 @@
+{
+  "reviewer": "/root/complete_fixed100_grades",
+  "scope": "Complete pre-finish answers independently read; offline guided replay only",
+  "rows": [
+    {
+      "id": "acra-agm-deadlines-01",
+      "original": "UNSUPPORTED",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "acra-agm-deadlines-02",
+      "original": "UNSUPPORTED",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "acra-agm-deadlines-03",
+      "original": "UNSUPPORTED",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "acra-agm-deadlines-04",
+      "original": "UNSUPPORTED",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "acra-annual-returns-01",
+      "original": "UNSUPPORTED",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "acra-annual-returns-02",
+      "original": "CORRECT",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "acra-annual-returns-03",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "acra-annual-returns-04",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "acra-audit-exemption-01",
+      "original": "PARTIAL",
+      "enriched": "PARTIAL"
+    },
+    {
+      "id": "acra-audit-exemption-02",
+      "original": "PARTIAL",
+      "enriched": "PARTIAL"
+    },
+    {
+      "id": "acra-audit-exemption-03",
+      "original": "PARTIAL",
+      "enriched": "PARTIAL"
+    },
+    {
+      "id": "acra-audit-exemption-04",
+      "original": "PARTIAL",
+      "enriched": "PARTIAL"
+    },
+    {
+      "id": "acra-annual-return-officer-particulars-01",
+      "original": "UNSUPPORTED",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "acra-annual-return-officer-particulars-02",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "acra-annual-return-officer-particulars-03",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "acra-annual-return-officer-particulars-04",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "acra-secretary-appointment-01",
+      "original": "UNSUPPORTED",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "acra-secretary-appointment-02",
+      "original": "UNSUPPORTED",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "acra-secretary-appointment-03",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "acra-secretary-appointment-04",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    }
+  ],
+  "capturedCounts": {
+    "original": {
+      "CORRECT": 3,
+      "PARTIAL": 4,
+      "INCORRECT": 0,
+      "UNSUPPORTED": 13
+    },
+    "enriched": {
+      "CORRECT": 10,
+      "PARTIAL": 4,
+      "INCORRECT": 0,
+      "UNSUPPORTED": 6
+    }
+  },
+  "baselineCounts": {
+    "original": {
+      "CORRECT": 7,
+      "PARTIAL": 0,
+      "INCORRECT": 0,
+      "UNSUPPORTED": 13
+    },
+    "enriched": {
+      "CORRECT": 11,
+      "PARTIAL": 0,
+      "INCORRECT": 0,
+      "UNSUPPORTED": 9
+    }
+  },
+  "pending": [
+    "Audit01-04 can be CORRECT only after removal of unsupported ancillary5% sentence confirmed in new answers",
+    "Enriched annualreturns02 must recover substantive deadline answer; baseline CORRECT lost",
+    "Four expected new CORRECT enriched AGM01-04"
+  ],
+  "baselineCorrectLosses": {
+    "original": [],
+    "enriched": [
+      "acra-annual-returns-02"
+    ]
+  }
+}

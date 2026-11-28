@@ -1,0 +1,18 @@
+{
+  "checkedOnSingaporeDate": "31/10/2026",
+  "method": "Read the current official MOM pages with web access; frozen fixtures remain unchanged.",
+  "sources": [
+    {
+      "url": "https://www.mom.gov.sg/employment-practices/salary/itemised-payslips",
+      "scope": "Employment Act-covered employees",
+      "ordinaryRule": "Provide the payslip with payment; if unable, within three working days of payment.",
+      "terminationQuote": "In the case of termination or dismissal, must give pay slip together with outstanding salary.",
+      "interpretation": "The termination/dismissal requirement must be visible alongside, and distinguished from, the ordinary fallback. Do not infer an independent three-working-day extension after outstanding salary is paid."
+    },
+    {
+      "url": "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+      "summary": "Final-salary payment dates differ: resignation with required notice is payable on the last employment day; without notice, within seven days of that day. Employer termination or misconduct dismissal requires payment on the last employment day, or within three working days if that is not possible.",
+      "limitations": "Payment timing does not determine the amount owed. Ordinary salary and overtime payment periods are distinct; foreign-employee tax clearance is a separate obligation."
+    }
+  ]
+}

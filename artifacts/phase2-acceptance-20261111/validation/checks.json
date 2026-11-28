@@ -1,0 +1,61 @@
+{
+  "head": "d1f9be1f46c780acfb01591f0f527e87cbd133a9",
+  "node": "22.23.3",
+  "externalFetchBlocked": true,
+  "liveProviderCalls": 0,
+  "steps": [
+    {
+      "name": "preflight",
+      "arguments": [
+        "scripts/preflight.mjs"
+      ],
+      "exitCode": 0,
+      "startedUTC": "2026-11-11T13:04:37.1043789Z",
+      "elapsedSeconds": 0.08
+    },
+    {
+      "name": "maintained-lint",
+      "arguments": [
+        "node_modules/oxlint/bin/oxlint",
+        "src",
+        "scripts",
+        "tests",
+        "vite.config.ts",
+        "tailwind.config.js",
+        "postcss.config.js"
+      ],
+      "exitCode": 0,
+      "startedUTC": "2026-11-11T13:04:37.2074838Z",
+      "elapsedSeconds": 1.16
+    },
+    {
+      "name": "typecheck",
+      "arguments": [
+        "node_modules/typescript/bin/tsc",
+        "-b"
+      ],
+      "exitCode": 0,
+      "startedUTC": "2026-11-11T13:04:38.3714192Z",
+      "elapsedSeconds": 9.31
+    },
+    {
+      "name": "vite-build",
+      "arguments": [
+        "node_modules/vite/bin/vite.js",
+        "build"
+      ],
+      "exitCode": 0,
+      "startedUTC": "2026-11-11T13:04:47.6811724Z",
+      "elapsedSeconds": 13.01
+    },
+    {
+      "name": "worker-build",
+      "arguments": [
+        "scripts/build_cloudflare_worker.mjs"
+      ],
+      "exitCode": 0,
+      "startedUTC": "2026-11-11T13:05:00.6976128Z",
+      "elapsedSeconds": 0.8
+    }
+  ]
+}

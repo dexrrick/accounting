@@ -1,0 +1,1085 @@
+{
+  "schemaVersion": 1,
+  "caseId": "iras-residency",
+  "answerStatus": "RETRIEVED_SUFFICIENT",
+  "providerStatus": "SUCCEEDED",
+  "semanticPlanSource": "NOT_EXPOSED",
+  "declaredCaptureStatus": "CAPTURE_WINDOW_SETTLED",
+  "captureWindow": {
+    "boundedWaitMs": 12000,
+    "timedOut": false,
+    "pendingCapturesAtDeadline": 0,
+    "inFlightFetchesAtDeadline": 0,
+    "cloneReadersCancelledAtDeadline": 0,
+    "inFlightFetchesAtReceipt": 0,
+    "pendingCapturesAtReceipt": 0
+  },
+  "payloadAvailability": "METADATA_ONLY",
+  "bodyPayloads": [
+    {
+      "pointer": "/modelResponses/0/rawResponseBodyText",
+      "sha256": "7c4e43406cbda52d39175450cbdef00f1fe6777352be38e55247e631f584a208",
+      "encoding": "utf8",
+      "byteLength": 1929,
+      "artifactPath": "bodies/7c4e43406cbda52d39175450cbdef00f1fe6777352be38e55247e631f584a208.gz",
+      "declaredResponseBodySha256": "7c4e43406cbda52d39175450cbdef00f1fe6777352be38e55247e631f584a208",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 1929,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/0/bodyBase64",
+      "sha256": "7b367b79b714e829bc284806c1033b060f0da0ae67b6acb61143964b1c191ee2",
+      "encoding": "base64",
+      "byteLength": 261737,
+      "artifactPath": "bodies/7b367b79b714e829bc284806c1033b060f0da0ae67b6acb61143964b1c191ee2.gz",
+      "declaredResponseBodySha256": "7b367b79b714e829bc284806c1033b060f0da0ae67b6acb61143964b1c191ee2",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 261737,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/0/bodyText",
+      "sha256": "7b367b79b714e829bc284806c1033b060f0da0ae67b6acb61143964b1c191ee2",
+      "encoding": "utf8",
+      "byteLength": 261737,
+      "artifactPath": "bodies/7b367b79b714e829bc284806c1033b060f0da0ae67b6acb61143964b1c191ee2.gz",
+      "declaredResponseBodySha256": "7b367b79b714e829bc284806c1033b060f0da0ae67b6acb61143964b1c191ee2",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 261737,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/modelResponses/1",
+      "payloadStatus": "METADATA_ONLY",
+      "declaredResponseBodySha256": "5f4e3858a38e40c99405333af963ea49973d343617a4143e5bf70d79c6f9ce1d",
+      "declaredHashScope": "complete_response",
+      "captureStatus": "COMPLETE",
+      "declaredCaptureBytes": 15903,
+      "bodyBytesPresent": false
+    }
+  ],
+  "issuePlan": "UNOBSERVED",
+  "issues": "UNOBSERVED",
+  "presentationIssues": "UNOBSERVED",
+  "conceptOwnership": "UNOBSERVED",
+  "admissionDiagnostics": "UNOBSERVED",
+  "requestCompletenessContext": {
+    "contractVersion": 1,
+    "identity": "[1,\"For Singapore corporate income tax, is incorporation in Singapore alone enough to make a company tax resident? Explain the general control-and-management test using IRAS guidance. Do not calculate tax or create journal entries.\"]",
+    "inputLength": 227,
+    "inventory": {
+      "state": "UNCERTAIN",
+      "fullyConsumed": false,
+      "outcomes": [],
+      "facts": [],
+      "findings": [
+        {
+          "stage": "INVENTORY",
+          "code": "UNKNOWN_PREFIX_OR_REQUEST",
+          "span": {
+            "start": 0,
+            "end": 227
+          }
+        }
+      ],
+      "inputLength": 227
+    },
+    "declaredFacts": [],
+    "excludedSpans": [],
+    "observationSnapshot": {
+      "hasWrapper": true,
+      "mode": "SEMANTIC_INTERPRETATION",
+      "format": "STORED_NORMALIZED_OR_LEGACY",
+      "normalizedInterpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "domain": "IRAS_INCOME_TAX",
+        "population": "COMPANY",
+        "primarySubject": "corporate tax residency and control-and-management test",
+        "concepts": [
+          {
+            "concept": "corporate tax residency",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "control and management test",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "place of incorporation",
+            "role": "RELATED"
+          }
+        ],
+        "requestedOperation": "EXPLAIN_RULE",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "confidence": 1,
+        "issues": [
+          {
+            "subject": "corporate tax residency determination based on incorporation and control and management",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 1
+          }
+        ]
+      },
+      "structuralAcceptance": "ACCEPTED",
+      "confidenceAcceptance": "ACCEPTED",
+      "observedConfidence": 1
+    },
+    "evaluation": {
+      "status": "UNCERTAIN",
+      "structuralAcceptance": "ACCEPTED",
+      "confidenceAcceptance": "ACCEPTED",
+      "minimumConfidence": 0.72,
+      "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+      "observedConfidence": 1,
+      "findings": [
+        {
+          "stage": "BRIDGE",
+          "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+          "issueIndex": 0,
+          "subject": "corporate tax residency determination based on incorporation and control and management"
+        }
+      ],
+      "matches": [],
+      "issues": [
+        {
+          "subject": "corporate tax residency determination based on incorporation and control and management",
+          "population": "COMPANY",
+          "operation": "EXPLAIN_RULE"
+        }
+      ]
+    }
+  },
+  "groundedContext": {
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [
+        "IRAS_CORPORATE_TAX"
+      ],
+      "topicIds": [
+        "iras-corporate-tax-residency"
+      ],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Semantic interpretation routed this company question to IRAS for corporate tax residency and control-and-management test."
+    },
+    "userFacts": [
+      "Numerical quantities stated: ,"
+    ],
+    "missingFacts": [],
+    "assumptions": [],
+    "primaryEvidence": [],
+    "officialGuidance": [
+      {
+        "id": "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714",
+        "authority": "IRAS",
+        "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+        "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+        "legalOrStandardInstrument": "IRAS Administrative Guidance",
+        "standardOrActCode": "IRAS",
+        "paragraphOrSection": "company tax residence",
+        "principleSummary": "IRAS guidance on company tax residence and certificates of residence.",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+        "domain": "IRAS_TAX",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "iras-corporate-tax-residency"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "OFFICIAL_GUIDANCE",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-10-24",
+        "provenance": "LIVE_EXTERNAL",
+        "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+        "sourceAuthority": "IRAS",
+        "retrievedAt": "2026-10-24T08:52:53.829Z",
+        "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+        "extractionStatus": "PARTIAL",
+        "documentHash": "7b367b79b714e829bc284806c1033b060f0da0ae67b6acb61143964b1c191ee2",
+        "contentHash": "7b367b79b714e829bc284806c1033b060f0da0ae67b6acb61143964b1c191ee2",
+        "lifecycleState": "CANDIDATE",
+        "recordRole": "DISCOVERED_EVIDENCE",
+        "groundingEligible": true,
+        "urlVerificationStatus": "VERIFIED",
+        "urlVerifiedDate": "2026-10-24",
+        "sourceLocator": {
+          "heading": "Tax Residency of a Company/ Certificate of Residence",
+          "sourceType": "HTML"
+        }
+      }
+    ],
+    "curatedSummaries": [],
+    "applicationRules": [],
+    "currentInformationRequired": false,
+    "semanticUnderstanding": {
+      "extractionSource": "deterministic_fallback",
+      "provenance": {
+        "tier": "DETERMINISTIC_HEURISTIC_FALLBACK",
+        "isFallback": true,
+        "engine": "heuristic_pattern_matcher",
+        "appliedRules": [
+          "reporting_entity:company"
+        ],
+        "confidenceCapped": true,
+        "notice": "Heuristic rule fallback: extracted using regex/keyword patterns; not validated by LLM reasoning",
+        "timestamp": "2026-10-24T08:52:53.793Z"
+      },
+      "reportingEntity": {
+        "type": "company",
+        "description": "Reporting entity is the corporate business"
+      },
+      "transactionType": "unclassified_transaction",
+      "paymentStatus": "unknown",
+      "currency": {
+        "value": null,
+        "source": "unknown",
+        "confidence": 0,
+        "rationale": "No currency specified in query"
+      },
+      "transactionDate": null,
+      "jurisdiction": "SG",
+      "factsMissing": [],
+      "assumptions": [],
+      "confidence": 0.3,
+      "actualMeasurementBasis": "UNKNOWN",
+      "measurementBasis": "UNKNOWN",
+      "isHypothetical": false
+    },
+    "questionUnderstanding": {
+      "mode": "SEMANTIC_PLUS_RULES",
+      "assessmentStatus": "PASSED",
+      "transportAttempts": [
+        {
+          "attempt": 1,
+          "status": 200,
+          "elapsedMs": 1549,
+          "retryScheduled": false
+        }
+      ],
+      "interpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "domain": "IRAS_INCOME_TAX",
+        "population": "COMPANY",
+        "primarySubject": "corporate tax residency and control-and-management test",
+        "concepts": [
+          {
+            "concept": "corporate tax residency",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "control and management test",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "place of incorporation",
+            "role": "RELATED"
+          }
+        ],
+        "requestedOperation": "EXPLAIN_RULE",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "confidence": 1,
+        "issues": [
+          {
+            "subject": "corporate tax residency determination based on incorporation and control and management",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 1
+          }
+        ]
+      }
+    },
+    "requestCompletenessContext": {
+      "contractVersion": 1,
+      "identity": "[1,\"For Singapore corporate income tax, is incorporation in Singapore alone enough to make a company tax resident? Explain the general control-and-management test using IRAS guidance. Do not calculate tax or create journal entries.\"]",
+      "inputLength": 227,
+      "inventory": {
+        "state": "UNCERTAIN",
+        "fullyConsumed": false,
+        "outcomes": [],
+        "facts": [],
+        "findings": [
+          {
+            "stage": "INVENTORY",
+            "code": "UNKNOWN_PREFIX_OR_REQUEST",
+            "span": {
+              "start": 0,
+              "end": 227
+            }
+          }
+        ],
+        "inputLength": 227
+      },
+      "declaredFacts": [],
+      "excludedSpans": [],
+      "observationSnapshot": {
+        "hasWrapper": true,
+        "mode": "SEMANTIC_INTERPRETATION",
+        "format": "STORED_NORMALIZED_OR_LEGACY",
+        "normalizedInterpretation": {
+          "jurisdiction": [
+            "Singapore"
+          ],
+          "authorityCandidates": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "primarySubject": "corporate tax residency and control-and-management test",
+          "concepts": [
+            {
+              "concept": "corporate tax residency",
+              "role": "PRIMARY"
+            },
+            {
+              "concept": "control and management test",
+              "role": "PRIMARY"
+            },
+            {
+              "concept": "place of incorporation",
+              "role": "RELATED"
+            }
+          ],
+          "requestedOperation": "EXPLAIN_RULE",
+          "requiresUserSpecificFacts": false,
+          "calculationRequested": false,
+          "factsExplicitlyProvided": [],
+          "confidence": 1,
+          "issues": [
+            {
+              "subject": "corporate tax residency determination based on incorporation and control and management",
+              "population": "COMPANY",
+              "domain": "IRAS_INCOME_TAX",
+              "governingAuthorities": [
+                "IRAS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "EXPLAIN_RULE",
+              "mappedTopicIds": [],
+              "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+              "confidence": 1
+            }
+          ]
+        },
+        "structuralAcceptance": "ACCEPTED",
+        "confidenceAcceptance": "ACCEPTED",
+        "observedConfidence": 1
+      },
+      "evaluation": {
+        "status": "UNCERTAIN",
+        "structuralAcceptance": "ACCEPTED",
+        "confidenceAcceptance": "ACCEPTED",
+        "minimumConfidence": 0.72,
+        "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+        "observedConfidence": 1,
+        "findings": [
+          {
+            "stage": "BRIDGE",
+            "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+            "issueIndex": 0,
+            "subject": "corporate tax residency determination based on incorporation and control and management"
+          }
+        ],
+        "matches": [],
+        "issues": [
+          {
+            "subject": "corporate tax residency determination based on incorporation and control and management",
+            "population": "COMPANY",
+            "operation": "EXPLAIN_RULE"
+          }
+        ]
+      }
+    },
+    "evidenceQuality": {
+      "status": "RETRIEVED_SUFFICIENT",
+      "eligibleRecords": [
+        {
+          "id": "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714",
+          "authority": "IRAS",
+          "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+          "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+          "legalOrStandardInstrument": "IRAS Administrative Guidance",
+          "standardOrActCode": "IRAS",
+          "paragraphOrSection": "company tax residence",
+          "principleSummary": "IRAS guidance on company tax residence and certificates of residence.",
+          "officialSourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+          "domain": "IRAS_TAX",
+          "jurisdiction": "Singapore",
+          "tags": [
+            "iras-corporate-tax-residency"
+          ],
+          "sourceStatus": "NEEDS_REVIEW",
+          "sourceType": "OFFICIAL_GUIDANCE",
+          "evidenceTier": "OFFICIAL_GUIDANCE",
+          "isVerbatimText": false,
+          "lastVerifiedDate": "2026-10-24",
+          "provenance": "LIVE_EXTERNAL",
+          "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+          "sourceAuthority": "IRAS",
+          "retrievedAt": "2026-10-24T08:52:53.829Z",
+          "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+          "extractionStatus": "PARTIAL",
+          "documentHash": "7b367b79b714e829bc284806c1033b060f0da0ae67b6acb61143964b1c191ee2",
+          "contentHash": "7b367b79b714e829bc284806c1033b060f0da0ae67b6acb61143964b1c191ee2",
+          "lifecycleState": "CANDIDATE",
+          "recordRole": "DISCOVERED_EVIDENCE",
+          "groundingEligible": true,
+          "urlVerificationStatus": "VERIFIED",
+          "urlVerifiedDate": "2026-10-24",
+          "sourceLocator": {
+            "heading": "Tax Residency of a Company/ Certificate of Residence",
+            "sourceType": "HTML"
+          }
+        }
+      ],
+      "rejectedRecords": [],
+      "coveredTopicIds": [
+        "iras-corporate-tax-residency",
+        "iras-authority-query-concept-company-tax-residency-rule",
+        "iras-authority-query-concept-company-tax-residency-incorporation"
+      ],
+      "uncoveredTopicIds": [],
+      "requestedConcepts": [
+        "Company tax residency rule",
+        "Company tax residency and incorporation"
+      ],
+      "coveredConcepts": [
+        "Company tax residency rule",
+        "Company tax residency and incorporation"
+      ],
+      "uncoveredConcepts": [],
+      "acceptedSourceGroups": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence"
+      ],
+      "missingFacts": [],
+      "targetDateConfidence": "LOW"
+    },
+    "sourceMapFallbackTrace": {
+      "path": "MAPPED_SOURCE",
+      "sourceMapIds": [
+        "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+      ],
+      "selectedRecordIds": [
+        "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+      ],
+      "finalVerifiedUrls": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence"
+      ],
+      "candidateOnly": true,
+      "attempts": [
+        {
+          "topicId": "iras-corporate-tax-residency",
+          "sourceMapId": "IRAS_CIT_RESIDENCY_SOURCE_MAP",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+          "fetchStatus": "SUCCESS",
+          "finalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+          "pageTitle": "Tax Residency of a Company/ Certificate of Residence",
+          "titleMatched": true,
+          "contentMatched": true,
+          "discoveryStage": "MAPPED_SOURCE"
+        }
+      ],
+      "discoveryFetchAttempts": [],
+      "coverageDecisions": [
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-corporate-tax-residency",
+            "iras-authority-query-concept-company-tax-residency-rule",
+            "iras-authority-query-concept-company-tax-residency-incorporation"
+          ],
+          "admissionTopicIds": [
+            "iras-corporate-tax-residency"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-corporate-tax-residency",
+            "iras-authority-query-concept-company-tax-residency-rule",
+            "iras-authority-query-concept-company-tax-residency-incorporation"
+          ],
+          "admissionTopicIds": [
+            "iras-corporate-tax-residency"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-company-tax-residency-rule"
+          ],
+          "admissionTopicIds": [
+            "iras-corporate-tax-residency"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-company-tax-residency-incorporation"
+          ],
+          "admissionTopicIds": [
+            "iras-corporate-tax-residency"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-corporate-tax-residency",
+            "iras-authority-query-concept-company-tax-residency-rule",
+            "iras-authority-query-concept-company-tax-residency-incorporation"
+          ],
+          "admissionTopicIds": [
+            "iras-corporate-tax-residency"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-company-tax-residency-rule"
+          ],
+          "admissionTopicIds": [
+            "iras-corporate-tax-residency"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-company-tax-residency-incorporation"
+          ],
+          "admissionTopicIds": [
+            "iras-corporate-tax-residency"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-corporate-tax-residency",
+            "iras-authority-query-concept-company-tax-residency-rule",
+            "iras-authority-query-concept-company-tax-residency-incorporation"
+          ],
+          "admissionTopicIds": [
+            "iras-corporate-tax-residency"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-company-tax-residency-rule"
+          ],
+          "admissionTopicIds": [
+            "iras-corporate-tax-residency"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-company-tax-residency-incorporation"
+          ],
+          "admissionTopicIds": [
+            "iras-corporate-tax-residency"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-corporate-tax-residency",
+            "iras-authority-query-concept-company-tax-residency-rule",
+            "iras-authority-query-concept-company-tax-residency-incorporation"
+          ],
+          "admissionTopicIds": [
+            "iras-corporate-tax-residency"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-company-tax-residency-rule"
+          ],
+          "admissionTopicIds": [
+            "iras-corporate-tax-residency"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-company-tax-residency-incorporation"
+          ],
+          "admissionTopicIds": [
+            "iras-corporate-tax-residency"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": []
+        }
+      ],
+      "stages": [
+        {
+          "stage": "LOCAL_VERIFIED",
+          "status": "EXHAUSTED",
+          "reason": "Local retrieval was insufficient for at least one routed topic."
+        },
+        {
+          "stage": "MAPPED_SOURCE",
+          "status": "SUFFICIENT",
+          "reason": "Every applicable reviewed source-map pointer was attempted before discovery; adequacy was checked against each routed topic."
+        },
+        {
+          "stage": "SITEMAP_DISCOVERY",
+          "status": "SKIPPED",
+          "reason": "Sitemap discovery was not attempted for this request."
+        },
+        {
+          "stage": "OFFICIAL_DOMAIN_SEARCH",
+          "status": "SKIPPED",
+          "reason": "Official-domain search was not attempted for this request."
+        }
+      ]
+    }
+  },
+  "evidenceQuality": {
+    "status": "RETRIEVED_SUFFICIENT",
+    "eligibleRecords": [
+      {
+        "id": "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714",
+        "authority": "IRAS",
+        "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+        "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+        "legalOrStandardInstrument": "IRAS Administrative Guidance",
+        "standardOrActCode": "IRAS",
+        "paragraphOrSection": "company tax residence",
+        "principleSummary": "IRAS guidance on company tax residence and certificates of residence.",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+        "domain": "IRAS_TAX",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "iras-corporate-tax-residency"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "OFFICIAL_GUIDANCE",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-10-24",
+        "provenance": "LIVE_EXTERNAL",
+        "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+        "sourceAuthority": "IRAS",
+        "retrievedAt": "2026-10-24T08:52:53.829Z",
+        "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+        "extractionStatus": "PARTIAL",
+        "documentHash": "7b367b79b714e829bc284806c1033b060f0da0ae67b6acb61143964b1c191ee2",
+        "contentHash": "7b367b79b714e829bc284806c1033b060f0da0ae67b6acb61143964b1c191ee2",
+        "lifecycleState": "CANDIDATE",
+        "recordRole": "DISCOVERED_EVIDENCE",
+        "groundingEligible": true,
+        "urlVerificationStatus": "VERIFIED",
+        "urlVerifiedDate": "2026-10-24",
+        "sourceLocator": {
+          "heading": "Tax Residency of a Company/ Certificate of Residence",
+          "sourceType": "HTML"
+        }
+      }
+    ],
+    "rejectedRecords": [],
+    "coveredTopicIds": [
+      "iras-corporate-tax-residency",
+      "iras-authority-query-concept-company-tax-residency-rule",
+      "iras-authority-query-concept-company-tax-residency-incorporation"
+    ],
+    "uncoveredTopicIds": [],
+    "requestedConcepts": [
+      "Company tax residency rule",
+      "Company tax residency and incorporation"
+    ],
+    "coveredConcepts": [
+      "Company tax residency rule",
+      "Company tax residency and incorporation"
+    ],
+    "uncoveredConcepts": [],
+    "acceptedSourceGroups": [
+      "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence"
+    ],
+    "missingFacts": [],
+    "targetDateConfidence": "LOW"
+  },
+  "sourceMapFallbackTrace": {
+    "path": "MAPPED_SOURCE",
+    "sourceMapIds": [
+      "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+    ],
+    "selectedRecordIds": [
+      "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+    ],
+    "finalVerifiedUrls": [
+      "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence"
+    ],
+    "candidateOnly": true,
+    "attempts": [
+      {
+        "topicId": "iras-corporate-tax-residency",
+        "sourceMapId": "IRAS_CIT_RESIDENCY_SOURCE_MAP",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+        "fetchStatus": "SUCCESS",
+        "finalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+        "pageTitle": "Tax Residency of a Company/ Certificate of Residence",
+        "titleMatched": true,
+        "contentMatched": true,
+        "discoveryStage": "MAPPED_SOURCE"
+      }
+    ],
+    "discoveryFetchAttempts": [],
+    "coverageDecisions": [
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-corporate-tax-residency",
+          "iras-authority-query-concept-company-tax-residency-rule",
+          "iras-authority-query-concept-company-tax-residency-incorporation"
+        ],
+        "admissionTopicIds": [
+          "iras-corporate-tax-residency"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": []
+      },
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-corporate-tax-residency",
+          "iras-authority-query-concept-company-tax-residency-rule",
+          "iras-authority-query-concept-company-tax-residency-incorporation"
+        ],
+        "admissionTopicIds": [
+          "iras-corporate-tax-residency"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": []
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-company-tax-residency-rule"
+        ],
+        "admissionTopicIds": [
+          "iras-corporate-tax-residency"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": []
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-company-tax-residency-incorporation"
+        ],
+        "admissionTopicIds": [
+          "iras-corporate-tax-residency"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": []
+      },
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-corporate-tax-residency",
+          "iras-authority-query-concept-company-tax-residency-rule",
+          "iras-authority-query-concept-company-tax-residency-incorporation"
+        ],
+        "admissionTopicIds": [
+          "iras-corporate-tax-residency"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": []
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-company-tax-residency-rule"
+        ],
+        "admissionTopicIds": [
+          "iras-corporate-tax-residency"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": []
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-company-tax-residency-incorporation"
+        ],
+        "admissionTopicIds": [
+          "iras-corporate-tax-residency"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": []
+      },
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-corporate-tax-residency",
+          "iras-authority-query-concept-company-tax-residency-rule",
+          "iras-authority-query-concept-company-tax-residency-incorporation"
+        ],
+        "admissionTopicIds": [
+          "iras-corporate-tax-residency"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": []
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-company-tax-residency-rule"
+        ],
+        "admissionTopicIds": [
+          "iras-corporate-tax-residency"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": []
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-company-tax-residency-incorporation"
+        ],
+        "admissionTopicIds": [
+          "iras-corporate-tax-residency"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": []
+      },
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-corporate-tax-residency",
+          "iras-authority-query-concept-company-tax-residency-rule",
+          "iras-authority-query-concept-company-tax-residency-incorporation"
+        ],
+        "admissionTopicIds": [
+          "iras-corporate-tax-residency"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": []
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-company-tax-residency-rule"
+        ],
+        "admissionTopicIds": [
+          "iras-corporate-tax-residency"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": []
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-company-tax-residency-incorporation"
+        ],
+        "admissionTopicIds": [
+          "iras-corporate-tax-residency"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-corporate-tax-residency_7b367b79b714"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": []
+      }
+    ],
+    "stages": [
+      {
+        "stage": "LOCAL_VERIFIED",
+        "status": "EXHAUSTED",
+        "reason": "Local retrieval was insufficient for at least one routed topic."
+      },
+      {
+        "stage": "MAPPED_SOURCE",
+        "status": "SUFFICIENT",
+        "reason": "Every applicable reviewed source-map pointer was attempted before discovery; adequacy was checked against each routed topic."
+      },
+      {
+        "stage": "SITEMAP_DISCOVERY",
+        "status": "SKIPPED",
+        "reason": "Sitemap discovery was not attempted for this request."
+      },
+      {
+        "stage": "OFFICIAL_DOMAIN_SEARCH",
+        "status": "SKIPPED",
+        "reason": "Official-domain search was not attempted for this request."
+      }
+    ]
+  },
+  "directGroups": [],
+  "observedStatus": {
+    "workstreamStatus": "UNOBSERVED",
+    "evidenceStatus": "UNOBSERVED",
+    "applicationStatus": "UNOBSERVED",
+    "presentationStatus": "UNOBSERVED",
+    "requestCompletenessEvaluation": "UNCERTAIN"
+  },
+  "gaps": "UNOBSERVED"
+}

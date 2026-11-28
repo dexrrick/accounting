@@ -8,13 +8,17 @@ interface InputHandlerPanelProps {
   scenario: AccountingScenarioState | null;
   onScenarioChange?: (updated: AccountingScenarioState) => void;
   onResetToDefaults: () => void;
+  resetDisabled?: boolean;
+  defaultExpanded?: boolean;
 }
 
 export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
   scenario,
-  onResetToDefaults
+  defaultExpanded = false,
+  onResetToDefaults,
+  resetDisabled = false
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   if (!scenario) {
     return null;
   }
@@ -112,7 +116,8 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
             </button>
             <button
               onClick={onResetToDefaults}
-              className="text-workspace-muted hover:text-slate-800 dark:hover:text-white p-1.5 rounded-lg hover:bg-workspace-hover dark:hover:bg-workspace-hover transition-colors"
+              disabled={resetDisabled}
+              className="text-workspace-muted hover:text-slate-800 dark:hover:text-white p-1.5 rounded-lg hover:bg-workspace-hover dark:hover:bg-workspace-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Reset scenario"
             >
               <RefreshCw className="w-3.5 h-3.5" />

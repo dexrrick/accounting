@@ -1,17 +1,34 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { ChatImageAttachment, ChatMessage, MissingFieldInfo } from '../types/accounting';
-import { Send, Bot, User, Sparkles, AlertCircle, ArrowRight, ArrowDown, ChevronLeft, ChevronRight, MoveHorizontal, Eye, EyeOff, ImagePlus } from 'lucide-react';
+import type { AdvisoryFailureStatus, AccountingScenarioState, ChatImageAttachment, ChatMessage, MissingFieldInfo } from '../types/accounting';
+import { Send, Square, Bot, User, Sparkles, AlertCircle, ArrowRight, ArrowDown, ChevronLeft, ChevronRight, MoveHorizontal, Eye, EyeOff, ImagePlus } from 'lucide-react';
 import { SAMPLE_PROMPTS } from '../data/sampleScenarios';
 import type { OutputPreference } from '../services/geminiService';
 import { createImageAttachment, validateImageFile } from '../utils/imageUtils';
 import { ImageAttachmentPreview } from './ImageAttachmentPreview';
+import { SafeChatAnswer } from './SafeChatAnswer';
+import { canRetryFailedAnswer } from '../services/conversationBoundary';
+
+function advisoryFailureMessage(status: AdvisoryFailureStatus): string {
+  const messages: Record<AdvisoryFailureStatus, string> = {
+    AUTH_OR_PERMISSION: 'The configured provider rejected authentication or permission for this request. Check its settings and retry.',
+    RATE_LIMIT: 'The configured provider reported a rate limit or quota issue. Check its availability and retry.',
+    TIMEOUT: 'The configured provider took too long to respond. You can retry the AI answer.',
+    NETWORK: 'The app could not reach the configured provider. Check the connection and retry.',
+    INVALID_RESPONSE: 'The provider returned a response the app could not validate. You can retry the AI answer.',
+    CONTEXT_LIMIT: 'The question and supporting context exceed the AI answer limit. Shorten the question and retry.',
+    OTHER: 'The provider or response failed for an unclassified reason. Check its settings and retry.'
+  };
+  return messages[status];
+}
 
 interface ChatPanelProps {
   messages: ChatMessage[];
   onSendMessage: (text: string, images?: ChatImageAttachment[]) => void;
   onRetryMessage: (text: string, images: ChatImageAttachment[]) => void;
+  onRetryAiAnswer: (text: string, scenarioSnapshot: AccountingScenarioState | null, originalUserMessageId: string) => void;
   onSelectSuggestion: (fieldKey: string, value: number | string) => void;
   onResolveRelation: (isRelated: boolean) => void;
+  onCancelRequest: () => void;
   isLoading: boolean;
   isAwaitingRelation: boolean;
   outputPreference: OutputPreference;
@@ -22,8 +39,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   messages,
   onSendMessage,
   onRetryMessage,
+  onRetryAiAnswer,
   onSelectSuggestion,
   onResolveRelation,
+  onCancelRequest,
   isLoading,
   isAwaitingRelation,
   outputPreference,
@@ -163,7 +182,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   : 'bg-workspace-raised dark:bg-workspace-raised text-slate-800 dark:text-workspace-secondary rounded-bl-none border border-workspace-border dark:border-workspace-border shadow-xs'
               }`}
             >
-              <div className="whitespace-pre-line font-normal">{msg.text}</div>
+              {msg.advisoryFailureStatus && (
+                <div role="status" className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+                  <span className="font-semibold">AI answer could not be completed.</span> {advisoryFailureMessage(msg.advisoryFailureStatus)} The available response is shown below.
+                </div>
+              )}
+              {msg.displayFullAnswer
+                ? <div className="font-normal"><SafeChatAnswer text={msg.fullText || msg.text} trustedLinks={msg.scenarioSnapshot?.officialAnswerLinks || []} /></div>
+                : <div className="whitespace-pre-line font-normal">{msg.text}</div>}
+              {msg.advisoryRetryPayload && msg.advisoryFailureStatus !== 'CONTEXT_LIMIT' &&
+                canRetryFailedAnswer(messages, msg.advisoryRetryPayload.originalUserMessageId) && (
+                <button type="button" onClick={() => onRetryAiAnswer(msg.advisoryRetryPayload!.text, msg.advisoryRetryPayload!.scenarioSnapshot, msg.advisoryRetryPayload!.originalUserMessageId)} disabled={isLoading || isAwaitingRelation} className="mt-3 rounded-lg border border-workspace-accent px-3 py-1.5 text-[11px] font-semibold text-workspace-accent-text hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-blue-950/30">
+                  Retry AI answer
+                </button>
+              )}
               {msg.retryPayload && (
                 <button type="button" onClick={() => onRetryMessage(msg.retryPayload!.text, msg.retryPayload!.images)} disabled={isLoading || isAwaitingRelation} className="mt-3 rounded-lg border border-workspace-accent px-3 py-1.5 text-[11px] font-semibold text-workspace-accent-text hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-blue-950/30">
                   Retry image analysis
@@ -217,8 +249,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                           {field.suggestions.map((sug, idx) => (
                             <button
                               key={idx}
+                              type="button"
                               onClick={() => onSelectSuggestion(field.fieldKey, sug.value)}
-                              className="px-2.5 py-1 bg-workspace-raised hover:bg-slate-200 dark:bg-workspace-raised dark:hover:bg-workspace-hover text-slate-800 dark:text-workspace-secondary border border-workspace-border dark:border-workspace-border rounded-lg text-[11px] font-medium transition-colors flex items-center gap-1"
+                              disabled={isLoading || isAwaitingRelation}
+                              className="px-2.5 py-1 bg-workspace-raised hover:bg-slate-200 dark:bg-workspace-raised dark:hover:bg-workspace-hover text-slate-800 dark:text-workspace-secondary border border-workspace-border dark:border-workspace-border rounded-lg text-[11px] font-medium transition-colors flex items-center gap-1 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               <span>{sug.label}</span>
                               <ArrowRight className="w-2.5 h-2.5 opacity-60" />
@@ -387,19 +421,27 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             rows={2}
             className="w-full min-h-20 pl-3 pr-12 py-3 text-sm bg-workspace-raised dark:bg-workspace-input border border-slate-300 dark:border-workspace-border rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-workspace-accent focus:border-transparent resize-none leading-relaxed font-sans"
           />
-          <button
-            type="submit"
-            disabled={(!inputText.trim() && attachments.length === 0) || isLoading || isAwaitingRelation}
-            className={`absolute right-2 p-2 rounded-lg transition-all ${
-              (inputText.trim() || attachments.length > 0) && !isLoading && !isAwaitingRelation
-                ? 'bg-workspace-accent text-white hover:bg-workspace-accent-hover shadow-sm'
-                : 'bg-slate-200 dark:bg-workspace-raised text-workspace-muted dark:text-workspace-muted cursor-not-allowed'
-            }`}
-            title="Send query"
-            aria-label="Send query"
-          >
-            <Send className="w-4 h-4" />
-          </button>
+          {isLoading ? (
+            <button type="button" onClick={onCancelRequest}
+              className="absolute right-2 p-2 rounded-lg bg-rose-100 text-rose-800 hover:bg-rose-200 dark:bg-rose-950/40 dark:text-rose-200"
+              title="Cancel request" aria-label="Cancel request">
+              <Square className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={(!inputText.trim() && attachments.length === 0) || isAwaitingRelation}
+              className={`absolute right-2 p-2 rounded-lg transition-all ${
+                (inputText.trim() || attachments.length > 0) && !isAwaitingRelation
+                  ? 'bg-workspace-accent text-white hover:bg-workspace-accent-hover shadow-sm'
+                  : 'bg-slate-200 dark:bg-workspace-raised text-workspace-muted dark:text-workspace-muted cursor-not-allowed'
+              }`}
+              title="Send query"
+              aria-label="Send query"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          )}
         </div>
         <div className="mt-2 flex flex-wrap gap-3 px-1 text-[11px] text-slate-600 dark:text-workspace-secondary">
           <label className="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={outputPreference.journal} disabled={isLoading || isAwaitingRelation} onChange={(e) => onOutputPreferenceChange({ ...outputPreference, journal: e.target.checked })} /> Double Entry Journal</label>

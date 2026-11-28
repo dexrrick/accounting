@@ -6,9 +6,9 @@ console.log("=== RUNNING EXTENSIVE MULTI-SCENARIO VERIFICATION ===");
 // -------------------------------------------------------------
 // TEST 1: User's Apple Shares Scenario with Explicit FX Gain Double Entry
 // -------------------------------------------------------------
-const applePrompt = "a company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026, subsequently the company sold 300 shares for USD400k on 15/12/2026. what's the double entries";
+const applePrompt = "a company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026 at USD/SGD spot rate of 1.34, subsequently the company sold 300 shares for USD400k on 15/12/2026 at USD/SGD spot rate of 1.36. what's the double entries";
 
-const parsedApple = parseAccountingQuery(applePrompt);
+const parsedApple = await parseAccountingQuery(applePrompt);
 console.log("\n[TEST 1] Apple Shares Parsing & Double Entry:");
 console.assert(parsedApple.scenarioType === 'EQUITY_INVESTMENT_FX', `Expected EQUITY_INVESTMENT_FX, got ${parsedApple.scenarioType}`);
 console.assert(parsedApple.purchaseAmountForeign === 300000, `Expected 300000, got ${parsedApple.purchaseAmountForeign}`);
@@ -36,7 +36,7 @@ console.log("✓ TEST 1 PASSED: Explicit Realized Foreign Exchange Gain double e
 // -------------------------------------------------------------
 const rentalPrompt = "i have a rental agreement for 3 years, paying 1 month sgd3,000 what's the double entry";
 
-const parsedRental = parseAccountingQuery(rentalPrompt);
+const parsedRental = await parseAccountingQuery(rentalPrompt);
 console.log("\n[TEST 2] Rental Lease Agreement Parsing & Double Entry:");
 console.assert(parsedRental.scenarioType === 'LEASE_IFRS16', `Expected LEASE_IFRS16, got ${parsedRental.scenarioType}`);
 console.assert(parsedRental.leaseTermYears === 3, `Expected 3 years, got ${parsedRental.leaseTermYears}`);

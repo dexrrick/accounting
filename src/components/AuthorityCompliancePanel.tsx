@@ -1,16 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, ExternalLink, ShieldCheck } from 'lucide-react';
 import type { AuthorityEvidencePresentation, AuthorityPresentedClaim, AuthorityPresentedWorkstream } from '../utils/authorityEvidencePresentation';
+import { hasCompleteRequestRepresentation } from '../utils/authorityEvidencePresentation';
 import { defaultSourceRetriever } from '../retrieval/sourceRetriever';
+import type { ISourceRetriever } from '../retrieval/sourceRetriever';
 import { sameVerifiedDocumentBinding, verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
 import { SOURCE_REGISTRY_CHANGE_EVENT } from '../retrieval/sourceRegistryEvents';
 import { formatSingaporeDate } from '../utils/dateUtils';
 
 interface AuthorityCompliancePanelProps {
   presentation: AuthorityEvidencePresentation;
+  sourceRetriever?: ISourceRetriever;
 }
 
-function statusLabel(status: AuthorityEvidencePresentation['status']): string {
+function statusLabel(status: AuthorityEvidencePresentation['status'], requestComplete: boolean, evidenceVerified: boolean, applicationUnresolved: boolean): string {
+  if (!requestComplete && evidenceVerified) {
+    return `Evidence verified for mapped issues; full request coverage unconfirmed${applicationUnresolved ? '; application unresolved' : ''}`;
+  }
   if (status === 'VERIFIED') return 'All requested evidence verified';
   if (status === 'CONDITIONAL') return 'Evidence verified; application unresolved';
   return 'Evidence incomplete';
@@ -27,12 +33,14 @@ function workstreamStatus(stream: AuthorityPresentedWorkstream, staleBinding: bo
   return stream.applicationStatus === 'UNRESOLVED' ? 'Application unresolved' : 'Evidence verified';
 }
 
-function bindingStatus(claim: AuthorityPresentedClaim): { current: boolean; status: string } | undefined {
+function bindingStatus(claim: AuthorityPresentedClaim, sourceRetriever: ISourceRetriever): { current: boolean; status: string } | undefined {
   const binding = claim.sourceBinding;
   if (!binding) return undefined;
-  const source = defaultSourceRetriever.getSourceById(binding.recordId);
+  const admissionOptions = claim.sourceAdmissionOptions;
+  if (!admissionOptions) return { current: false, status: 'SOURCE_ADMISSION_CONTEXT_MISSING' };
+  const source = sourceRetriever.getSourceById(binding.recordId, admissionOptions);
   if (!source) return { current: false, status: 'SOURCE_NOT_FOUND' };
-  const admission = verifySharedDocumentAdmission(source);
+  const admission = verifySharedDocumentAdmission(source, sourceRetriever.getVersioningManager?.(), admissionOptions);
   if (!admission.required) return { current: false, status: 'ADMISSION_NOT_REQUIRED' };
   if (!admission.admitted) return { current: false, status: admission.reason };
   const matches = sameVerifiedDocumentBinding(binding, admission.binding);
@@ -42,7 +50,9 @@ function bindingStatus(claim: AuthorityPresentedClaim): { current: boolean; stat
   };
 }
 
-export const AuthorityCompliancePanel: React.FC<AuthorityCompliancePanelProps> = ({ presentation }) => {
+export const AuthorityCompliancePanel: React.FC<AuthorityCompliancePanelProps> = ({
+  presentation, sourceRetriever = defaultSourceRetriever
+}) => {
   const [, setRegistryRevision] = useState(0);
   useEffect(() => {
     const refresh = () => setRegistryRevision(revision => revision + 1);
@@ -53,14 +63,16 @@ export const AuthorityCompliancePanel: React.FC<AuthorityCompliancePanelProps> =
   const renderedStreams = presentation.workstreams.map(stream => {
     const claimStatuses = new Map(stream.sources.flatMap(source => source.claims)
       .flatMap(claim => {
-        const status = bindingStatus(claim);
+        const status = bindingStatus(claim, sourceRetriever);
         return status ? [[claim, status] as const] : [];
       }));
     const hasStaleBinding = [...claimStatuses.values()].some(status => !status.current);
     return { stream, claimStatuses, hasStaleBinding };
   });
   const hasInvalidatedBinding = renderedStreams.some(item => item.hasStaleBinding);
-  const displayedStatus = hasInvalidatedBinding ? 'INSUFFICIENT' : presentation.status;
+  const requestComplete = hasCompleteRequestRepresentation(presentation);
+  const displayedStatus = hasInvalidatedBinding ? 'INSUFFICIENT'
+    : !requestComplete && presentation.evidenceStatus === 'VERIFIED' ? 'CONDITIONAL' : presentation.status;
 
   return (
   <section className="bg-white dark:bg-[#1C2538] rounded-2xl border border-slate-200 dark:border-[#2B374E] shadow-xl overflow-hidden flex flex-col">
@@ -76,7 +88,7 @@ export const AuthorityCompliancePanel: React.FC<AuthorityCompliancePanelProps> =
       </div>
       <span className={`inline-flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-md font-semibold border ${statusStyle(displayedStatus)}`}>
         {(displayedStatus === 'INSUFFICIENT' || hasInvalidatedBinding) && <AlertTriangle className="w-3 h-3" />}
-        {hasInvalidatedBinding ? 'Source version changed; review required' : statusLabel(displayedStatus)}
+        {hasInvalidatedBinding ? 'Source version changed; review required' : statusLabel(displayedStatus, requestComplete, presentation.evidenceStatus === 'VERIFIED', presentation.applicationStatus === 'UNRESOLVED')}
       </span>
     </header>
 
@@ -100,7 +112,7 @@ export const AuthorityCompliancePanel: React.FC<AuthorityCompliancePanelProps> =
                 <div key={issue.id} className="rounded-lg bg-slate-50 dark:bg-[#111827] border border-slate-200 dark:border-[#2B374E] p-3">
                   {(() => {
                     const issueHasStaleBinding = issue.claims.some(claim => {
-                      const status = claimStatuses.get(claim) || bindingStatus(claim);
+                      const status = claimStatuses.get(claim) || bindingStatus(claim, sourceRetriever);
                       return status ? !status.current : false;
                     });
                     const issueInsufficient = issueHasStaleBinding || issue.evidenceStatus === 'INSUFFICIENT';

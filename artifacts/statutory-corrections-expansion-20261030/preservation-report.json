@@ -1,0 +1,22 @@
+{
+  "status": "QUALIFIED_PRESERVATION",
+  "strictOriginalStatusPreservationPassed": false,
+  "originalPathsPreserved": 53,
+  "originalEvidenceLosses": [
+    "iras-eci-03"
+  ],
+  "nativeEnrichedPathsPreserved": 54,
+  "enrichedEvidenceLosses": [],
+  "previousGeneralExplanations": 25,
+  "originalExplanationLosses": [],
+  "enrichedExplanationLosses": [],
+  "fixed100CorpusUnchanged": true,
+  "exception": {
+    "id": "iras-eci-03",
+    "originalStatus": "INSUFFICIENT",
+    "enrichedStatus": "VERIFIED",
+    "admittedClaimsUnchanged": true,
+    "reason": "Original admitted quotation establishes filing timing and existence of a waiver, but omits waiver conditions. INSUFFICIENT is preserved; native enrichment separately supplies the complete conditions."
+  },
+  "limits": "Offline evidence-path and explanation-presence audits do not establish complete-answer correctness, historical-rule acceptance, CI or production readiness."
+}

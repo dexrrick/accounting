@@ -1,0 +1,73 @@
+Steps to file an annual return
+Last updated on 19 October 2026.
+
+Before you file
+All local companies must meet annual return deadlines and requirements. This guide explains how to file annual returns to avoid penalties and enforcement action.
+
+Who may file
+Company officers (such as the director or company secretary) can file annual returns. You may also engage a corporate service provider (CSP) to file on your behalf.
+
+Pre-filing checklist
+Company details: Ensure these company details are correct and up to date:
+Company type
+Registered office address
+Business activities (primary and secondary)
+Details of company officers (such as the directors and secretary)
+Details of shareholders and shares (such as number of shares held, issued share capital, and paid up share capital)
+Details of any registered charges or loans
+Note: You are legally required to keep this information up to date. If anything is incorrect, you must update it before you file.
+Financial statements: Check if your company needs to file financial statements.
+Compliance requirements for Register of Registrable Controllers (RORC), Registers of Nominee Directors (ROND) and Nominee Shareholders (RONS): Check if your company is required to comply with:
+Register of Registrable Controllers (RORC) requirements (opens in new tab)
+Registers of Nominee Directors (ROND) and Nominee Shareholders (RONS) requirements (opens in new tab)
+
+What you need to prepare
+First, make sure you have completed the required checks beforehand. This includes checking if your company needs to file financial statements.
+
+Required documents and information
+Financial statements or online declaration: If your company needs to file financial statements in XBRL format:
+Prepare and validate your financial statements
+File your financial statements in the required XBRL format
+When you submit a full set of financial statements in XBRL format, you do not need to attach a PDF copy. If you do not submit the full XBRL, you must attach a PDF copy of the complete financial statements. When uploading the PDF copy:
+Ensure the file name includes only alphanumeric characters (letters A-Z, a-z and numbers 0-9).
+Do not include spaces, special characters (such as ., @, #, $, %, &, *), or foreign language characters in the filename.
+
+Annual general meeting (AGM) details
+You must declare your AGM details when you file an annual return. This applies whether you held an AGM, were exempt, or dispensed with holding an AGM. If your company held an AGM, include the date it was held when you file an annual return.
+
+Director signatures
+If your company has:
+One director only: That director must sign the directors’ statement.
+Multiple directors: At least two directors must sign the directors’ statement.
+
+Fees and approval time
+Fees: $60.
+Processing time: Your records will update immediately once you successfully submit your annual return.
+
+How to file an annual return
+## Step 1: Log in to Bizfile and open the 'File annual returns' eService
+1. Click 'Login' on the Bizfile homepage.
+2. Select "Business User" to log in via Corppass.
+4. Select the entity you are filing for.
+5. From the mega menu, click "Annual filing". Then, click "Local Company" tab and "File annual returns".
+6. Click "Start" on the introduction page to file your annual return.
+
+## Step 2: Check entity information and financial year details
+1. Check that the entity information is correct and up to date. If you need to update any details, use the 'Update entity information' eService under the 'Manage' tab before continuing.
+2. Indicate 'Yes' if the company has any individuals who perform the role of a CEO. You can also click the ‘?’ icon to understand more about the definition of CEO. If you indicate 'Yes', please ensure that the CEO is indeed appointed and reflected as a Position Holder in the Annual Return.
+4. Check that the Financial Year End (FYE) date is correct.
+5. Select the company type and specify the company's status for the financial period. The form will show the relevant sections based on your selection.
+
+## Step 4: Complete AGM, financial statement, and register information
+Complete all of these steps regardless of your company type.
+Select the appropriate Annual General Meeting (AGM) option and enter the AGM date. If the company is exempt from holding an AGM, enter the date when the financial statements were sent to members.
+If your company needs to file XBRL documents, select them from the available options. You must first upload these documents using the BizFinx prep tool before they will be available for selection here.
+
+## Step 5: Review and submit
+Review all information carefully before submission.
+Tick the checkbox to complete the declaration. Then, click 'Proceed to payment'.
+You will be directed to the payment summary page. Select the payment method and click 'Make payment'.
+Upon successful submission, you will receive an acknowledgement message and a receipt.
+
+Filing overdue annual returns
+If your company has not filed annual returns for more than one financial year, you need to file all overdue returns first. Follow the same steps to file your annual returns via Bizfile.

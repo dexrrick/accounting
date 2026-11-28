@@ -1,6 +1,11 @@
 import { getCoverageTopicsByIds, type SingaporeKnowledgeDomain } from '../standards/coverageRegistry';
 import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
 import { hasUnresolvedSection14NBasisPeriod } from '../retrieval/statutoryDateScope';
+import { removeNegatedOutputDirectives } from '../utils/journalRequestIntent';
+import { isFinalSalaryAmountRequest } from '../utils/momFinalPayIntent';
+import { normalizeTaxJurisdictionName, TAX_JURISDICTION_NAMES } from '../utils/taxJurisdictionNames';
+import { isCpfLowWageShareQuestion } from '../retrieval/cpfPayrollKnowledge20261027b';
+import type { SemanticQuestionDomain } from '../services/semanticQuestionUnderstanding';
 
 export type CanonicalDomain =
   | 'ACCOUNTING'
@@ -28,39 +33,14 @@ export interface QuestionClassificationResult {
   calculationRequired: boolean;
   journalEntryRequired: boolean;
   missingFacts: string[];
+  /** Missing facts produced by a classifier branch with a single known semantic domain. */
+  missingFactDomains?: Array<{ fact: string; domain: SemanticQuestionDomain }>;
   intent: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID';
   reasoning: string;
 }
 
-function normalizeJurisdictionName(value: string): string {
-  return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ').trim();
-}
-
-const TAX_JURISDICTION_NAMES: ReadonlySet<string> = (() => {
-  const names = new Set<string>();
-  if (typeof Intl.DisplayNames === 'function') {
-    const displayNames = new Intl.DisplayNames(['en'], { type: 'region' });
-    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    for (const first of alphabet) {
-      for (const second of alphabet) {
-        const code = `${first}${second}`;
-        const name = displayNames.of(code);
-        // Invalid two-letter codes fall back to themselves. Keep only actual
-        // region names and compare complete one-to-five-word complements.
-        if (name && name.toUpperCase() !== code) names.add(normalizeJurisdictionName(name));
-      }
-    }
-  }
-  for (const alias of [
-    'US', 'U.S.', 'USA', 'U.S.A.', 'UK', 'U.K.', 'Britain', 'Great Britain',
-    'UAE', 'Republic of Korea', 'South Korea', 'North Korea', 'Republic of China'
-  ]) names.add(normalizeJurisdictionName(alias));
-  return names;
-})();
-
 function hasForeignJurisdictionTarget(complement: string): boolean {
-  const words = normalizeJurisdictionName(complement).split(' ').filter(Boolean);
+  const words = normalizeTaxJurisdictionName(complement).split(' ').filter(Boolean);
   while (words.length && ['a', 'an', 'the'].includes(words[0])) words.shift();
   if (words.length === 0) return false;
 
@@ -100,6 +80,7 @@ export function isExplicitForeignTaxOnlyQuestion(query: string): boolean {
  */
 export function classifyQuestion(query: string): QuestionClassificationResult {
   const q = query.toLowerCase();
+  const entryIntentQuery = removeNegatedOutputDirectives(query).toLowerCase();
   const decomposition = defaultQueryTopicResolver.decomposeQuery(query);
   const allTopicIds = decomposition.topics.map(topic => topic.id);
   const allTopicMetadata = getCoverageTopicsByIds(allTopicIds);
@@ -125,8 +106,8 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   );
   const foreignTaxOnlyContext = isExplicitForeignTaxOnlyQuestion(query);
   const employerComplianceContext = /\b(?:employer|payroll|ir8a|ir21|ais submission|report employee|withhold monies)\b/i.test(query);
-  const explicitAccountingIntent = /\b(?:accounting|journal|bookkeeping|debit|balance sheet|financial statements?|p&l|sfrs|ifrs|capitalis\w*)\b/i.test(q) ||
-    /\bdouble entr\w*/i.test(q);
+  const explicitAccountingIntent = /\b(?:accounting|journal|bookkeeping|debit|balance sheet|financial statements?|p&l|sfrs|ifrs|capitalis\w*)\b/i.test(entryIntentQuery) ||
+    /\bdouble entr\w*/i.test(entryIntentQuery);
   const taxCreditWithoutAccountingIntent = /\b(?:foreign tax credit|tax credit|double tax relief foreign tax credit)\b/i.test(q) && !explicitAccountingIntent;
   const passengerCarTaxOnlyContext = /\b(?:s-plate|passenger (?:motor )?car)\b/i.test(q) &&
     /\b(?:deduct\w*|running costs?|capital allowances?|income tax|corporate tax)\b/i.test(q) &&
@@ -155,6 +136,16 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     ].includes(topic.id))
   );
   const topicIds = topicMetadata.map(topic => topic.id);
+  // ACRA XBRL filing questions refer to financial statements but do not ask
+  // for accounting analysis. Keep that filing language from setting the
+  // generic financial-statement accounting signal unless the query also asks
+  // about accounting work or describes an actual transaction.
+  const isAcraFinancialStatementFilingAdvisory = topicIds.includes('acra_financial_statements') &&
+    /\bfinancial statements?\b/i.test(entryIntentQuery) &&
+    /\b(?:annual[- ]return|file|filing|omit|exempt\w*|dormant|newly incorporat\w*)\b/i.test(entryIntentQuery) &&
+    /\b(?:company|companies|incorporat\w*|annual[- ]return|dormant)\b/i.test(entryIntentQuery);
+  const isAcraXbrlFilingAdvisory = (topicIds.includes('acra_xbrl') || isAcraFinancialStatementFilingAdvisory) &&
+    !/\b(?:journal|bookkeeping|debit|credit|how to record|how do i record|accounting treatment|recognition|measurement|depreciat\w*|amorti\w*|capitalis\w*|capitaliz\w*|sfrs|ifrs|ias\s*\d*|intangible assets?|financial assets?|trade discount|accruals?|leases?|rou asset|fvtpl|fvtoci|balance sheet|p&l|statement of profit|statement of comprehensive income|restatement|restate|reclassif\w*|presentation of income|revenue presentation|bought|sold|purchased|acquired|invested|disposed of|issued|allotted)\b/i.test(entryIntentQuery);
 
   // 1. Domain Indicator Detection
   const hasAccounting =
@@ -168,8 +159,8 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('amorti') ||
     q.includes('debit') ||
     (/\bcredit\b/i.test(q) && !taxCreditWithoutAccountingIntent) ||
-    q.includes('journal') ||
-    q.includes('double entr') ||
+    entryIntentQuery.includes('journal') ||
+    entryIntentQuery.includes('double entr') ||
     q.includes('bookkeeping') ||
     q.includes('accrual') ||
     /\bleases?\b/i.test(q) ||
@@ -180,8 +171,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('trade discount') ||
     q.includes('balance sheet') ||
     q.includes('p&l') ||
-    q.includes('financial statement') ||
-    q.includes('financial statements') ||
+    (!isAcraXbrlFilingAdvisory && (q.includes('financial statement') || q.includes('financial statements'))) ||
     q.includes('statement of profit') ||
     q.includes('statement of comprehensive income') ||
     q.includes('restatement') ||
@@ -326,10 +316,49 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('13o') || q.includes('13u') || q.includes('cms licence') ||
     topicMetadata.some(topic => topic.domainId.startsWith('MAS_'));
 
-  const hasPayrollCalculation =
-    (q.includes('salary') || q.includes('earning') || q.includes('earns') || q.includes('payroll') || q.includes('wages') || q.includes('wage')) &&
-    (q.includes('cpf') || q.includes('last day') || q.includes('resignation') || q.includes('prorat') || q.includes('staff') || q.includes('employee')) &&
-    (q.includes('calculat') || q.includes('compute') || q.includes('how much') || /\d+/.test(q));
+  // Age bands, contribution years and wage thresholds carry digits without asking for a payroll result.
+  const asksCpfContributionRates =
+    /\b(?:cpf|central provident fund)\b/.test(entryIntentQuery) &&
+    /\b(?:rates?|percentages?|contribution table|rate table)\b/.test(entryIntentQuery);
+  const asksCpfRefundProcedure =
+    /\b(?:cpf|central provident fund)\b/.test(entryIntentQuery) &&
+    /\brefunds?\b/.test(entryIntentQuery) &&
+    /\b(?:deadline|when|due|apply|application|request|procedure|how long|time limit)\b/.test(entryIntentQuery);
+  const explicitlyCalculatesCpfContribution =
+    /\b(?:calculat\w*|comput\w*|work out|estimate\b|estimating\b|how much)\b/.test(entryIntentQuery) ||
+    /\b(?:employer|employee)?\s*cpf contribution\b[^.!?;\n]{0,40}\b(?:is|are)\s+(?:payable|due|owed)\b/.test(entryIntentQuery) ||
+    /\b(?:cpf|contribution) amount\b/.test(entryIntentQuery) ||
+    /\bhow many\s+(?:singapore\s+)?(?:dollars?|cents?)\b/.test(entryIntentQuery) ||
+    /\b(?:cpf|contribution) amount\b[^.!?;\n]{0,40}\b(?:due|owe|owed|payable)\b/.test(entryIntentQuery) ||
+    /\bamount\s+(?:due|owed|payable)\b/.test(entryIntentQuery) ||
+    /\b(?:owe|owing|owed)\b[^.!?;\n]{0,60}\b(?:cpf|contribution)\b/.test(entryIntentQuery);
+  const asksCpfShareApplicability = /\b(?:is|are)\s+there\s+(?:an?\s+)?(?:employee|employer)(?:'s)?\s+(?:cpf\s+)?share\b|\b(?:does|do)\s+(?:an?\s+)?(?:employee|employer)\b[^.!?;]{0,50}\b(?:have|pay|contribute)\b[^.!?;]{0,35}\b(?:cpf\s+)?share\b/i.test(entryIntentQuery);
+  const asksCpfWageClassification = /\b(?:which|what)\b[^.!?;]{0,100}\b(?:items?|components?|payments?)\b[^.!?;]{0,100}\b(?:wages?|cpf|attract)\b|\b(?:cpf|central provident fund)\b[^.!?;]{0,100}\b(?:which|what)\b[^.!?;]{0,80}\b(?:items?|components?|payments?)\b/i.test(entryIntentQuery);
+  const asksCpfWageBaseOrCeilingApplicability =
+    /\b(?:ordinary wages?|additional wages?|ow|aw)\b/i.test(entryIntentQuery) &&
+    /\b(?:base|ceiling|cap(?:ping|ped)?)\b/i.test(entryIntentQuery) &&
+    /\b(?:is|are|does|do|what|which|whether|prove|subject to|attract)\b/i.test(entryIntentQuery);
+  const asksSalaryDeductionGuidance = /\b(?:salary|wage|pay)\b[^.!?;]{0,80}\b(?:deduct\w*|withhold\w*)\b|\b(?:deduct\w*|withhold\w*)\b[^.!?;]{0,80}\b(?:salary|wage|pay)\b/i.test(entryIntentQuery);
+  const hasExplicitPayrollAmount = /(?:\b(?:S\$|SGD\s*\$?)|\$)\s*\d[\d,]*(?:\.\d+)?\b|\b(?:salary|wages?|earns?|earnings|monthly pay)\s+(?:of|at|is)?\s*\d[\d,]*(?:\.\d+)?\b/i.test(entryIntentQuery);
+  const asksFinalSalaryAmount = isFinalSalaryAmountRequest(entryIntentQuery);
+  const hasExplicitSalaryBasis = /\b(?:salary|wages?|earns?|earning|earnings|monthly pay|pay rate|hourly rate|daily rate)\b\s+(?:of|at|is)?\s*(?:(?:S\$|SGD\s*\$?|\$)\s*)?\d[\d,]*(?:\.\d+)?\b/i.test(entryIntentQuery) ||
+    /(?:\b(?:S\$|SGD\s*\$?)|\$)\s*\d[\d,]*(?:\.\d+)?\s*(?:per|\/)\s*(?:month|day|hour|week|year)\b/i.test(entryIntentQuery) &&
+      !/\b(?:deduct\w*|deduction\w*)\b/i.test(entryIntentQuery);
+  const numericPayrollFallbackIsCalculation = hasExplicitPayrollAmount &&
+    !asksSalaryDeductionGuidance &&
+    !(asksCpfContributionRates && !explicitlyCalculatesCpfContribution) &&
+    !(asksCpfRefundProcedure && !explicitlyCalculatesCpfContribution) &&
+    !(asksCpfWageBaseOrCeilingApplicability && !explicitlyCalculatesCpfContribution) &&
+    !asksCpfShareApplicability && !asksCpfWageClassification;
+  const explicitlyRequestsProratedPayroll =
+    /\b(?:what if|what will|what would|calculat\w*|comput\w*|estimat\w*)\b[\s\S]{0,140}\b(?:pro[- ]?rat\w*)\b[\s\S]{0,80}\b(?:payroll|salary|wages?)\b/i.test(entryIntentQuery) &&
+    /\b(?:resign\w*|last day|termination|ceas\w*)\b/i.test(entryIntentQuery);
+  const hasPayrollCalculation = asksFinalSalaryAmount ||
+    (explicitlyCalculatesCpfContribution || !isCpfLowWageShareQuestion(entryIntentQuery)) &&
+    (entryIntentQuery.includes('salary') || entryIntentQuery.includes('earning') || entryIntentQuery.includes('earns') || entryIntentQuery.includes('payroll') || entryIntentQuery.includes('wages') || entryIntentQuery.includes('wage')) &&
+    (entryIntentQuery.includes('cpf') || entryIntentQuery.includes('last day') || entryIntentQuery.includes('resignation') || entryIntentQuery.includes('prorat') || entryIntentQuery.includes('staff') || entryIntentQuery.includes('employee')) &&
+    (entryIntentQuery.includes('calculat') || entryIntentQuery.includes('compute') || entryIntentQuery.includes('how much') ||
+      explicitlyCalculatesCpfContribution || numericPayrollFallbackIsCalculation || explicitlyRequestsProratedPayroll);
 
   // 2. Map Authorities
   const authorities: string[] = [];
@@ -404,57 +433,107 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   // 5. Intent and Calculation / Journal Requirements
   // Guard against numbers in statutory advisory queries falsely triggering journal entries
   const asksForEntries =
-    q.includes('double entr') ||
-    q.includes('journal') ||
-    q.includes('accounting entr') ||
-    q.includes('how to record') ||
-    q.includes('how do i record') ||
-    q.includes('debit and credit') ||
-    q.includes('dr and cr') ||
-    q.includes('show entries') ||
-    q.includes('bookkeeping entry') ||
-    q.includes('post entry');
+    entryIntentQuery.includes('double entr') ||
+    entryIntentQuery.includes('journal') ||
+    entryIntentQuery.includes('accounting entr') ||
+    entryIntentQuery.includes('how to record') ||
+    entryIntentQuery.includes('how do i record') ||
+    entryIntentQuery.includes('debit and credit') ||
+    entryIntentQuery.includes('dr and cr') ||
+    entryIntentQuery.includes('show entries') ||
+    entryIntentQuery.includes('bookkeeping entry') ||
+    entryIntentQuery.includes('post entry');
+  const mixedCpfContributionAndRefundRequest = hasPayrollCalculation &&
+    /\b(?:cpf|central provident fund)\b/.test(entryIntentQuery) &&
+    explicitlyCalculatesCpfContribution && asksCpfRefundProcedure && !asksForEntries;
 
-  const isConceptualOrAdvisory =
-    /^(what is|what are|explain|define|definition|describe|overview|difference between|how does|summarise|summarize|can i|can we|do we qualify|does it qualify|is it allowed|is it deductible|is it claimable|must we|must i|guidance on|requirements for|criteria for)\b/i.test(q.trim()) ||
-    q.includes('do we qualify') ||
-    q.includes('is it deductible') ||
-    q.includes('is it claimable') ||
-    q.includes('can i claim') ||
-    q.includes('can we claim');
+  const isConceptualOrAdvisoryQuery = (value: string) =>
+    /^(what is|what are|explain|define|definition|describe|overview|difference between|how does|summarise|summarize|can i|can we|do we qualify|does it qualify|is it allowed|is it deductible|is it claimable|must we|must i|guidance on|requirements for|criteria for)\b/i.test(value.trim()) ||
+    value.includes('do we qualify') ||
+    value.includes('is it deductible') ||
+    value.includes('is it claimable') ||
+    value.includes('can i claim') ||
+    value.includes('can we claim');
+  const isConceptualOrAdvisory = isConceptualOrAdvisoryQuery(q);
 
   const hasTransactionAction =
     (q.includes('bought') || q.includes('sold') || q.includes('purchased') || q.includes('acquired') || q.includes('invested') || q.includes('disposed of')) &&
     (asksForEntries || q.includes('shares') || q.includes('usd') || q.includes('asset') || q.includes('goods'));
 
+  // A conceptual opening clause can suppress an independent sale in a mixed
+  // final-pay request. Keep this narrow so ordinary tax and advisory questions
+  // retain the classifier's whole-query journal safeguards.
+  const independentFinalSalaryTransactionAction = asksFinalSalaryAmount && q
+    .split(/[.!?;\n]+|\b(?:and|also|then)\b/i)
+    .some(clause => {
+      const transactionClause = clause.trim();
+      const hasAction = /\b(?:bought|sold|purchased|acquired|invested|disposed of)\b/i.test(transactionClause);
+      const hasTransactionContext = asksForEntries || /\b(?:shares|usd|asset|goods)\b/i.test(transactionClause);
+      return hasAction && hasTransactionContext && !isConceptualOrAdvisoryQuery(transactionClause);
+    });
+  const hasActiveTransactionAction = (hasTransactionAction && !isConceptualOrAdvisory) ||
+    independentFinalSalaryTransactionAction;
+  const calculationIntentQuery = entryIntentQuery;
+
   let intent: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID' = 'STATUTORY_ADVISORY';
   if (asksForEntries && isConceptualOrAdvisory) {
     intent = 'HYBRID';
-  } else if (asksForEntries || hasTransactionAction || hasPayrollCalculation) {
+  } else if (asksForEntries || hasActiveTransactionAction || hasPayrollCalculation) {
     intent = 'TRANSACTION';
   } else {
     intent = 'STATUTORY_ADVISORY';
   }
 
   // Journal entry is required if user asked for entries, active transaction, or payroll calculation
-  const journalEntryRequired = asksForEntries || hasPayrollCalculation || (hasTransactionAction && !isConceptualOrAdvisory);
+  const journalEntryRequired = asksForEntries ||
+    (hasPayrollCalculation && !mixedCpfContributionAndRefundRequest && !asksFinalSalaryAmount) ||
+    (hasActiveTransactionAction && !mixedCpfContributionAndRefundRequest);
 
   // Calculation required ONLY if quantitative computation requested or active quantitative transaction
   const calculationRequired =
-    q.includes('calculat') ||
-    q.includes('compute') ||
-    q.includes('how much') ||
-    q.includes('what is the amount') ||
-    q.includes('fx gain') ||
-    q.includes('foreign exchange') ||
-    q.includes('tax payable') ||
+    calculationIntentQuery.includes('calculat') ||
+    calculationIntentQuery.includes('compute') ||
+    calculationIntentQuery.includes('how much') ||
+    calculationIntentQuery.includes('what is the amount') ||
+    calculationIntentQuery.includes('fx gain') ||
+    calculationIntentQuery.includes('foreign exchange') ||
+    calculationIntentQuery.includes('tax payable') ||
     hasPayrollCalculation ||
-    (intent === 'TRANSACTION' && /\d+/.test(q) && !isConceptualOrAdvisory);
+    (intent === 'TRANSACTION' && /\d+/.test(calculationIntentQuery) &&
+      (!isConceptualOrAdvisory || independentFinalSalaryTransactionAction));
 
   // 6. Missing Facts Identification
   const missingFacts: string[] = [];
+  const missingFactDomains: NonNullable<QuestionClassificationResult['missingFactDomains']> = [];
+  const addCpfMissingFact = (fact: string) => {
+    missingFacts.push(fact);
+    missingFactDomains.push({ fact, domain: 'CPF_PAYROLL' });
+  };
+  if (asksFinalSalaryAmount && !hasExplicitSalaryBasis) {
+    missingFacts.push('Contractual salary rate for final salary calculation');
+  }
+  if (hasPayrollCalculation && /\b(?:cpf|central provident fund)\b/.test(entryIntentQuery) &&
+      (explicitlyCalculatesCpfContribution || /\b(?:salary|wages?|wage|payroll)\b/.test(entryIntentQuery))) {
+    if (!/\b(?:age|aged|age band|years? old|date of birth)\b/i.test(entryIntentQuery)) {
+      addCpfMissingFact('Employee age on the relevant contribution date or applicable age band');
+    }
+    if (!/\b(?:singaporean|citizen|citizenship|permanent resident|\bspr\b|\bpr status\b|foreign worker)\b/i.test(entryIntentQuery)) {
+      addCpfMissingFact('Employee citizenship or permanent-resident status, including PR contribution year if applicable');
+    } else if (/\b(?:permanent resident|\bspr\b|\bpr status\b)\b/i.test(entryIntentQuery) &&
+        !/\b(?:first|second|third|1st|2nd|3rd)\s+(?:pr\s+)?(?:cpf\s+)?contribution year\b/i.test(entryIntentQuery)) {
+      addCpfMissingFact('Permanent-resident CPF contribution year');
+    }
+    if (!/\b(?:ordinary wages?|additional wages?|\bow\b|\baw\b)\b/i.test(entryIntentQuery)) {
+      addCpfMissingFact('Whether the wages are Ordinary Wages or Additional Wages and their classification');
+    }
+    if (!/\b(?:contribution period|wage month|for (?:the )?(?:month|period) of|in (?:the )?month of)\b/i.test(entryIntentQuery)) {
+      addCpfMissingFact('CPF contribution period or wage month');
+    }
+  }
   const isPureConceptualQuery =
     /^(what is|what are|explain|define|definition|describe|overview|difference between|how does|summarise|summarize)\b/i.test(q.trim());
+  const explicitlyGeneralTaxRuleRequest =
+    /\b(?:as\s+a\s+general\s+rule|general\s+(?:rules?|criteria|conditions|test|restriction|eligibility)|generally\s+(?:claimable|allowed|eligible|qualif\w*))\b/i.test(query);
 
   // Capitalisation missing facts (only for scenario/transactional evaluation, not pure conceptual definitions)
   if (!isPureConceptualQuery && (q.includes('capitalis') || q.includes('capitaliz') || q.includes('development cost') || q.includes('r&d'))) {
@@ -470,7 +549,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   }
 
   // Vehicle purchase missing facts (only when assessing a specific acquisition or claim)
-  if (!isPureConceptualQuery && /\b(?:car|cars|vehicle|vehicles)\b/i.test(q) && (q.includes('bought') || q.includes('purchas') || /\bclaim(?:s|ed|ing)?\b/i.test(q) || q.includes('deduct') || q.includes('entry'))) {
+  if (!isPureConceptualQuery && !explicitlyGeneralTaxRuleRequest && /\b(?:car|cars|vehicle|vehicles)\b/i.test(q) && (q.includes('bought') || q.includes('purchas') || /\bclaim(?:s|ed|ing)?\b/i.test(q) || q.includes('deduct') || q.includes('entry'))) {
     if (!q.includes('s-plate') && !q.includes('g-plate') && !q.includes('passenger') && !q.includes('commercial')) {
       missingFacts.push('Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)');
     }
@@ -478,7 +557,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
 
   // Scenario-specific tax conclusions need the facts that determine the
   // applicable IRAS treatment. Keep general explain/definition requests clear.
-  const asksAboutSpecificTaxCase = !isPureConceptualQuery &&
+  const asksAboutSpecificTaxCase = !isPureConceptualQuery && !explicitlyGeneralTaxRuleRequest &&
     /\b(?:our|my|this|we|company|paid|paying|claim\w*|file)\b/i.test(q);
   if (asksAboutSpecificTaxCase && hasTax && /\b(?:deductib\w*|deduct\w*|tax deduction)\b/i.test(q) &&
       /\b(?:expense|cost|payment|fee|meal|entertainment|renovat\w*|fit.out|machinery|equipment|car|vehicle|asset)\b/i.test(q)) {
@@ -676,6 +755,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     calculationRequired,
     journalEntryRequired,
     missingFacts,
+    ...(missingFactDomains.length ? { missingFactDomains } : {}),
     intent,
     reasoning
   };

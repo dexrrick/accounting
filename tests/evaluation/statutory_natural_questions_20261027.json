@@ -1,0 +1,551 @@
+{
+  "frozenOn": "27/10/2026",
+  "authorship": "Independent reviewer; frozen before implementation inspection. Expectations must not be weakened to fit outputs.",
+  "scope": "Held-out natural wording; explicit offline semantic fixtures. Does not test live model interpretation or transport.",
+  "cases": [
+    {
+      "id": "natural-iras-01",
+      "authority": "IRAS",
+      "question": "When can a business recover the GST it paid on purchases?",
+      "subject": "General eligibility for recovery of GST on business purchases",
+      "domain": "IRAS_GST",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "GST registration, supply/import to claimant and business use",
+        "qualifying taxable or specified out-of-scope attribution and valid invoice/import evidence",
+        "blocked-claim restrictions and reasonable Missing Trader Fraud steps"
+      ],
+      "forbidden": [
+        "business use alone establishes recovery",
+        "every GST purchase is claimable"
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+      ]
+    },
+    {
+      "id": "natural-iras-02",
+      "authority": "IRAS",
+      "question": "How long after year end do companies get to send in their estimated chargeable income?",
+      "subject": "General ECI filing deadline after financial year end",
+      "domain": "IRAS_INCOME_TAX",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "generally three months after financial year end",
+        "filing waiver or specifically exempt entities can remove duty"
+      ],
+      "forbidden": [
+        "deadline applies unconditionally to every entity",
+        "ECI deadline equals Form C deadline"
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing"
+      ]
+    },
+    {
+      "id": "natural-iras-03",
+      "authority": "IRAS",
+      "question": "Our company made no accounting profit. Does that mean we can skip ECI?",
+      "subject": "Whether no accounting profit establishes ECI filing waiver",
+      "domain": "IRAS_INCOME_TAX",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "no accounting profit alone does not establish waiver",
+        "revenue at most S$5m AND nil ECI before tax exemptions",
+        "need annual revenue, taxable ECI adjustments and special exemption facts"
+      ],
+      "forbidden": [
+        "eligible for waiver from no profit alone",
+        "accounting profit equals ECI"
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing"
+      ]
+    },
+    {
+      "id": "natural-iras-04",
+      "authority": "IRAS",
+      "question": "A customer has an overseas billing address. Is our sale automatically zero-rated for GST?",
+      "subject": "GST zero-rating of sales to overseas customers",
+      "domain": "IRAS_GST",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "overseas billing address alone insufficient",
+        "exports and qualifying international services may be zero-rated",
+        "need goods/service nature, delivery/performance and qualifying evidence"
+      ],
+      "forbidden": [
+        "every overseas customer gives zero-rating",
+        "zero-rated equals exempt"
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-to-charge-goods-and-services-tax-(gst)"
+      ]
+    },
+    {
+      "id": "natural-iras-05",
+      "authority": "IRAS",
+      "question": "For GST, how do exempt supplies differ from zero-rated sales?",
+      "subject": "GST distinction between exempt and zero-rated supplies",
+      "domain": "IRAS_GST",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "zero-rated supplies taxable at zero per cent",
+        "exempt supplies legislatively exempt rather than zero-rated taxable supplies",
+        "exports/international services versus specified financial services/residential property"
+      ],
+      "forbidden": [
+        "same treatment because neither charges GST"
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-to-charge-goods-and-services-tax-(gst)"
+      ]
+    },
+    {
+      "id": "natural-iras-06",
+      "authority": "IRAS",
+      "question": "What were the conditions for recovering input GST in 2013?",
+      "subject": "Historical 2013 GST input-tax eligibility conditions",
+      "domain": "IRAS_GST",
+      "expectedScope": "HISTORICAL_UNRESOLVED",
+      "expected": [
+        "cannot establish 2013 from current page",
+        "need contemporaneous effective source"
+      ],
+      "forbidden": [
+        "current checklist verified for 2013",
+        "capture date proves historical validity"
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+      ]
+    },
+    {
+      "id": "natural-cpf-01",
+      "authority": "CPF",
+      "question": "Is a cash transport allowance treated differently from repaying an employee's actual business travel bill for CPF?",
+      "subject": "CPF classification of cash allowances and official expense reimbursements",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "cash allowance generally wages",
+        "qualifying official reimbursement excluded up to actual expense",
+        "payment facts determine individual classification"
+      ],
+      "forbidden": [
+        "all labelled reimbursements exempt",
+        "all allowances non-wages"
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ]
+    },
+    {
+      "id": "natural-cpf-02",
+      "authority": "CPF",
+      "question": "We paid a bonus this month. How do we decide whether it belongs with monthly pay or additional pay for CPF?",
+      "subject": "CPF Ordinary Wages versus Additional Wages classification of a bonus",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "OW relates to employment in month and payable by 14th of following month",
+        "otherwise AW; annual performance bonus example",
+        "need employment period and payable date"
+      ],
+      "forbidden": [
+        "payment month establishes OW",
+        "bonus automatically OW"
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ]
+    },
+    {
+      "id": "natural-cpf-03",
+      "authority": "CPF",
+      "question": "Do part-time Singaporean staff working under a contract of service still get employer CPF?",
+      "subject": "CPF employee coverage for part-time Singapore Citizen staff",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "part-time status not itself exempt",
+        "SC/PR employees in Singapore above S$50 monthly generally covered",
+        "specific exemptions conditional"
+      ],
+      "forbidden": [
+        "CPF only full-time",
+        "every part-timer unconditionally covered"
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/who-should-receive-cpf-contributions"
+      ]
+    },
+    {
+      "id": "natural-cpf-04",
+      "authority": "CPF",
+      "question": "Does holding an Employment Pass make a foreign employee eligible for CPF?",
+      "subject": "CPF coverage for foreign employees who are not citizens or permanent residents",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "neither SC nor PR foreigner exempt",
+        "Employment Pass alone not SC/PR status"
+      ],
+      "forbidden": [
+        "all employment in Singapore triggers CPF irrespective of status"
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/who-should-receive-cpf-contributions"
+      ]
+    },
+    {
+      "id": "natural-cpf-05",
+      "authority": "CPF",
+      "question": "For staff earning S$400 in total wages for a month, is there always an employee CPF deduction as well as an employer contribution?",
+      "subject": "CPF low-wage employer and employee contribution shares",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "covered employee above S$50 and at most S$500 employer share remains employee share nil",
+        "coverage, period and status/rate table needed for amount"
+      ],
+      "forbidden": [
+        "standard 20 per cent deduction from 400",
+        "400 means no employer CPF"
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay"
+      ]
+    },
+    {
+      "id": "natural-cpf-06",
+      "authority": "CPF",
+      "question": "Can you apply today's CPF contribution table to wages paid in 2024?",
+      "subject": "Historical applicability of CPF contribution rates for 2024 wages",
+      "expectedScope": "HISTORICAL_UNRESOLVED",
+      "expected": [
+        "no automatic back-application",
+        "need 2024 table, employee status, age and wages"
+      ],
+      "forbidden": [
+        "today's rates verified for 2024"
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay"
+      ]
+    },
+    {
+      "id": "natural-mom-01",
+      "authority": "MOM",
+      "question": "For someone covered by the Employment Act, can the company pay normal monthly wages two weeks after the pay period closes?",
+      "subject": "Employment Act regular salary frequency and payment deadline",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "at least monthly; ordinary salary within seven days",
+        "fourteen-day deadline applies to overtime"
+      ],
+      "forbidden": [
+        "ordinary salary generally payable fourteen days later"
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+      ]
+    },
+    {
+      "id": "natural-mom-02",
+      "authority": "MOM",
+      "question": "Which staff are entitled to statutory overtime pay, and what multiplier is used?",
+      "subject": "Part IV overtime employee coverage and minimum pay multiplier",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "non-workmen basic monthly <=2600; workmen <=4500",
+        "managers/executives excluded; minimum 1.5 hourly basic rate"
+      ],
+      "forbidden": [
+        "all employees regardless of role/pay",
+        "gross salary establishes coverage"
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days"
+      ]
+    },
+    {
+      "id": "natural-mom-03",
+      "authority": "MOM",
+      "question": "Our clerk stayed late twice this week. What do you need before working out the overtime amount?",
+      "subject": "Facts and formula required for a clerk's overtime pay",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "need Part IV coverage, basic rate, eligible hours and contractual hours",
+        "hourly basic times at least1.5 times qualifying hours"
+      ],
+      "forbidden": [
+        "invent hours/amount",
+        "stayed late proves statutory eligibility"
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days"
+      ]
+    },
+    {
+      "id": "natural-mom-04",
+      "authority": "MOM",
+      "question": "Are managers automatically covered by the Employment Act overtime provisions even if their salary is low?",
+      "subject": "Managers and executives excluded from Part IV overtime coverage",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "managers/executives excluded from Part IV",
+        "contractual rights separate"
+      ],
+      "forbidden": [
+        "low salary brings manager into Part IV",
+        "no contractual overtime possible"
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days"
+      ]
+    },
+    {
+      "id": "natural-mom-05",
+      "authority": "MOM",
+      "question": "Can an employer routinely roster ninety overtime hours a month just because staff agree?",
+      "subject": "Part IV monthly overtime-hours limit and exemptions",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "normally72 monthly overtime hours",
+        "MOM exemption required; agreement insufficient"
+      ],
+      "forbidden": [
+        "consent overrides limit",
+        "no exemptions exist"
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days"
+      ]
+    },
+    {
+      "id": "natural-mom-06",
+      "authority": "MOM",
+      "question": "Were the same overtime salary thresholds already in force in 2015?",
+      "subject": "Historical 2015 Part IV salary-threshold applicability",
+      "expectedScope": "HISTORICAL_UNRESOLVED",
+      "expected": [
+        "current page cannot verify2015",
+        "need contemporaneous effective provisions"
+      ],
+      "forbidden": [
+        "current2600 verified for2015"
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days"
+      ]
+    },
+    {
+      "id": "natural-acra-01",
+      "authority": "ACRA",
+      "question": "How many months after closing the accounts does a listed company get for its AGM compared with a non-listed company?",
+      "subject": "AGM deadlines after financial year end by listed status",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "four months listed/six non-listed afterFYE",
+        "FYending>=31/08/2018; exemptions/dispensation qualify duty"
+      ],
+      "forbidden": [
+        "four/six applies all historical periods"
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings/due-dates-requirements/"
+      ]
+    },
+    {
+      "id": "natural-acra-02",
+      "authority": "ACRA",
+      "question": "If a private company sends its accounts out within five months, can a shareholder still insist on a meeting?",
+      "subject": "Private-company AGM exemption and member meeting-request safeguards",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "statements to ALL members within5months can exempt private company",
+        "member request up to14days before6month deadline; AGMwithin6months",
+        "member/auditor request within14days of statements triggers meeting within14days"
+      ],
+      "forbidden": [
+        "timely statements extinguish member rights"
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings/due-dates-requirements/"
+      ]
+    },
+    {
+      "id": "natural-acra-03",
+      "authority": "ACRA",
+      "question": "Our company has stopped trading and IRAS waived its tax filing. Must it still lodge anything annually with ACRA?",
+      "subject": "ACRA annual-return duty of dormant companies despite IRAS tax waiver",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "registered company still annual return despite dormancy/IRAS waiver",
+        "ACRA/IRAS distinct; needFYE/listing/branch facts"
+      ],
+      "forbidden": [
+        "IRAS waiver removesAR",
+        "dormancy removesAR"
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/"
+      ]
+    },
+    {
+      "id": "natural-acra-04",
+      "authority": "ACRA",
+      "question": "Does keeping an overseas branch register change the annual-return timetable for a company with share capital?",
+      "subject": "Annual-return overseas branch-register exception by listed status",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "sharecapital AND overseasbranch register:6months listed/8non-listed",
+        "ordinary5/7months"
+      ],
+      "forbidden": [
+        "any overseas branch gives extra month",
+        "listing irrelevant"
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/"
+      ]
+    },
+    {
+      "id": "natural-acra-05",
+      "authority": "ACRA",
+      "question": "We need to plan our next AGM. Can you tell us the last day to hold it?",
+      "subject": "Company facts needed to determine next AGM deadline",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "needFYE/listing/private status/exemption/dispensation/memberrequest/extension",
+        "general4/6months without invented date"
+      ],
+      "forbidden": [
+        "invent deadline from currentdate",
+        "automatic exemption"
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings/due-dates-requirements/"
+      ]
+    },
+    {
+      "id": "natural-acra-06",
+      "authority": "ACRA",
+      "question": "For a financial year ending in 2017, was the annual return always due seven months after year end?",
+      "subject": "Historical 2017 annual-return deadline applicability",
+      "expectedScope": "HISTORICAL_UNRESOLVED",
+      "expected": [
+        "do not backapply current timetable to2017",
+        "contemporaneous law/source and AGM/company facts needed"
+      ],
+      "forbidden": [
+        "7months verified2017"
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/"
+      ]
+    },
+    {
+      "id": "natural-mas-01",
+      "authority": "MAS",
+      "question": "What financial returns does an LFMC send each quarter, and how soon after quarter end?",
+      "subject": "LFMC quarterly financial return forms and deadline",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "Forms1/2 within14days quarterend viaMAS-Tx",
+        "distinct fromQDC"
+      ],
+      "forbidden": [
+        "quarterly deadline automatically QDC"
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "natural-mas-02",
+      "authority": "MAS",
+      "question": "After an LFMC's year end, what audited filings are due to MAS and by when?",
+      "subject": "LFMC audited annual financial return documents and deadline",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "5monthsFYE Forms1-6 auditedstatements/auditorreport/managementletterifany",
+        "manager-level commonSFA not allfundlevel duties"
+      ],
+      "forbidden": [
+        "solelyVCFM25A",
+        "exhaustive regulatorylist"
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "natural-mas-03",
+      "authority": "MAS",
+      "question": "An LFMC has changed its name and main office. How soon should MAS be told?",
+      "subject": "LFMC name or principal-business-place change notification",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "14daysfromchange NoticeforChangeinParticulars MAS-Tx"
+      ],
+      "forbidden": [
+        "waitannualreturn",
+        "obsoleteForm10 current"
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "natural-mas-04",
+      "authority": "MAS",
+      "question": "Can a venture capital fund manager simply use the normal LFMC financial-return checklist without checking its own regime?",
+      "subject": "VCFM versus ordinary LFMC reporting applicability",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "checkVCFM framework noautomaticordinaryLFMC transplant",
+        "manager/licencescope"
+      ],
+      "forbidden": [
+        "allordinaryLFMCforms automaticVCFM",
+        "VCFMnoreporting"
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf",
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "natural-mas-05",
+      "authority": "MAS",
+      "question": "Our investment business needs a filing calendar. Is one quarterly return enough for MAS?",
+      "subject": "Facts needed for MAS regulatory reporting calendar and completeness",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "needlicence/regime/activities/fundtypes/period for exhaustivecalendar",
+        "LFMCquarterly/annual conditionalexamples; eventnoticesseparate"
+      ],
+      "forbidden": [
+        "onequarterlyreturn exhaustsMAS",
+        "assume licence"
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "natural-mas-06",
+      "authority": "MAS",
+      "question": "Can the latest LFMC toolkit establish exactly what we had to report in 2021?",
+      "subject": "Historical 2021 applicability of LFMC reporting requirements",
+      "expectedScope": "HISTORICAL_UNRESOLVED",
+      "expected": [
+        "latestrevisioncannotverify2021",
+        "needcontemporaneousrules/entityscope"
+      ],
+      "forbidden": [
+        "issue2020provesallcurrentrulessince2020"
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf"
+      ]
+    }
+  ]
+}

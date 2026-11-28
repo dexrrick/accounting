@@ -1,0 +1,8 @@
+{
+  "scope": "Reported multi-part failures, frozen before correction",
+  "cases": [
+    {"id":"p2-iras-medical-van","authority":"IRAS","question":"Our GST-registered company paid for staff medical expenses and bought a delivery van to deliver goods. Can we claim input tax on each, and what separate conditions or exceptions apply?"},
+    {"id":"p2-mas-combined","authority":"MAS","question":"Our venture capital fund manager has not confirmed its financial year-end. Can we use the calendar-year nil-misconduct return deadline for Form 25A and assume that filing Form 25A also completes every reporting obligation of the funds we manage?"},
+    {"id":"p2-mas-qdc","authority":"MAS","question":"Which exact QDC form must our VCFM file, which funds and mandates are in scope, and what is the filing deadline?"}
+  ]
+}

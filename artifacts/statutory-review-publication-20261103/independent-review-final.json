@@ -1,0 +1,293 @@
+{
+  "reviewedUTC": "2026-11-03T05:34:35.531Z",
+  "baseHead": "24102c38d1b081f786cf22a643bc16747986eb3d",
+  "uncommitted": true,
+  "status": "CLEAR_BOUNDED_OFFLINE_REVIEW",
+  "scope": "Added balanced five-authority expansion beyond preexisting WHT snapshot; bounded answers only.",
+  "findings": [],
+  "answerGrades": [
+    {
+      "id": "balanced-acra-1",
+      "answerSha256": "88086009d406fc70acbcd158e15c8497021b0776b58ee8a76cd7635d968a6b72",
+      "grade": "CORRECT_BOUNDED_GUIDANCE",
+      "rationale": "Six-month registration deadlines and sole-director exclusion correctly bounded; residency and eligibility remain conditional.",
+      "preexistingControl": false,
+      "wholeQuestionComplete": false,
+      "matchesPreviouslyReviewedAnswer": true
+    },
+    {
+      "id": "balanced-acra-2",
+      "answerSha256": "f3b6d337b4db63ef4f0e9d3472202e3a0d294ebd47071e55caef1deec7644569",
+      "grade": "CORRECT_BOUNDED_GUIDANCE",
+      "rationale": "Six-month registration deadlines and sole-director exclusion correctly bounded; residency and eligibility remain conditional.",
+      "preexistingControl": false,
+      "wholeQuestionComplete": false,
+      "matchesPreviouslyReviewedAnswer": true
+    },
+    {
+      "id": "balanced-cpf-1",
+      "answerSha256": "49c6be1cc021e3adbd275d0aaf0c99e4c94facdb9c0d72601ec30890452b59a3",
+      "grade": "CORRECT_BOUNDED_GUIDANCE",
+      "rationale": "Correct nil employee share and continuing employer share for stated monthly total wages above50 through500; no unsupported numeric amount.",
+      "preexistingControl": false,
+      "wholeQuestionComplete": false,
+      "matchesPreviouslyReviewedAnswer": true
+    },
+    {
+      "id": "balanced-cpf-2",
+      "answerSha256": "49c6be1cc021e3adbd275d0aaf0c99e4c94facdb9c0d72601ec30890452b59a3",
+      "grade": "CORRECT_BOUNDED_GUIDANCE",
+      "rationale": "Correct nil employee share and continuing employer share for stated monthly total wages above50 through500; no unsupported numeric amount.",
+      "preexistingControl": false,
+      "wholeQuestionComplete": false,
+      "matchesPreviouslyReviewedAnswer": true
+    },
+    {
+      "id": "balanced-mom-1",
+      "answerSha256": "0a046e5e8392c5715b6cc92f07a4b91f7158f3af26fde4e1a59dddc07cb9c9fa",
+      "grade": "CORRECT_BOUNDED_GUIDANCE",
+      "rationale": "Correct7/14 calendar-day deadlines; case1 distinguishes late ordinary salary from timely overtime; case2 withholds payment timeliness.",
+      "preexistingControl": false,
+      "wholeQuestionComplete": false,
+      "matchesPreviouslyReviewedAnswer": true
+    },
+    {
+      "id": "balanced-mom-2",
+      "answerSha256": "ad803a93a014d8014af54f5b0e6a9bcc13abd64da4b96fcdfa3a1a76aa73de01",
+      "grade": "CORRECT_BOUNDED_GUIDANCE",
+      "rationale": "Correct7/14 calendar-day deadlines; case1 distinguishes late ordinary salary from timely overtime; case2 withholds payment timeliness.",
+      "preexistingControl": false,
+      "wholeQuestionComplete": false,
+      "matchesPreviouslyReviewedAnswer": true
+    },
+    {
+      "id": "balanced-iras-1",
+      "answerSha256": "62884d9b9fec40d61457b150a3b194253c3d0d23e5fe61233d9dea49fc7c78ba",
+      "grade": "CORRECT_BOUNDED_GUIDANCE",
+      "rationale": "Correct general medical-input-tax blocking and retained statutory exceptions; individual recovery and whole-question completeness remain conditional.",
+      "preexistingControl": false,
+      "wholeQuestionComplete": false,
+      "matchesPreviouslyReviewedAnswer": true
+    },
+    {
+      "id": "balanced-iras-2",
+      "answerSha256": "25804d2f294b02522258542cd62e3fbaa3bec74ce7c717db0848175b015ebd71",
+      "grade": "CORRECT_BOUNDED_GUIDANCE",
+      "rationale": "Correct general medical-input-tax blocking and retained statutory exceptions; individual recovery and whole-question completeness remain conditional.",
+      "preexistingControl": true,
+      "wholeQuestionComplete": false,
+      "matchesPreviouslyReviewedAnswer": true
+    },
+    {
+      "id": "balanced-mas-1",
+      "answerSha256": "2672430873824a0aba7b8141520ed8e3df9a82daeeea9cae5ba30b56658e28b5",
+      "grade": "CORRECT_BOUNDED_GUIDANCE",
+      "rationale": "Correct branch prior approval in Singapore/elsewhere, no prescribed form, no retrospective cure; no LFMC or20percent corporation-limb conclusion.",
+      "preexistingControl": false,
+      "wholeQuestionComplete": false,
+      "matchesPreviouslyReviewedAnswer": true
+    },
+    {
+      "id": "balanced-mas-2",
+      "answerSha256": "2672430873824a0aba7b8141520ed8e3df9a82daeeea9cae5ba30b56658e28b5",
+      "grade": "CORRECT_BOUNDED_GUIDANCE",
+      "rationale": "Correct branch prior approval in Singapore/elsewhere, no prescribed form, no retrospective cure; no LFMC or20percent corporation-limb conclusion.",
+      "preexistingControl": false,
+      "wholeQuestionComplete": false,
+      "matchesPreviouslyReviewedAnswer": true
+    }
+  ],
+  "changedAnswerGrades": [
+    {
+      "corpus": "final75",
+      "id": "iras-03",
+      "answerSha256": "62884d9b9fec40d61457b150a3b194253c3d0d23e5fe61233d9dea49fc7c78ba",
+      "grade": "CORRECT_BOUNDED_GUIDANCE",
+      "priorCorrect": false,
+      "rationale": "Correct general medical-input-tax blocking and retained statutory exceptions; individual recovery and whole-question completeness remain conditional.",
+      "wholeQuestionComplete": false,
+      "matchesPreviouslyReviewedAnswer": true
+    },
+    {
+      "corpus": "final75",
+      "id": "acra-01",
+      "answerSha256": "88086009d406fc70acbcd158e15c8497021b0776b58ee8a76cd7635d968a6b72",
+      "grade": "CORRECT_BOUNDED_GUIDANCE",
+      "priorCorrect": false,
+      "rationale": "Six-month registration deadlines and sole-director exclusion correctly bounded; residency and eligibility remain conditional.",
+      "wholeQuestionComplete": false,
+      "matchesPreviouslyReviewedAnswer": true
+    },
+    {
+      "corpus": "final75",
+      "id": "mas-10",
+      "answerSha256": "2672430873824a0aba7b8141520ed8e3df9a82daeeea9cae5ba30b56658e28b5",
+      "grade": "CORRECT_BOUNDED_GUIDANCE",
+      "priorCorrect": false,
+      "rationale": "Correct branch prior approval in Singapore/elsewhere, no prescribed form, no retrospective cure; no LFMC or20percent corporation-limb conclusion.",
+      "wholeQuestionComplete": false,
+      "matchesPreviouslyReviewedAnswer": true
+    }
+  ],
+  "preservation": {
+    "answers": 350,
+    "unchanged": 347,
+    "changed": 3,
+    "priorCorrect": 213,
+    "priorCorrectUnchanged": 213,
+    "networkRequests": 0,
+    "modelRequests": 0,
+    "drift": []
+  },
+  "checks": {
+    "finalFileHashesMatch": true,
+    "locatorExpectationFix": "Read reviewed: exact array adds the new health-screening pattern and positive/negative employee-context checks.",
+    "portableMasCases": "Read reviewed: two inline questions; no dependency on balanced artifact acceptance file; complete row2 exact claim and raw PDF hash asserted.",
+    "masPdfBinding": "Read reviewed: fetched PDF hash equals extractor record hash; unique row2/row3 same-page boundary; bounded columns; selected quote reproof; diagnostic retained hash98e89fb58014311bd5840cd76110b82e4c268189fe0d6d53572100e6a425f440.",
+    "finalNarrowGuardReview": "No remaining material finding in the requested fixes. Focused normal-profile log passed; source and full-application controls read-reviewed.",
+    "finalCaptureBinding": {
+      "freshAcceptanceArtifactSha256": "a0adb0934fcf5db979561aff101b6c77705c8e8f68de70297fb0298dfe46dd12",
+      "freshChangedAnswersArtifactSha256": "8cef5f9580c7a29b9529b9bbee7e41794dd083f1739ce101e37f990b088d9e3a",
+      "freshPreservationArtifactSha256": "7e6071c549432378741260a74f5f95a04eed0920e715f659ee83c8da1e3bbb40",
+      "all10AnswersMatchIndependentlyReviewedHashes": true,
+      "all3ChangedAnswersMatchIndependentlyReviewedHashes": true,
+      "networkRequests": 0,
+      "modelRequests": 0,
+      "valid": true
+    },
+    "supervisorReportedFinalValidation": "Normal-profile smoke161/161, full184/184, maintained lint, typecheck, Vite and Worker builds passed. Not rerun by reviewer."
+  },
+  "limitations": [
+    "No live source refresh, CI, deployment, browser or model acceptance performed.",
+    "Independent grades assess retained official source-backed bounded guidance, not complete whole-question or individual applicability.",
+    "Broad final validation results supplied by supervisor; reviewer independently verified frozen code and answer-hash bindings without rerunning broad suites."
+  ],
+  "reviewedFileHashes": [
+    {
+      "path": "src/classification/questionClassifier.ts",
+      "sha256": "43a7e55584a57bf774ab674e3ea7e47da5b232134d65c4528511e0b8c871da1a",
+      "actualSha256": "43a7e55584a57bf774ab674e3ea7e47da5b232134d65c4528511e0b8c871da1a",
+      "matches": true
+    },
+    {
+      "path": "src/retrieval/acraMomKnowledge20261027b.ts",
+      "sha256": "55b6efa96ef2ece4abc39113beb90bd34290194bcd016dbce60305bd56fda240",
+      "actualSha256": "55b6efa96ef2ece4abc39113beb90bd34290194bcd016dbce60305bd56fda240",
+      "matches": true
+    },
+    {
+      "path": "src/retrieval/cpfPayrollKnowledge20261027b.ts",
+      "sha256": "27bda454e086a24e33904f2ac8cb42b5582d4ac568b64753e290e0c2a028e857",
+      "actualSha256": "27bda454e086a24e33904f2ac8cb42b5582d4ac568b64753e290e0c2a028e857",
+      "matches": true
+    },
+    {
+      "path": "src/retrieval/irasMasKnowledge20261027b.ts",
+      "sha256": "3938f53a15699645da9fff1a1e4a69ca8ca3859b08d3a39c81c72cbd688018f8",
+      "actualSha256": "3938f53a15699645da9fff1a1e4a69ca8ca3859b08d3a39c81c72cbd688018f8",
+      "matches": true
+    },
+    {
+      "path": "src/retrieval/statutoryKnowledge20261027b.ts",
+      "sha256": "b86edc4551c77216ecef3dda49d1e2946346019eb43af9535ea22fe325607582",
+      "actualSha256": "b86edc4551c77216ecef3dda49d1e2946346019eb43af9535ea22fe325607582",
+      "matches": true
+    },
+    {
+      "path": "src/retrieval/statutoryWorkflows20261029.ts",
+      "sha256": "be6d8e8471cdcc6f9a49b96dbbb1af698c44453fc9bc3c6fb5454b22ec5b0694",
+      "actualSha256": "be6d8e8471cdcc6f9a49b96dbbb1af698c44453fc9bc3c6fb5454b22ec5b0694",
+      "matches": true
+    },
+    {
+      "path": "src/retrieval/targetDateResolver.ts",
+      "sha256": "2eec9959866969c864f0ec92746321528a945137a62d12b66d09aebbc85935d3",
+      "actualSha256": "2eec9959866969c864f0ec92746321528a945137a62d12b66d09aebbc85935d3",
+      "matches": true
+    },
+    {
+      "path": "src/services/authorityWorkstreams.ts",
+      "sha256": "95cfab0832aa5271ac6e9c7aed7c6b8c6348cf68bee16f4e1df4a58c1055623d",
+      "actualSha256": "95cfab0832aa5271ac6e9c7aed7c6b8c6348cf68bee16f4e1df4a58c1055623d",
+      "matches": true
+    },
+    {
+      "path": "src/services/groundingContextBuilder.ts",
+      "sha256": "129a27b7e7495a57d01e83b642a1d4779e49b55bc93777111a8077bb55395fe8",
+      "actualSha256": "129a27b7e7495a57d01e83b642a1d4779e49b55bc93777111a8077bb55395fe8",
+      "matches": true
+    },
+    {
+      "path": "src/services/semanticQuestionUnderstanding.ts",
+      "sha256": "03954f9d3c323bd6ea5908ca4188746ac79c2dbe7440128e605d5c50bdd94307",
+      "actualSha256": "03954f9d3c323bd6ea5908ca4188746ac79c2dbe7440128e605d5c50bdd94307",
+      "matches": true
+    },
+    {
+      "path": "src/standards/coverageRegistry.ts",
+      "sha256": "a6e83d53b9e8967c1d7bfbd239b59fe2a1714e61efe0df0535380ff51755a2f0",
+      "actualSha256": "a6e83d53b9e8967c1d7bfbd239b59fe2a1714e61efe0df0535380ff51755a2f0",
+      "matches": true
+    },
+    {
+      "path": "src/utils/taxJurisdictionNames.ts",
+      "sha256": "a77993fbb2798e6a78be094683cdcfd378f072b6249774d290450bf0c8358df3",
+      "actualSha256": "a77993fbb2798e6a78be094683cdcfd378f072b6249774d290450bf0c8358df3",
+      "matches": true
+    },
+    {
+      "path": "tests/regression/test_acra_mom_knowledge_20261027b.mjs",
+      "sha256": "c04e3b2c84173828960ed6f71a45685c3ecdaca49567d2d0d6786b59dda37bb3",
+      "actualSha256": "c04e3b2c84173828960ed6f71a45685c3ecdaca49567d2d0d6786b59dda37bb3",
+      "matches": true
+    },
+    {
+      "path": "tests/regression/test_iras_mas_knowledge_20261027b.mjs",
+      "sha256": "a5ce7b8a36c62e1d0e2324559bec930e268487825ded3c66f7132a802bdf167d",
+      "actualSha256": "a5ce7b8a36c62e1d0e2324559bec930e268487825ded3c66f7132a802bdf167d",
+      "matches": true
+    },
+    {
+      "path": "tests/regression/test_iras_wht_filing_treaty_production.mjs",
+      "sha256": "640dd569bc08a605c84d9265734bcfa99d397a631bab34e0c5eb99f53e562b6a",
+      "actualSha256": "640dd569bc08a605c84d9265734bcfa99d397a631bab34e0c5eb99f53e562b6a",
+      "matches": true
+    },
+    {
+      "path": "tests/regression/test_statutory_cpf_expansion_20261101.mjs",
+      "sha256": "e9ab67d24731c38aa6e6751bee3163dea16de617a4cb6a4ed2b5a342a2e1b9f4",
+      "actualSha256": "e9ab67d24731c38aa6e6751bee3163dea16de617a4cb6a4ed2b5a342a2e1b9f4",
+      "matches": true
+    },
+    {
+      "path": "tests/regression/test_statutory_workflow_expansions_20261030.mjs",
+      "sha256": "b1075e4ad45bf38390a21256d124271acbfae6211ebe0667bcff63ccc7677855",
+      "actualSha256": "b1075e4ad45bf38390a21256d124271acbfae6211ebe0667bcff63ccc7677855",
+      "matches": true
+    },
+    {
+      "path": "tests/regression/test_statutory_workflows_20261029.mjs",
+      "sha256": "cf2503126dfd9b0f61132ea2b93ef555fa5d1da0a8b025b952f4f3e7e65d9d0e",
+      "actualSha256": "cf2503126dfd9b0f61132ea2b93ef555fa5d1da0a8b025b952f4f3e7e65d9d0e",
+      "matches": true
+    },
+    {
+      "path": "tests/regression/test_iras_gst_opening_locator.mjs",
+      "sha256": "23448a411a549e7ef79d4b290cc2debc69295de30356675edcbc18ca4388027a",
+      "actualSha256": "23448a411a549e7ef79d4b290cc2debc69295de30356675edcbc18ca4388027a",
+      "matches": true
+    }
+  ],
+  "resolvedFindings": [
+    {
+      "title": "Earlier salary-period date hides payment negation or future tense in same sentence",
+      "status": "RESOLVED",
+      "evidence": "Payment-date search starts at matched action; tests cover same-sentence will pay, have not paid, curly haven’t, and affirmative paid control."
+    },
+    {
+      "title": "Casing-dependent and first-match owner detection borrows another employee payment",
+      "status": "RESOLVED",
+      "evidence": "Both renderer and resolver now use contextual owner tokens independent of casing and evaluate all role/possessive/bare matches. Tests cover uppercase/lowercase/mixedcase, A/B, E1/E2, E-1/E-2, later possessive after generic employee’s, and preserve generic-employee positive payment assertions."
+    }
+  ]
+}

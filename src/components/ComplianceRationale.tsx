@@ -98,12 +98,12 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
 
   const currentAuthorityPresentation = hasCurrentAuthorityEvidencePresentation(authorityEvidencePresentation, rawQuery)
     ? authorityEvidencePresentation : undefined;
-  if (currentAuthorityPresentation) {
+  const currentIrasPresentation = hasCurrentIrasEvidencePresentation(irasEvidencePresentation, rawQuery, primaryDomain, queryIntent)
+    ? irasEvidencePresentation : undefined;
+  if (currentAuthorityPresentation && !currentIrasPresentation) {
     return <AuthorityCompliancePanel presentation={currentAuthorityPresentation} />;
   }
 
-  const currentIrasPresentation = hasCurrentIrasEvidencePresentation(irasEvidencePresentation, rawQuery, primaryDomain, queryIntent)
-    ? irasEvidencePresentation : undefined;
   const irasDetail = irasStatusDetail(currentIrasPresentation);
   const evidenceIncomplete = currentIrasPresentation
     ? currentIrasPresentation.status === 'INSUFFICIENT'
@@ -116,6 +116,11 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
 
   return (
     <div className="bg-workspace-panel rounded-2xl border border-workspace-border dark:border-workspace-border shadow-none overflow-hidden space-y-6 flex flex-col transition-colors duration-200">
+      {currentAuthorityPresentation && (
+        <div className="order-0">
+          <AuthorityCompliancePanel presentation={currentAuthorityPresentation} />
+        </div>
+      )}
       {/* Statutory Header */}
       <div className="order-1 p-4 bg-workspace-raised/80 dark:bg-workspace-panel text-slate-900 dark:text-white flex items-center justify-between border-b border-workspace-border dark:border-workspace-border">
         <div className="flex items-center gap-3">

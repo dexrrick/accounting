@@ -1,0 +1,141 @@
+{
+  "scope": "DEVELOPMENT_ACCEPTANCE_CASES_NOT_INDEPENDENT_EVALUATION",
+  "cases": [
+    {
+      "id": "dev-acra-01",
+      "authority": "ACRA",
+      "question": "What particulars must companies confirm in annual returns from 20 October 2026?",
+      "subject": "Annual return officer particulars confirmation from 20 October 2026",
+      "domain": "ACRA_CORPORATE",
+      "expectedScope": "GENERAL_RULE"
+    },
+    {
+      "id": "dev-acra-02",
+      "authority": "ACRA",
+      "question": "How do I file an annual return with ACRA in Bizfile?",
+      "subject": "Annual return filing process and documents",
+      "domain": "ACRA_CORPORATE",
+      "expectedScope": "GENERAL_RULE"
+    },
+    {
+      "id": "dev-acra-03",
+      "authority": "ACRA",
+      "question": "Which companies must submit Full XBRL rather than Simplified XBRL?",
+      "subject": "XBRL financial statement filing requirements and exemptions",
+      "domain": "ACRA_CORPORATE",
+      "expectedScope": "GENERAL_RULE"
+    },
+    {
+      "id": "dev-mom-04",
+      "authority": "MOM",
+      "question": "What is the statutory annual leave entitlement after three months of employment?",
+      "subject": "Annual leave eligibility entitlement and proration",
+      "domain": "MOM_EMPLOYMENT",
+      "expectedScope": "GENERAL_RULE"
+    },
+    {
+      "id": "dev-mom-05",
+      "authority": "MOM",
+      "question": "What are the statutory sick leave and hospitalisation leave entitlements?",
+      "subject": "Sick leave eligibility and paid hospitalisation leave",
+      "domain": "MOM_EMPLOYMENT",
+      "expectedScope": "GENERAL_RULE"
+    },
+    {
+      "id": "dev-mom-06",
+      "authority": "MOM",
+      "question": "How is public holiday pay determined when an employee works on the holiday?",
+      "subject": "Public holiday entitlement and pay",
+      "domain": "MOM_EMPLOYMENT",
+      "expectedScope": "GENERAL_RULE"
+    },
+    {
+      "id": "dev-mom-07",
+      "authority": "MOM",
+      "question": "When is final salary due if an employee resigns without serving notice?",
+      "subject": "Final salary payment deadlines by termination reason",
+      "domain": "MOM_EMPLOYMENT",
+      "expectedScope": "GENERAL_RULE"
+    },
+    {
+      "id": "dev-iras-08",
+      "authority": "IRAS",
+      "question": "Can input GST on staff medical expenses ever be recovered?",
+      "subject": "GST input tax on staff medical expenses and exceptions",
+      "domain": "IRAS_GST",
+      "expectedScope": "GENERAL_RULE"
+    },
+    {
+      "id": "dev-iras-09",
+      "authority": "IRAS",
+      "question": "Can input tax on a private hire car trip be claimed?",
+      "subject": "GST input tax motor car expenses and exceptions",
+      "domain": "IRAS_GST",
+      "expectedScope": "GENERAL_RULE"
+    },
+    {
+      "id": "dev-iras-10",
+      "authority": "IRAS",
+      "question": "Does a nil accounting profit automatically waive ECI filing?",
+      "subject": "Practical ECI filing waiver conditions",
+      "domain": "IRAS_INCOME_TAX",
+      "expectedScope": "GENERAL_RULE"
+    },
+    {
+      "id": "dev-iras-11",
+      "authority": "IRAS",
+      "question": "Does withholding tax apply to services performed wholly outside Singapore?",
+      "subject": "Withholding tax on non-resident company service fees",
+      "domain": "IRAS_INCOME_TAX",
+      "expectedScope": "GENERAL_RULE"
+    },
+    {
+      "id": "dev-iras-12",
+      "authority": "IRAS",
+      "question": "How is the WHT filing and payment deadline determined?",
+      "subject": "Withholding tax filing and payment date",
+      "domain": "IRAS_INCOME_TAX",
+      "expectedScope": "GENERAL_RULE"
+    },
+    {
+      "id": "dev-cpf-13",
+      "authority": "CPF",
+      "question": "What are the CPF contribution rates for Singapore citizens in 2026?",
+      "subject": "CPF contribution rate tables and wage bands",
+      "domain": "CPF_PAYROLL",
+      "expectedScope": "GENERAL_RULE"
+    },
+    {
+      "id": "dev-cpf-14",
+      "authority": "CPF",
+      "question": "What is the current Ordinary Wage ceiling for CPF?",
+      "subject": "CPF Ordinary Wage ceiling",
+      "domain": "CPF_PAYROLL",
+      "expectedScope": "GENERAL_RULE"
+    },
+    {
+      "id": "dev-cpf-15",
+      "authority": "CPF",
+      "question": "How does the PR contribution year change after becoming a permanent resident?",
+      "subject": "CPF permanent resident contribution year progression",
+      "domain": "CPF_PAYROLL",
+      "expectedScope": "GENERAL_RULE"
+    },
+    {
+      "id": "dev-mas-16",
+      "authority": "MAS",
+      "question": "What reporting duties does the new misconduct notice introduce from 1 January 2027?",
+      "subject": "MAS misconduct reporting and representative notification requirements",
+      "domain": "MAS_FUNDS",
+      "expectedScope": "GENERAL_RULE"
+    },
+    {
+      "id": "dev-mas-17",
+      "authority": "MAS",
+      "question": "What QDC return does a fund manager submit?",
+      "subject": "Quarterly fund data collection return requirements",
+      "domain": "MAS_FUNDS",
+      "expectedScope": "GENERAL_RULE"
+    }
+  ]
+}

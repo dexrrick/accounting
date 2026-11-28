@@ -1,0 +1,95 @@
+{
+  "status": "OFFICIAL_SOURCES_CAPTURED; NATIVE_PDF_AND_EXCERPT_DIGESTS_DISTINCT; WEB_EXCERPTS_VERBATIM_VISIBLE_TEXT",
+  "sources": [
+    {
+      "id": "rate-tables",
+      "title": "CPF Contribution Rate Table from 1 January 2026",
+      "url": "https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf",
+      "fixture": "cpf-rate-tables-2026-extract.txt",
+      "nativePdfFixture": "cpf-rates-native-2026.pdf",
+      "fixtureKind": "NATIVE_OFFICIAL_PDF",
+      "topicIds": [
+        "cpf_contribution_rates",
+        "cpf-pr-contribution-rates",
+        "cpf-contribution-computation",
+        "cpf-contribution-rounding"
+      ],
+      "authority": "CPF",
+      "captureDateSingapore": "2026-10-27",
+      "captureMethod": "DIRECT_PUBLIC_OFFICIAL_PDF_DOWNLOAD; native PDF header, page count, extracted title and 2026 rules verified",
+      "sha256": "7ab21a34bd830be773b5bf39020f590d61e744fb7df6c91922352cef82789496",
+      "sha256Scope": "original official PDF bytes",
+      "excerptSha256": "b3e64036596beb1db169c43c168645369e0f7681c25e073079ba440f99124b3f"
+    },
+    {
+      "id": "computation",
+      "title": "How much CPF contributions to pay",
+      "url": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+      "fixture": "cpf-computation-guidance-extract.txt",
+      "fixtureKind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "topicIds": [
+        "cpf_contribution_rates",
+        "cpf-contribution-computation",
+        "cpf-contribution-rounding"
+      ],
+      "authority": "CPF",
+      "captureDateSingapore": "2026-10-27",
+      "captureMethod": "OFFICIAL_WEB_READ_VISIBLE_TEXT_EXCERPT; raw HTML response was not retained",
+      "sha256": "e2fc3172ae35f62a264aa0029216114dfb3918a8455b54f8f6a91915447811d5",
+      "sha256Scope": "retained visible-text excerpt, not original HTML response",
+      "excerptSha256": "e2fc3172ae35f62a264aa0029216114dfb3918a8455b54f8f6a91915447811d5"
+    },
+    {
+      "id": "ow-ceiling",
+      "title": "What is the Ordinary Wage (OW) ceiling?",
+      "url": "https://www.cpf.gov.sg/service/article/what-is-the-ordinary-wage-ow-ceiling-mbr",
+      "fixture": "cpf-ow-ceiling-extract.txt",
+      "fixtureKind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "topicIds": [
+        "cpf-ordinary-wages",
+        "cpf-ordinary-wage-ceiling"
+      ],
+      "authority": "CPF",
+      "captureDateSingapore": "2026-10-27",
+      "captureMethod": "OFFICIAL_WEB_READ_VISIBLE_TEXT_EXCERPT; raw HTML response was not retained",
+      "sha256": "6f9c5e65278421c7ced24676640c5df507aedc4bc09e1445041f94bc40612611",
+      "sha256Scope": "retained visible-text excerpt, not original HTML response",
+      "excerptSha256": "6f9c5e65278421c7ced24676640c5df507aedc4bc09e1445041f94bc40612611"
+    },
+    {
+      "id": "aw-ceiling",
+      "title": "Examples for computation of Additional Wage (AW) Ceiling",
+      "url": "https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1",
+      "fixture": "cpf-aw-ceiling-2026-extract.txt",
+      "nativePdfFixture": "cpf-aw-ceiling-native-2026.pdf",
+      "fixtureKind": "NATIVE_OFFICIAL_PDF",
+      "topicIds": [
+        "cpf-additional-wages",
+        "cpf-additional-wage-ceiling"
+      ],
+      "authority": "CPF",
+      "captureDateSingapore": "2026-10-27",
+      "captureMethod": "DIRECT_PUBLIC_OFFICIAL_PDF_DOWNLOAD; native PDF header, page count, extracted title and 2026 rules verified",
+      "sha256": "98fc7777d8c6fb0f76f4770217570e26e94e91533345d98db7b1c451c8721220",
+      "sha256Scope": "original official PDF bytes",
+      "excerptSha256": "5c1a0d0bce2362535cf2984cbbcf00db8ae08a56cf0dad9a1f8029855e441d00"
+    },
+    {
+      "id": "pr-status",
+      "title": "I have successfully applied for a new re-entry permit and retained my Singapore Permanent Resident status. How will this impact my CPF contributions?",
+      "url": "https://www.cpf.gov.sg/service/article/i-have-successfully-applied-for-a-new-re-entry-permit-and-retained-my-singapore-permanent-resident-status-how-will-this-impact-my-cpf-contributions",
+      "fixture": "cpf-pr-year-status-extract.txt",
+      "fixtureKind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "topicIds": [
+        "cpf-pr-contribution-rates",
+        "cpf_contribution_rates"
+      ],
+      "authority": "CPF",
+      "captureDateSingapore": "2026-10-27",
+      "captureMethod": "OFFICIAL_WEB_READ_VISIBLE_TEXT_EXCERPT; raw HTML response was not retained",
+      "sha256": "1209fe78ae0c48f8579dd70d1c84794147dfb6d8588019bf7ae344e77cb3a359",
+      "sha256Scope": "retained visible-text excerpt, not original HTML response",
+      "excerptSha256": "1209fe78ae0c48f8579dd70d1c84794147dfb6d8588019bf7ae344e77cb3a359"
+    }
+  ]
+}

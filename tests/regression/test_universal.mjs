@@ -2,16 +2,27 @@ import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { getExchangeRate } from '../../src/services/frankfurterService.ts';
 
-console.log("=== RUNNING UNIVERSAL ACCOUNTING ENGINE & FRANKFURTER API VERIFICATION ===");
+console.log("=== RUNNING UNIVERSAL ACCOUNTING ENGINE & OFFLINE FRANKFURTER VERIFICATION ===");
 
 // -------------------------------------------------------------------------
-// TEST 1: Frankfurter API Live Spot Rate Fetch
+// TEST 1: Frankfurter date-specific response fixture
 // -------------------------------------------------------------------------
-console.log("\n[TEST 1] Frankfurter API Rate Fetch (USD -> SGD):");
+console.log("\n[TEST 1] Frankfurter offline rate fixture (USD -> SGD):");
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async input => {
+  const url = new URL(typeof input === 'string' ? input : input.url);
+  return new Response(JSON.stringify({
+    base: url.searchParams.get('base'),
+    date: url.pathname.split('/').at(-1),
+    rates: { SGD: 1.34 }
+  }), { headers: { 'content-type': 'application/json' } });
+};
 const rateObj = await getExchangeRate('USD', 'SGD', '2024-01-15');
+globalThis.fetch = originalFetch;
 console.log(`Fetched Rate: 1 USD = ${rateObj.rate} SGD (Date: ${rateObj.date}, Source: ${rateObj.source})`);
 console.assert(rateObj.rate > 1.2 && rateObj.rate < 1.5, `Rate unexpected: ${rateObj.rate}`);
-console.log("✓ TEST 1 PASSED: Frankfurter API operational!");
+console.assert(rateObj.date === '2024-01-15', `Expected date-specific rate, got ${rateObj.date}`);
+console.log("✓ TEST 1 PASSED: Frankfurter date-specific response validated offline!");
 
 // -------------------------------------------------------------------------
 // TEST 2: User's Question: "i pay for entertainment expenses 3k with bank"
@@ -53,14 +64,25 @@ console.log("✓ TEST 3 PASSED: Rental lease agreement IFRS 16 entries generated
 // TEST 4: User's Apple Shares Scenario with Frankfurter FX & Realized FX Gain
 // -------------------------------------------------------------------------
 console.log("\n[TEST 4] Apple Shares Scenario with Frankfurter FX & Realized FX Gain:");
-const applePrompt = "a company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026, subsequently the company sold 300 shares for USD400k on 15/12/2026.";
+const applePrompt = "a company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2025, subsequently the company sold 300 shares for USD400k on 15/12/2025.";
+const originalFxFetch = globalThis.fetch;
+const requestedFxDates = [];
+globalThis.fetch = async (input, init) => {
+  const url = new URL(typeof input === 'string' ? input : input.url);
+  requestedFxDates.push(url.pathname.split('/').at(-1));
+  const date = url.pathname.split('/').at(-1);
+  const rate = date === '2025-11-13' ? 1.34 : 1.36;
+  return new Response(JSON.stringify({
+    base: 'USD',
+    date,
+    rates: { SGD: rate }
+  }), { headers: { 'content-type': 'application/json' } });
+};
 const parsedApple = await parseAccountingQuery(applePrompt);
+globalThis.fetch = originalFxFetch;
+console.assert(requestedFxDates.join(',') === '2025-11-13,2025-12-15', `Expected exact requested FX dates, got ${requestedFxDates}`);
 console.log(`Buy Spot Rate: ${parsedApple.purchaseFxRate} (Source: ${parsedApple.fxSource})`);
 console.log(`Sell Spot Rate: ${parsedApple.saleFxRate}`);
-
-// Set realistic spread (e.g. 1.34 buy, 1.36 sell) to verify FX gain line calculation
-parsedApple.purchaseFxRate = 1.34;
-parsedApple.saleFxRate = 1.36;
 
 const appleResult = calculateDoubleEntries(parsedApple, 'SFRS_I');
 const sellGrp = appleResult.groups[1];

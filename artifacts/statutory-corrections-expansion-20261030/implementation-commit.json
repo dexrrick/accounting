@@ -1,0 +1,98 @@
+{
+  "repository": "https://github.com/dexrrick/accounting",
+  "branch": "codex/statutory-corrections-expansion-20261030",
+  "startingCommit": "59cede9c83c27d8398a97a49ddb246a547e771a8",
+  "implementationCommit": "6de920463d3f92c918fdf4ccc1946d1a4c4ef5bf",
+  "files": [
+    {
+      "path": "scripts/run_all_tests.mjs",
+      "sha256": "d126941443c623f7092c5d4f311c7f2dd2a34a24991b815a6e20552ea6292759",
+      "committedSha256": "a54f9ee97d7c3585d04eb70a6503f07e5e5edaa23c4a4a6f192c7dee4c4e7894",
+      "equalAllowingCheckoutLineEndings": true
+    },
+    {
+      "path": "src/retrieval/acraMomKnowledge20261027b.ts",
+      "sha256": "3a04a5f7c882bb0832a9fef902a1e0e73fa53e6ebce81e075b0224660757deda",
+      "committedSha256": "ec16dd80aafe31fb798355f95b1831de56f8779fc633c65b73eb36a95cbc9b33",
+      "equalAllowingCheckoutLineEndings": true
+    },
+    {
+      "path": "src/retrieval/irasMasKnowledge20261027b.ts",
+      "sha256": "f36d640ae47de0b4ecca4bf857237e8f14667b5aeecd775597762b29e7c96e72",
+      "committedSha256": "64abf67b0d0031edab8a99be8455e4e37a256be44333a662e56ed4ded9c72c77",
+      "equalAllowingCheckoutLineEndings": true
+    },
+    {
+      "path": "src/retrieval/statutoryKnowledge20261027b.ts",
+      "sha256": "2680c65bd0fe4809fd956b6af6eb0a257b2180a439265ec2c61e56ce1f963648",
+      "committedSha256": "acf69b1f78b935db388b7936d9228c14d8f224ef99e2208602aafa82bee9cd2b",
+      "equalAllowingCheckoutLineEndings": true
+    },
+    {
+      "path": "src/retrieval/statutoryWorkflows20261029.ts",
+      "sha256": "e6852b9148dcd2e118048c8008d9f308665b602a62b8c15b88b0918b39e0ebaa",
+      "committedSha256": "f10812f253a8ea459573f012c9d974df3b154bafa7b32a812cd1cdae451be696",
+      "equalAllowingCheckoutLineEndings": true
+    },
+    {
+      "path": "src/retrieval/targetDateResolver.ts",
+      "sha256": "1b0a9ef63ec405a786bc7c8d3d0a712b4e3469ec8510476f2bc4dbd72aa27814",
+      "committedSha256": "e5f46a00a957c4299972f98f2fa8c00feafbe78e829a3e4c298801008a484bc8",
+      "equalAllowingCheckoutLineEndings": true
+    },
+    {
+      "path": "src/services/authorityEvidenceResponse.ts",
+      "sha256": "cd5e7014493a0110e7d629aba5f1c36fadd82ef2ccd3924fcf29e8c5556cfa02",
+      "committedSha256": "15058121b3cfbd90267f881cd3134f2418d4b931ecc25e335dc63157dd82821a",
+      "equalAllowingCheckoutLineEndings": true
+    },
+    {
+      "path": "src/services/groundingContextBuilder.ts",
+      "sha256": "aca0f5be646f9cbcab3811ab94bba79c1317c57a321ed0a86d7fa1f3e21a7abd",
+      "committedSha256": "7bc0f437b6af045925ff0c0804dddbd9ce26155f0a5a79416d02fa759e08ee69",
+      "equalAllowingCheckoutLineEndings": true
+    },
+    {
+      "path": "src/services/semanticQuestionUnderstanding.ts",
+      "sha256": "a41a1de77c7871ef2b862efb0e877a14ed50c32b177ae250484b8da6681a3c90",
+      "committedSha256": "a41a1de77c7871ef2b862efb0e877a14ed50c32b177ae250484b8da6681a3c90",
+      "equalAllowingCheckoutLineEndings": true
+    },
+    {
+      "path": "src/standards/coverageRegistry.ts",
+      "sha256": "46f4e3150d22118dc8a18c76ab29133ec03e689c4b50c9a52cc61b37ded328e9",
+      "committedSha256": "65907840397510051b52878292fa353c45cf4c18b6553e9e97dc90377c0cd7f9",
+      "equalAllowingCheckoutLineEndings": true
+    },
+    {
+      "path": "tests/regression/test_authority_evidence_general_status_20261028.mjs",
+      "sha256": "8b8d46b6e00236be24f207807ec5071cde89853b335b480b57737fffe1bce39c",
+      "committedSha256": "68443f369eebfacf8efd036d79a60125fdb72e76b358d709066de0a8f5694289",
+      "equalAllowingCheckoutLineEndings": true
+    },
+    {
+      "path": "tests/regression/test_statutory_priority3_source_expansions_20261030.mjs",
+      "sha256": "77fa75f0b5e3105d4e0009f0a1e5b65ff902bf084a9f910f4d691baa17264f39",
+      "committedSha256": "77fa75f0b5e3105d4e0009f0a1e5b65ff902bf084a9f910f4d691baa17264f39",
+      "equalAllowingCheckoutLineEndings": true
+    },
+    {
+      "path": "tests/regression/test_statutory_review_application_existing_rule_mappings_20261029.mjs",
+      "sha256": "af6e1d79e9f8ae6227188ce9c44dca2339ad8d06993cf2f4277e8e182db94ba4",
+      "committedSha256": "82934f429a08837b78b4f55d14a96f59cb082641956cdbced61d2ee3554a2489",
+      "equalAllowingCheckoutLineEndings": true
+    },
+    {
+      "path": "tests/regression/test_statutory_review_topic_routing_20261028.mjs",
+      "sha256": "49b141026350a3f46c1ec717a1bce34759f2e9f3d74e52cdbd9461eea2c2f350",
+      "committedSha256": "b73bac7c8f2907483aa2c592e6a256d041a7579359a971a992ba4dfa655cd1e8",
+      "equalAllowingCheckoutLineEndings": true
+    },
+    {
+      "path": "tests/regression/test_statutory_workflows_20261029.mjs",
+      "sha256": "8a0cad027044f728a4192abbf187083d60e3b3194839bc64c6996af79d1eb795",
+      "committedSha256": "bfe5ababdc581e6be583b43ece7983ddd5655409ccb98bbb6db8730fcd91036c",
+      "equalAllowingCheckoutLineEndings": true
+    }
+  ]
+}

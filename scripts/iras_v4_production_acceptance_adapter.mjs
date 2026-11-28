@@ -14,7 +14,10 @@ import {
   interpretSemanticQuestion,
   reconcileQuestionUnderstanding
 } from '../src/services/semanticQuestionUnderstanding.ts';
-import { buildAuthorityWorkstreams } from '../src/services/authorityWorkstreams.ts';
+import {
+  buildAuthorityWorkstreams,
+  createLocalAuthorityEvidenceProvider
+} from '../src/services/authorityWorkstreams.ts';
 import { findRecordEligibilityRejection, verifyEvidenceClaims } from '../src/verification/claimEvidenceVerifier.ts';
 import {
   CASE_IDS,
@@ -594,6 +597,7 @@ function governedDiagnostic(result, candidateGroups, fetchObservations, observat
     status: result?.status,
     evidenceStatus: result?.evidenceStatus,
     applicationStatus: result?.applicationStatus,
+    requestCompletenessStatus: result?.requestCompletenessContext?.evaluation?.status,
     workstreams,
     topLevelGaps: (result?.gaps || []).filter(gap => gap.issueId === 'issue-plan').map(gap => gap.code).slice(0, 32),
     candidateGroupCount: candidateGroups.length,
@@ -858,6 +862,9 @@ export async function runV4AcceptanceCase({
       governedRuntime = await buildAuthorityWorkstreams(caseContract.question, issuePlan, {
         retriever: createObservedRetriever(governedGroups),
         questionUnderstanding: semanticUnderstanding,
+        providers: {
+          CPF: createLocalAuthorityEvidenceProvider('CPF', createObservedRetriever(governedGroups), referenceDate)
+        },
         localOnly: false,
         referenceDate,
         groundingOptions: {

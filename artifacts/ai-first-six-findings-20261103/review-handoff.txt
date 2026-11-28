@@ -1,0 +1,69 @@
+# AI-first statutory advisory corrections — review handoff, 03/11/2026
+
+## Goal and status
+
+Fix the six reported synthesis/history defects while preserving useful AI-written Singapore statutory answers and the existing accounting engine. The corrections, positive/negative regressions, independent read-only review and local validation are complete. This is the pre-publication handoff snapshot. At writing, the implementation is committed locally and the push is pending; the accompanying final chat records the actual publication status and exact remote head. The GitHub links below become available after a successful push. No PR, merge, deployment or source activation is included.
+
+Supported conclusions are retained issue by issue; ordinary conditional explanations and faithful numerical paraphrases remain available. Live AI answer quality is not established by this work. The separate assessment explains current architecture, observable improvements and remaining limitations.
+
+## Exact review target
+
+- Repository: https://github.com/dexrrick/accounting
+- Branch: codex/ai-first-advisory-phase1-20261103
+- Base: 30ce81747552b57d373bb5ed98941428b63d395b
+- Exact implementation commit: 37c077f47cf4fe00c1345028df741d269c8b3c83
+- Commit: https://github.com/dexrrick/accounting/commit/37c077f47cf4fe00c1345028df741d269c8b3c83
+- Review diff: https://github.com/dexrrick/accounting/compare/30ce81747552b57d373bb5ed98941428b63d395b...37c077f47cf4fe00c1345028df741d269c8b3c83
+- Original implementation reviewed by the supplied task: 9ae13400860d069511c032ac5062b0c52ae9dc34.
+- PR: none created.
+
+The branch contains a subsequent documentation-only commit adding this file. The accompanying final chat supplies the full final published branch-head SHA and remote verification; use the exact implementation SHA above for code review. This avoids mistaking a documentation-only successor for another implementation change.
+
+## Changes and before/after behavior
+
+1. The abbreviated Dr/Cr posting boundary now covers slash and conjunction forms, including both supplied bypasses. Journal generation and calculations remain owned by the existing engine.
+2. Unresolved applications cannot borrow a conditional phrase to authorize a later categorical conclusion after adversatives, inherited-subject conjunctions or result clauses. Natural condition-first, can-if, uncertainty-only and negative-unless wording remains usable. Verified issues can still receive definitive conclusions.
+3. IRAS fallback passages retain the original issue ID. When a plan exists, fallback requires its validated context owner and matching subject, operation, domain, population and authority. Multiple passages remain associated with that same issue. No-owner evidence is not assigned to a convenient planned issue; the legacy whole-query path remains when no issue scope exists.
+4. Workstream/context-owned missing facts constrain their issue. A supported GST conclusion survives a separate unresolved CPF issue. Genuinely unowned material facts remain conservatively question-wide.
+5. Numerical verification recognizes cardinal/ordinal deadlines and written currency amounts. Faithful paraphrases can proceed to independent model assessment when typed values, units, currency, arithmetic sign, assertion polarity, local labels, event anchors and temporal relationships match. Deterministic output fields remain strict. Reused source numbers cannot authorize a new calculation or unrelated statutory figure.
+6. AI-first advisory receives relevantChatHistory. Production-entry tests exclude prior invoice facts for an independent new accounting request and retain them for a genuine follow-up.
+
+Generation instructions now prioritize the direct client answer, issue-specific application, confident supported conclusions and practical next steps. Independent assessment instructions require full numerical and legal context. No accounting rules, statutory rates, approved-source registries, dependencies or deployment configuration changed.
+
+Main files: src/services/evidenceGroundedSynthesis.ts; src/services/geminiService.ts. Tests extend test_evidence_grounded_synthesis.mjs and test_ai_first_advisory_phase1.mjs, add test_synthesis_numeric_provenance.mjs and test_synthesis_practical_answers.mjs, and register the new suites in scripts/run_all_tests.mjs.
+
+## Verification actually performed
+
+- Preflight passed with Node 22.23.3 and the Windows profile access required by tsx. The initial restricted-profile preflight failed before any product tests; no profile shim was introduced.
+- Final focused suites: all five passed, including the unchanged production-pipeline suite, after the last result-clause correction. They use offline records and scripted providers, with permissive positive reviewers for negative boundary tests.
+- Smoke: 166/166 passed in 368.62 seconds. This initial combined run preceded final independent-review repairs.
+- Full regression: 189/189 passed in 398.50 seconds. This run started before the last small so-result-clause change; all five affected suites were rechecked afterward on final code and passed. No second entire full run was performed.
+- Final maintained lint, TypeScript, Vite and Worker builds passed after the final change. Existing unrelated lint warnings remain. Diff checks passed, and final working-file hashes matched before staging. Git may normalize line endings; the hashes describe the validated working-file bytes.
+- Root lint failed only on 34 pre-existing errors in the untracked generated artifacts/fresh-acceptance-2026-10-24/prepare.mjs. Structured diagnostics confirmed the file and count; it was left unchanged.
+- Frozen-answer preservation: 75/75 existing frozen answers and 12/12 newly authored practical questions were byte-identical to the published base, with no provider or external network requests. These captures preceded final numerical/conditional repairs, which are behind the no-provider early return and do not execute on that path. This is preservation evidence, not answer-quality grading.
+- Independent review found four material issues, then a further numerical-polarity gap; these and supervisor-adjacent variants were repaired and re-reviewed. Final bounded read-only review reported no known material findings. Details and limits are in independent-review-summary.json.
+
+The first lint/typecheck/Vite pass found three implementation type/syntax issues. They were fixed and the final checks passed. No base-commit red regression replay, live source-integration test, paid/live model evaluation, browser acceptance or production verification was performed. No CI pass is claimed. The existing CI push filter excludes this branch; no CI dispatch or PR was requested or performed.
+
+## Remaining concerns and review focus
+
+The architecture remains model generation, independent model support assessment and targeted repair. Numerical matching is a conservative boundary check, not a proof of semantic entailment. Inspect condition scope, negative equality versus valid bounds, event/date direction, multi-passage provenance and issue/population ownership. Check that valid supported answers are preserved, not merely that malicious examples are rejected.
+
+The five-authority practical suite proves that hand-authored supported application claims reach the answer without generic gap warnings. It does not show that a real model produced or legally assessed those claims. The twelve fresh no-provider questions still expose incomplete/source-report-like replies and routing limitations. Phase 1 conceptual advisory still differs from fully evidence-grounded Phase 2. Retrieval/admission coverage, unscoped facts and real-provider answer quality remain limitations, not completed acceptance claims. No broad statutory expansion was undertaken.
+
+All implementation files are committed. After the reported successful push, no implementation is uncommitted or unpushed. Pre-existing unrelated untracked files remain local. Raw validation logs, 75/12 replay outputs, helper scripts, checkpoint and task copy also remain local/untracked and are unavailable through GitHub; portable summaries, per-suite outcomes, questions and hashes are published below.
+
+## Evidence
+
+- Validation and chronology: https://github.com/dexrrick/accounting/blob/37c077f47cf4fe00c1345028df741d269c8b3c83/artifacts/ai-first-six-findings-20261103/validation-summary.json
+- Individual full-suite outcomes: https://github.com/dexrrick/accounting/blob/37c077f47cf4fe00c1345028df741d269c8b3c83/artifacts/ai-first-six-findings-20261103/full-regression-summary.txt
+- Independent review: https://github.com/dexrrick/accounting/blob/37c077f47cf4fe00c1345028df741d269c8b3c83/artifacts/ai-first-six-findings-20261103/independent-review-summary.json
+- Before/after quality assessment: https://github.com/dexrrick/accounting/blob/37c077f47cf4fe00c1345028df741d269c8b3c83/artifacts/ai-first-six-findings-20261103/answer-quality-assessment.txt
+- Preservation outcomes and hashes: https://github.com/dexrrick/accounting/blob/37c077f47cf4fe00c1345028df741d269c8b3c83/artifacts/ai-first-six-findings-20261103/answer-preservation-summary.json
+- Fresh practical questions: https://github.com/dexrrick/accounting/blob/37c077f47cf4fe00c1345028df741d269c8b3c83/artifacts/ai-first-six-findings-20261103/independent-assessment-cases.json
+- Root-lint errors: https://github.com/dexrrick/accounting/blob/37c077f47cf4fe00c1345028df741d269c8b3c83/artifacts/ai-first-six-findings-20261103/root-lint-errors.json
+- Raw local evidence: D:\Accounting\artifacts\ai-first-six-findings-20261103\
+
+## Ready-to-copy independent review prompt
+
+Independently review the changes identified above in https://github.com/dexrrick/accounting, branch codex/ai-first-advisory-phase1-20261103, exact implementation commit 37c077f47cf4fe00c1345028df741d269c8b3c83 against base 30ce81747552b57d373bb5ed98941428b63d395b, using your GitHub access. Confirm the exact commit you inspected. Use the handoff as context and verify its claims against the code, diff, tests, and available CI evidence. Report actionable findings with severity, file and line references, impact, and suggested fixes. State any access or verification limitations. Keep the review read-only.

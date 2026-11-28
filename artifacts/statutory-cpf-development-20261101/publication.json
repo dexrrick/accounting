@@ -1,0 +1,24 @@
+{
+  "status": "IMPLEMENTATION_PUSHED_REMOTE_SHA_VERIFIED",
+  "repository": "https://github.com/dexrrick/accounting",
+  "branch": "codex/statutory-knowledge-expansion-20261030",
+  "baseCommit": "f1a6c28f3c35fb7ea41b4090b979a6cfb05e36b8",
+  "acraCommit": "0fb04a6d31530d938ca111746cb8c87814421a1b",
+  "implementationCommit": "69c1b322a2a75716aabf6db696002a358d7a68d0",
+  "verifiedRemoteImplementationHead": "69c1b322a2a75716aabf6db696002a358d7a68d0",
+  "verifiedAtUTC": "2026-11-01T08:39:12.911Z",
+  "scope": "Records remote implementation verification; the documentation-only successor is verified separately and its full head reported in the chat.",
+  "sourceActivation": false,
+  "merge": false,
+  "deployment": false,
+  "githubCommitReceipt": {
+    "sha": "69c1b322a2a75716aabf6db696002a358d7a68d0",
+    "url": "https://github.com/dexrrick/accounting/commit/69c1b322a2a75716aabf6db696002a358d7a68d0",
+    "verifiedBy": "GitHub connector"
+  },
+  "ciObservation": {
+    "prTriggeredWorkflowRuns": 0,
+    "scope": "GitHub connector PR-triggered runs, first page only; not a claim about every possible workflow trigger.",
+    "manualDispatch": false
+  }
+}

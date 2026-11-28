@@ -1,5 +1,55 @@
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
-import { cleanHtmlText } from './sourceAdapters';
+import {
+  ACRA_2022_ANNUAL_RETURN_TIMELINES_URL,
+  supportsAcraAnnualReturnDeadlineTable
+} from './acraAnnualReturnFilingRule';
+import {
+  isBoundedStatutoryAdvisoryRequest,
+  supportBoundedStatutoryAdvisory,
+  type BoundedStatutoryAdvisoryRequest
+} from './statutoryAdvisorySupport';
+import { cleanHtmlText, cleanHtmlTextPreservingTableCells } from './sourceAdapters';
+import {
+  isAcraAuditExemptionContextRequest,
+  type AcraAuditExemptionContextRequest
+} from './acraMomKnowledge20261027b';
+
+/**
+ * Returns complete body text for restrictive same-document reasoning only.
+ * This deliberately keeps navigation, headings, disclosure text, hidden text,
+ * and other body chrome; none of it becomes positive evidence by inclusion.
+ * Missing or ambiguous body boundaries, incomplete non-content elements, and
+ * oversized pages fail closed instead of producing a partial context.
+ */
+export function extractCompleteHtmlBodyContext(rawDocument: string): string | undefined {
+  if (typeof rawDocument !== 'string' || !rawDocument.trim()) return undefined;
+
+  let markup = rawDocument.replace(/<!--[\s\S]*?-->/g, ' ');
+  if (/<!--|-->/i.test(markup)) return undefined;
+  for (const tag of ['script', 'style', 'template', 'head']) {
+    const pairedElement = new RegExp(`<${tag}\\b[^>]*>[\\s\\S]*?<\\/${tag}\\s*>`, 'gi');
+    markup = markup.replace(pairedElement, ' ');
+    if (new RegExp(`<\\/?${tag}\\b`, 'i').test(markup)) return undefined;
+  }
+
+  const bodyOpenings = [...markup.matchAll(/<body\b[^>]*>/gi)];
+  const bodyClosings = [...markup.matchAll(/<\/body\s*>/gi)];
+  if (bodyOpenings.length !== 1 || bodyClosings.length !== 1) return undefined;
+  const bodyOpen = bodyOpenings[0];
+  const bodyClose = bodyClosings[0];
+  const bodyOpenIndex = bodyOpen.index;
+  const bodyEnd = bodyClose.index;
+  if (bodyOpenIndex === undefined || bodyEnd === undefined) return undefined;
+  const bodyStart = bodyOpenIndex + bodyOpen[0].length;
+  if (bodyEnd < bodyStart) return undefined;
+
+  const bodyMarkup = markup.slice(bodyStart, bodyEnd);
+  const bodyWithoutTagTokens = bodyMarkup.replace(/<\/?[A-Za-z][^>]*>/g, ' ');
+  if (bodyWithoutTagTokens.includes('<')) return undefined;
+  const bodyText = cleanHtmlText(bodyMarkup);
+  if (!bodyText || bodyText.length > 12_000) return undefined;
+  return bodyText;
+}
 
 /**
  * Strict allowlist of authorized Singapore statutory authorities and verified reference APIs.
@@ -56,6 +106,8 @@ export interface ExternalValidationResult {
 }
 
 export interface TopicContentExpectation {
+  /** Isomer government banners may contain an article before the page's main. */
+  preferMainContent?: boolean;
   standardIdentifiers: string[];
   expectedTitles: string[];
   topicTerms: string[];
@@ -64,6 +116,16 @@ export interface TopicContentExpectation {
   allowIrasTopicTokenEquivalence?: boolean;
   /** Requires topic evidence in substantive paragraphs, list items, or table cells, excluding page metadata. */
   requireSubstantiveBody?: boolean;
+  /** Preserves and requires one complete, qualified ACRA annual-return deadline table. */
+  requireAcraAnnualReturnDeadlineTable?: boolean;
+  /** Enables one native CPF wage-definition card only for the exact bounded request. */
+  cpfOrdinaryWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
+  /** Enables the native Additional Wages definition card only for its bounded request. */
+  cpfAdditionalWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
+  /** Restores visible, link-free CPF action-card prose for an exact registered discovery candidate. */
+  preserveNativeDisclosureProse?: boolean;
+  /** Preserves the one registered ACRA audit-exemption conditional heading for its bounded request. */
+  acraAuditExemptionContextRequest?: AcraAuditExemptionContextRequest;
 }
 
 export interface TopicContentValidationResult extends ExternalValidationResult {
@@ -136,7 +198,150 @@ function preserveListItemBoundaries(markup: string): string {
   return output;
 }
 
+/** Isomer semantic navigation may use nested divs instead of a nav element. */
+function removeCorporateNavigationMarkup(document: string): string {
+  let output = document;
+  const containers = /<(div|section)\b([^>]*)>/gi;
+  for (const match of [...document.matchAll(containers)].reverse()) {
+    const attributes = match[2];
+    if (!/\b(?:aria-label\s*=\s*["'](?:Breadcrumb|Table of Contents)["']|role\s*=\s*["']navigation["'])/i.test(attributes)) continue;
+    const tag = match[1];
+    const boundaries = new RegExp(`<\\/?${tag}\\b[^>]*>`, 'gi');
+    boundaries.lastIndex = match.index! + match[0].length;
+    let depth = 1;
+    let end = document.length;
+    for (let boundary = boundaries.exec(document); boundary; boundary = boundaries.exec(document)) {
+      depth += boundary[0].startsWith('</') ? -1 : /\/>$/.test(boundary[0]) ? 0 : 1;
+      if (depth === 0) { end = boundaries.lastIndex; break; }
+    }
+    output = output.slice(0, match.index) + ' '.repeat(end - match.index!) + output.slice(end);
+  }
+  // Unlabelled breadcrumbs contain short anchor/span labels (and icons), with
+  // no prose outside them. Do not remove ordered statutory instructions.
+  return output.replace(/<ol\b[^>]*>([\s\S]*?)<\/ol\s*>/gi, (list, contents: string) => {
+    if (/<ol\b/i.test(contents) || !/<a\b/i.test(contents)) return list;
+    const items = [...contents.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li\s*>/gi)];
+    if (items.length === 0) return list;
+    const labelsOnly = items.every(item => {
+      const text = cleanHtmlText(item[1].replace(/<svg\b[^>]*>[\s\S]*?<\/svg\s*>/gi, ' '));
+      if (text.split(/\s+/).length > 16 || /\b(?:must|shall|file|submit|prepare|ensure|comply|need to)\b/i.test(text)) return false;
+      const residual = item[1].replace(/<(a|span|svg)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
+      return cleanHtmlText(residual).trim().length === 0;
+    });
+    return labelsOnly ? ' ' : list;
+  });
+}
+
 const RULE_METADATA_CONTAINER_MARKER = /\b(?:cards?|tiles?|teasers?|quick[-_ ]?links?|related[-_ ]?(?:content|links?)|popular[-_ ]?(?:content|links?)|featured[-_ ]?(?:content|links?)|link[-_ ]?list|page[-_ ]?index)\b/i;
+
+function simpleTableCellText(cellHtml: string): string {
+  return cleanHtmlText(cellHtml
+    .replace(/<li\b[^>]*>/gi, ' ')
+    .replace(/<\/li\s*>/gi, '; ')
+    .replace(/<\/?(?:ul|ol)\b[^>]*>/gi, ' '))
+    .replace(/\s*;\s*/g, '; ')
+    .replace(/\s+/g, ' ')
+    .replace(/;$/, '')
+    .trim();
+}
+
+function tableSpanAttributesAreSimple(attributes: string): boolean {
+  for (const name of ['colspan', 'rowspan']) {
+    const attributePattern = new RegExp(`(?:^|\\s)${name}(?=\\s|=|$)`, 'gi');
+    const matches = [...attributes.matchAll(attributePattern)];
+    if (matches.length === 0) continue;
+    if (matches.length !== 1) return false;
+    const match = attributes.match(new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'));
+    if (!match || (match[1] ?? match[2] ?? match[3]) !== '1') return false;
+  }
+  return true;
+}
+
+function simpleTableMarkupIsBalanced(rawTable: string): boolean {
+  const allowedTags = new Set([
+    'table', 'thead', 'tbody', 'tr', 'th', 'td', 'p', 'ul', 'ol', 'li',
+    'b', 'strong', 'i', 'em', 'u', 'sub', 'sup', 'a', 'span', 'br'
+  ]);
+  const stack: string[] = [];
+  for (const match of rawTable.matchAll(/<\/?([a-z][\w:-]*)\b([^>]*)>/gi)) {
+    const token = match[0];
+    const closing = token.startsWith('</');
+    const tagName = match[1].toLowerCase();
+    if (!allowedTags.has(tagName) || !tableSpanAttributesAreSimple(match[2])) return false;
+    if (tagName === 'br') {
+      if (closing) return false;
+      continue;
+    }
+    if (closing) {
+      if (stack.pop() !== tagName) return false;
+    } else if (!/\/\s*>$/.test(token)) {
+      stack.push(tagName);
+    }
+  }
+  return stack.length === 0;
+}
+
+function parseSimpleAcraDeadlineTable(rawTable: string): string | undefined {
+  const tableOpen = /^<table\b([^>]*)>/i.exec(rawTable);
+  const tableClose = /<\/table\s*>$/i.exec(rawTable);
+  if (!tableOpen || !tableClose || !simpleTableMarkupIsBalanced(rawTable)) return undefined;
+  const inner = rawTable.slice(tableOpen[0].length, tableClose.index);
+  if (/<table\b/i.test(inner)) return undefined;
+
+  const rows = [...inner.matchAll(/<tr\b([^>]*)>([\s\S]*?)<\/tr\s*>/gi)];
+  if (rows.length !== 5 || !tableSpanAttributesAreSimple(tableOpen[1])) return undefined;
+  const withoutRows = inner.replace(/<tr\b[^>]*>[\s\S]*?<\/tr\s*>/gi, ' ')
+    .replace(/<\/?(?:thead|tbody)\b[^>]*>/gi, ' ');
+  if (cleanHtmlText(withoutRows).trim()) return undefined;
+
+  const textRows: string[][] = [];
+  for (const [rowIndex, row] of rows.entries()) {
+    if (!tableSpanAttributesAreSimple(row[1])) return undefined;
+    const rowHtml = row[2];
+    const cells = [...rowHtml.matchAll(/<(th|td)\b([^>]*)>([\s\S]*?)<\/\1\s*>/gi)];
+    if (cells.length !== 2 || cells.some(cell => !tableSpanAttributesAreSimple(cell[2]) ||
+        /<(?:table|tr|td|th)\b/i.test(cell[3]))) return undefined;
+    const residual = rowHtml.replace(/<(th|td)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
+    if (cleanHtmlText(residual).trim()) return undefined;
+    const expectedCellTag = rowIndex === 0 ? 'th' : 'td';
+    if (cells.some(cell => cell[1].toLowerCase() !== expectedCellTag)) return undefined;
+    const textCells = cells.map(cell => simpleTableCellText(cell[3]));
+    if (textCells.some(cell => !cell)) return undefined;
+    textRows.push(textCells);
+  }
+
+  const text = textRows.map(row => row.join(' | ')).join('\n');
+  return supportsAcraAnnualReturnDeadlineTable(text) ? text : undefined;
+}
+
+function findSimpleAcraDeadlineTable(markup: string): { rawHtml: string[]; text: string } | undefined {
+  const tables = [...markup.matchAll(/<table\b[^>]*>[\s\S]*?<\/table\s*>/gi)];
+  const matching: Array<{ rawHtml: string; text: string }> = [];
+  for (const table of tables) {
+    const firstRow = /<tr\b[^>]*>([\s\S]*?)<\/tr\s*>/i.exec(table[0])?.[1];
+    if (!firstRow) continue;
+    const headerCells = [...firstRow.matchAll(/<th\b[^>]*>([\s\S]*?)<\/th\s*>/gi)].map(cell => simpleTableCellText(cell[1]));
+    const isDeadlineHeader = headerCells.length === 2 &&
+      normalizeVisibleText(headerCells[0]) === 'company type' && normalizeVisibleText(headerCells[1]) === 'filing deadline';
+    if (!isDeadlineHeader) continue;
+    const text = parseSimpleAcraDeadlineTable(table[0]);
+    if (!text) return undefined;
+    matching.push({ rawHtml: table[0], text });
+  }
+  if (matching.length === 0 || matching.some(table => table.text !== matching[0].text)) return undefined;
+  return { rawHtml: matching.map(table => table.rawHtml), text: matching[0].text };
+}
+
+function hasAcraDeadlineTableHeader(markup: string): boolean {
+  return [...markup.matchAll(/<table\b[^>]*>[\s\S]*?<\/table\s*>/gi)].some(table => {
+    const firstRow = /<tr\b[^>]*>([\s\S]*?)<\/tr\s*>/i.exec(table[0])?.[1];
+    if (!firstRow) return false;
+    const headerCells = [...firstRow.matchAll(/<th\b[^>]*>([\s\S]*?)<\/th\s*>/gi)]
+      .map(cell => simpleTableCellText(cell[1]));
+    return headerCells.length === 2 && normalizeVisibleText(headerCells[0]) === 'company type' &&
+      normalizeVisibleText(headerCells[1]) === 'filing deadline';
+  });
+}
 
 function hasRuleMetadataClassOrId(attributes: string): boolean {
   return [...attributes.matchAll(/(?:^|\s)(?:class|id)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi)]
@@ -244,27 +449,494 @@ function extractRuleBearingMarkup(markup: string): string {
   return output;
 }
 
+interface BalancedMarkupElement {
+  tagName: string;
+  attributes: string;
+  start: number;
+  contentStart: number;
+  contentEnd?: number;
+  end?: number;
+  parent?: BalancedMarkupElement;
+}
+
+const HTML_VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+
+/** Fail closed when malformed nesting makes a native rule-card boundary uncertain. */
+function parseBalancedMarkupElements(markup: string, allowOpenAncestors = false): BalancedMarkupElement[] | undefined {
+  const elements: BalancedMarkupElement[] = [];
+  const stack: BalancedMarkupElement[] = [];
+  const tagPattern = /<(\/)?([a-z][\w:-]*)\b([^>]*)>/gi;
+
+  for (const match of markup.matchAll(tagPattern)) {
+    const tagName = match[2].toLowerCase();
+    const start = match.index ?? 0;
+    if (match[1]) {
+      const opening = stack.pop();
+      if (!opening || opening.tagName !== tagName) return undefined;
+      opening.contentEnd = start;
+      opening.end = start + match[0].length;
+      continue;
+    }
+
+    const element: BalancedMarkupElement = {
+      tagName,
+      attributes: match[3],
+      start,
+      contentStart: start + match[0].length,
+      parent: stack.at(-1)
+    };
+    elements.push(element);
+    if (HTML_VOID_TAGS.has(tagName) || /\/\s*>$/.test(match[0])) {
+      element.contentEnd = element.contentStart;
+      element.end = element.contentStart;
+    } else {
+      stack.push(element);
+    }
+  }
+
+  return stack.length === 0 || allowOpenAncestors ? elements : undefined;
+}
+
+function findBalancedDivContainerEnd(markup: string, start: number): number | undefined {
+  const tagPattern = /<(\/)?div\b[^>]*>/gi;
+  tagPattern.lastIndex = start;
+  let depth = 0;
+  for (const match of markup.matchAll(tagPattern)) {
+    if (match[1]) {
+      depth -= 1;
+      if (depth === 0) return (match.index ?? 0) + match[0].length;
+      if (depth < 0) return undefined;
+    } else if (!/\/\s*>$/.test(match[0])) {
+      depth += 1;
+    }
+  }
+  return undefined;
+}
+
+function markupAttribute(attributes: string, name: string): string {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(`(?:^|\\s)${escapedName}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i').exec(attributes);
+  return match?.[1] ?? match?.[2] ?? match?.[3] ?? '';
+}
+
+function hasMarkupClass(element: BalancedMarkupElement, className: string): boolean {
+  return markupAttribute(element.attributes, 'class').split(/\s+/).includes(className);
+}
+
+function isHiddenMarkupElement(element: BalancedMarkupElement): boolean {
+  return isHiddenMarkupAttributes(element.attributes);
+}
+
+function removeHiddenAcraAuditMarkup(
+  markup: string,
+  request: AcraAuditExemptionContextRequest
+): string | undefined {
+  if (!isAcraAuditExemptionContextRequest(request)) return markup;
+  const elements = parseBalancedMarkupElements(markup);
+  if (!elements) return undefined;
+  const hiddenSubtrees = elements.filter(isHiddenMarkupElement).filter(element => {
+    for (let parent = element.parent; parent; parent = parent.parent) {
+      if (isHiddenMarkupElement(parent)) return false;
+    }
+    return true;
+  });
+  if (hiddenSubtrees.some(element => element.end === undefined)) return undefined;
+  const filteredMarkup = hiddenSubtrees.sort((left, right) => right.start - left.start).reduce((currentMarkup, element) => {
+    const end = element.end;
+    return end === undefined ? currentMarkup : currentMarkup.slice(0, element.start) + currentMarkup.slice(end);
+  }, markup);
+  return filteredMarkup;
+}
+
+function isHiddenMarkupAttributes(attributes: string): boolean {
+  return /(?:^|\s)hidden(?:\s|=|\/|$)/i.test(attributes)
+    || /(?:^|\s)aria-hidden\s*=\s*(?:"true"|'true'|true)(?:\s|$)/i.test(attributes)
+    || /\bdisplay\s*:\s*none\b|\bvisibility\s*:\s*hidden\b/i.test(markupAttribute(attributes, 'style'))
+    || /\b(?:sr-only|visually-hidden|d-none)\b/i.test(markupAttribute(attributes, 'class'));
+}
+
+function isInsideElement(element: BalancedMarkupElement, ancestor: BalancedMarkupElement): boolean {
+  for (let current = element.parent; current; current = current.parent) {
+    if (current === ancestor) return true;
+  }
+  return false;
+}
+
+interface VisibleCpfActionCardDescription {
+  start: number;
+  end: number;
+  descriptionMarkup: string;
+  proseMarkup: string;
+}
+
+/** Find structurally verified, visible native CPF action-card descriptions without interpreting their legal content. */
+function findVisibleCpfActionCardDescriptions(mainMarkup: string): VisibleCpfActionCardDescription[] {
+  const markupWithoutComments = mainMarkup.replace(/<!--[\s\S]*?-->/g, ' ');
+  const descriptions: VisibleCpfActionCardDescription[] = [];
+  const actionCardPattern = /<div\b([^>]*)>/gi;
+  let inspectedCards = 0;
+  for (const match of markupWithoutComments.matchAll(actionCardPattern)) {
+    const cardStart = match.index ?? 0;
+    const attributes = match[1];
+    const classes = markupAttribute(attributes, 'class').split(/\s+/);
+    if (!classes.includes('action-card') || !classes.includes('carousel')) continue;
+    inspectedCards += 1;
+    if (inspectedCards > 32) break;
+
+    const cardEnd = findBalancedDivContainerEnd(markupWithoutComments, cardStart);
+    if (!cardEnd) continue;
+    const cardMarkup = markupWithoutComments.slice(cardStart, cardEnd);
+    const cardElements = parseBalancedMarkupElements(cardMarkup);
+    const actionCard = cardElements?.find(element => element.start === 0 && element.tagName === 'div');
+    if (!cardElements || !actionCard) continue;
+
+    const prefixElements = parseBalancedMarkupElements(markupWithoutComments.slice(0, cardStart), true);
+    const openAncestors = prefixElements?.filter(element => element.end === undefined) || [];
+    if (!prefixElements || openAncestors.some(ancestor => {
+      const identity = markupAttribute(ancestor.attributes, 'class') + ' ' + markupAttribute(ancestor.attributes, 'id');
+      return !['div', 'section', 'article'].includes(ancestor.tagName) || isHiddenMarkupElement(ancestor) ||
+        RULE_METADATA_CONTAINER_MARKER.test(identity) ||
+        /\b(?:navigation|navbar|breadcrumb|menu|sidebar|quick[-_ ]?link|related|page[-_ ]?index)\b/i.test(identity);
+    })) continue;
+
+    const description = cardElements.find(element => element.tagName === 'div' && hasMarkupClass(element, 'cmp-teaser__description'));
+    const content = description?.parent;
+    const teaser = content?.parent;
+    const actionTeaser = teaser?.parent;
+    if (!description || !content || !teaser || !actionTeaser ||
+        content.tagName !== 'div' || !hasMarkupClass(content, 'cmp-teaser__content') ||
+        teaser.tagName !== 'div' || !hasMarkupClass(teaser, 'cmp-teaser') ||
+        actionTeaser.tagName !== 'div' || !hasMarkupClass(actionTeaser, 'teaser') || !hasMarkupClass(actionTeaser, 'cmp-action-card') ||
+        actionTeaser.parent !== actionCard) continue;
+
+    const cardAncestors: BalancedMarkupElement[] = [];
+    for (let current: BalancedMarkupElement | undefined = description; current; current = current.parent) {
+      cardAncestors.push(current);
+      if (current === actionCard) break;
+    }
+    if (cardAncestors.at(-1) !== actionCard || cardAncestors.some(isHiddenMarkupElement) ||
+        cardAncestors.some(element => element.tagName === 'a')) continue;
+    const descendants = cardElements.filter(element => isInsideElement(element, description));
+    if (descendants.some(element => element.tagName === 'a' || isHiddenMarkupElement(element) ||
+        ['script', 'style', 'noscript', 'svg', 'template', 'iframe', 'object'].includes(element.tagName) ||
+        (element !== description && (() => {
+          const identity = `${markupAttribute(element.attributes, 'class')} ${markupAttribute(element.attributes, 'id')}`;
+          return RULE_METADATA_CONTAINER_MARKER.test(identity) ||
+            /\b(?:navigation|navbar|breadcrumb|menu|sidebar|quick[-_ ]?link|related|page[-_ ]?index)\b/i.test(identity);
+        })()))) continue;
+
+    const descriptionMarkup = cardMarkup.slice(description.contentStart, description.contentEnd);
+    if (/<(?:table|thead|tbody|tfoot|tr|td|th)\b/i.test(descriptionMarkup)) continue;
+    const proseMarkup = extractRuleBearingMarkup(descriptionMarkup).trim();
+    if (!/<(?:p|li)\b/i.test(proseMarkup)) continue;
+    descriptions.push({ start: cardStart, end: cardEnd, descriptionMarkup, proseMarkup });
+  }
+  return descriptions;
+}
+
+/** Restore a native card only when extraction retained all of its visible description text. */
+function preserveRegisteredCpfDisclosureProse(mainMarkup: string): string {
+  const markupWithoutComments = mainMarkup.replace(/<!--[\s\S]*?-->/g, ' ');
+  const descriptions = findVisibleCpfActionCardDescriptions(markupWithoutComments);
+  return descriptions.sort((left, right) => right.start - left.start).reduce((markup, description) => {
+    const proseRetainsDescription = normalizeVisibleText(description.descriptionMarkup) ===
+      normalizeVisibleText(description.proseMarkup);
+    const replacement = proseRetainsDescription ? '<div>' + description.proseMarkup + '</div>' : ' ';
+    return markup.slice(0, description.start) + replacement + markup.slice(description.end);
+  }, markupWithoutComments);
+}
+
+/** Preserve the existing complete, per-card bounded rule proof without pooling across cards. */
+function preserveSupportedCpfWageCard(
+  mainMarkup: string,
+  request: BoundedStatutoryAdvisoryRequest
+): string {
+  if (!isBoundedStatutoryAdvisoryRequest(request)) return mainMarkup;
+  const markupWithoutComments = mainMarkup.replace(/<!--[\s\S]*?-->/g, ' ');
+  for (const description of findVisibleCpfActionCardDescriptions(markupWithoutComments)) {
+    if (supportBoundedStatutoryAdvisory({ ...request, sourceText: cleanHtmlText(description.proseMarkup) }) !== true) continue;
+    return markupWithoutComments.slice(0, description.start) + '<div>' + description.proseMarkup + '</div>' +
+      markupWithoutComments.slice(description.end);
+  }
+  return mainMarkup;
+}
+
+const ACRA_AUDIT_CONTEXT_HEADING = 'If your company is newly incorporated (less than two years old)';
+const ACRA_AUDIT_CONTEXT_ELIGIBILITY = 'You qualify for audit exemption if you meet the criteria in the current financial year.';
+const ACRA_AUDIT_GROUP_CONTEXT_HEADING = 'If your company is part of a group';
+const ACRA_AUDIT_GROUP_CRITERIA = 'Your entire group (including foreign entities) meets at least two of these quantitative criteria for the immediate past two consecutive financial years:';
+const ACRA_AUDIT_SECTION_BOUNDARIES = [
+  'Maintaining your exemption status',
+  'Frequently asked questions (FAQs)'
+] as const;
+
+/** Retain only the exact native section labels needed by the complete ACRA audit proof. */
+function preserveAcraAuditExemptionContext(
+  mainMarkup: string,
+  request: AcraAuditExemptionContextRequest
+): string {
+  if (!isAcraAuditExemptionContextRequest(request)) return mainMarkup;
+  const elements = parseBalancedMarkupElements(mainMarkup);
+  if (!elements) return mainMarkup;
+
+  const replacements: Array<{ start: number; end: number; text: string }> = [];
+  const summaryLabels = [ACRA_AUDIT_CONTEXT_HEADING, ACRA_AUDIT_GROUP_CONTEXT_HEADING];
+  for (const label of summaryLabels) {
+    const matches = elements.filter(element => element.tagName === 'summary' && element.contentEnd !== undefined &&
+      cleanHtmlText(mainMarkup.slice(element.contentStart, element.contentEnd)
+        .replace(/<svg\b[^>]*>[\s\S]*?<\/svg\s*>/gi, ' ')).trim() === label);
+    if (matches.length !== 1) continue;
+    const summary = matches[0];
+    const details = summary.parent?.tagName === 'details' ? summary.parent : undefined;
+    if (!details || summary.end === undefined || !isVisibleAcraAuditContextPath(summary, details) ||
+        !hasOnlyVisibleAcraAuditContextDescendants(summary, elements)) continue;
+    if (label === ACRA_AUDIT_CONTEXT_HEADING) {
+      const eligibility = elements.filter(element => element.tagName === 'p' && isInsideElement(element, details) &&
+        cleanHtmlText(mainMarkup.slice(element.contentStart, element.contentEnd)).trim() === ACRA_AUDIT_CONTEXT_ELIGIBILITY &&
+        isVisibleAcraAuditContextPath(element, details) && hasOnlyVisibleAcraAuditContextDescendants(element, elements));
+      if (eligibility.length !== 1 || eligibility[0].start <= summary.end) continue;
+    } else {
+      const criteria = elements.filter(element => element.tagName === 'p' && isInsideElement(element, details) &&
+        cleanHtmlText(mainMarkup.slice(element.contentStart, element.contentEnd)).trim() === ACRA_AUDIT_GROUP_CRITERIA &&
+        isVisibleAcraAuditContextPath(element, details));
+      if (criteria.length !== 1) continue;
+    }
+    replacements.push({ start: summary.start, end: summary.end, text: `<p>${mainMarkup.slice(summary.contentStart, summary.contentEnd)}</p>` });
+  }
+
+  for (const label of ACRA_AUDIT_SECTION_BOUNDARIES) {
+    const matches = elements.filter(element => element.tagName === 'h2' && element.contentEnd !== undefined &&
+      cleanHtmlText(mainMarkup.slice(element.contentStart, element.contentEnd)).trim() === label &&
+      isVisibleAcraAuditContextPath(element) && hasOnlyVisibleAcraAuditContextDescendants(element, elements));
+    if (matches.length === 1) {
+      const heading = matches[0];
+      if (heading.end !== undefined) replacements.push({
+        start: heading.start, end: heading.end,
+        text: `<p>${mainMarkup.slice(heading.contentStart, heading.contentEnd)}</p>`
+      });
+    }
+  }
+
+  return replacements.sort((left, right) => right.start - left.start).reduce((markup, replacement) =>
+    markup.slice(0, replacement.start) + replacement.text + markup.slice(replacement.end), mainMarkup);
+}
+
+function hasOnlyVisibleAcraAuditContextDescendants(
+  element: BalancedMarkupElement,
+  elements: readonly BalancedMarkupElement[]
+): boolean {
+  return !elements.some(descendant => isInsideElement(descendant, element) &&
+    (descendant.tagName === 'a' || (descendant.tagName !== 'svg' && isHiddenMarkupElement(descendant))));
+}
+
+function isVisibleAcraAuditContextPath(element: BalancedMarkupElement, stopAt?: BalancedMarkupElement): boolean {
+  let foundStop = stopAt === undefined;
+  for (let current: BalancedMarkupElement | undefined = element; current; current = current.parent) {
+    const identity = `${markupAttribute(current.attributes, 'class')} ${markupAttribute(current.attributes, 'id')}`;
+    if (isHiddenMarkupElement(current) || current.tagName === 'a' || RULE_METADATA_CONTAINER_MARKER.test(identity) ||
+        /\b(?:navigation|navbar|breadcrumb|menu|sidebar|carousel|teaser|quick[-_ ]?link|related|page[-_ ]?index)\b/i.test(identity)) {
+      return false;
+    }
+    if (current === stopAt) foundStop = true;
+  }
+  return foundStop;
+}
+interface MarkupElementContext {
+  tagName: string;
+  blockLinkCardStarts: number[];
+}
+
+/**
+ * Find a page-index link collection: at least three sibling links, each wrapping
+ * both a heading and a summary paragraph. A cluster like this is navigation,
+ * even when its cards sit inside an otherwise ordinary main element.
+ */
+function findBlockLinkCollectionStart(markup: string): number | undefined {
+  const tagPattern = /<(\/)?([a-z][\w:-]*)\b[^>]*>/gi;
+  const collectionContainers = new Set(['div', 'section', 'article', 'ul', 'ol']);
+  const voidTags = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+  const stack: MarkupElementContext[] = [];
+  const elements: MarkupElementContext[] = [];
+  const links: Array<{ parent: MarkupElementContext | undefined; start: number; contentStart: number }> = [];
+
+  for (const match of markup.matchAll(tagPattern)) {
+    const tagName = match[2].toLowerCase();
+    const closing = Boolean(match[1]);
+    const index = match.index ?? 0;
+
+    if (tagName === 'a') {
+      if (closing) {
+        const link = links.pop();
+        if (link?.parent && collectionContainers.has(link.parent.tagName)) {
+          const inner = markup.slice(link.contentStart, index);
+          if (/<h[2-6]\b/i.test(inner) && /<p\b/i.test(inner)) link.parent.blockLinkCardStarts.push(link.start);
+        }
+      } else {
+        links.push({ parent: stack[stack.length - 1], start: index, contentStart: index + match[0].length });
+      }
+    }
+
+    if (closing) {
+      let openIndex = stack.length - 1;
+      while (openIndex >= 0 && stack[openIndex].tagName !== tagName) openIndex -= 1;
+      if (openIndex >= 0) stack.splice(openIndex);
+    } else if (!voidTags.has(tagName) && !/\/\s*>$/.test(match[0])) {
+      const element: MarkupElementContext = { tagName, blockLinkCardStarts: [] };
+      elements.push(element);
+      stack.push(element);
+    }
+  }
+
+  const collectionStarts = elements
+    .filter(element => collectionContainers.has(element.tagName) && element.blockLinkCardStarts.length >= 3)
+    .flatMap(element => element.blockLinkCardStarts);
+  return collectionStarts.length > 0 ? Math.min(...collectionStarts) : undefined;
+}
+
+function normalizeVisibleText(value: string): string {
+  return cleanHtmlText(value).toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function getPageDescriptionMetadata(rawDocument: string): string[] {
+  const descriptions = new Set<string>();
+  for (const match of rawDocument.matchAll(/<meta\b([^>]*)>/gi)) {
+    const attributes = match[1];
+    const name = attributes.match(/(?:^|\s)name\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+    const property = attributes.match(/(?:^|\s)property\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+    const kind = (name?.[1] ?? name?.[2] ?? name?.[3] ?? property?.[1] ?? property?.[2] ?? property?.[3] ?? '').toLowerCase();
+    if (!['description', 'og:description', 'twitter:description'].includes(kind)) continue;
+    const content = attributes.match(/(?:^|\s)content\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+    const value = content?.[1] ?? content?.[2] ?? content?.[3];
+    const normalized = value ? normalizeVisibleText(value) : '';
+    if (normalized) descriptions.add(normalized);
+  }
+  return [...descriptions];
+}
+
+/**
+ * Remove a duplicated page-description lead only for an index-style main:
+ * the title-styled lead immediately follows the h1, a later sibling collection
+ * contains heading-and-summary cards, and no rule-bearing article content
+ * remains after those cards are removed. Related cards cannot hide article prose.
+ */
+function removeNavigationalSummaryLead(markup: string, rawDocument: string): string {
+  const descriptions = getPageDescriptionMetadata(rawDocument);
+  if (descriptions.length === 0) return markup;
+
+  const collectionStart = findBlockLinkCollectionStart(markup);
+  if (collectionStart === undefined) return markup;
+
+  const heading = /<h1\b[^>]*>[\s\S]*?<\/h1\s*>/i.exec(markup);
+  if (!heading) return markup;
+  const headingEnd = (heading.index ?? 0) + heading[0].length;
+
+  const firstLead = /<p\b[^>]*>[\s\S]*?<\/p\s*>/i.exec(markup.slice(headingEnd, collectionStart));
+  if (!firstLead) return markup;
+  const leadText = firstLead[0].replace(/^<p\b[^>]*>|<\/p\s*>$/gi, ' ');
+  if (/<a\b/i.test(leadText) || !descriptions.includes(normalizeVisibleText(leadText))) return markup;
+  const leadAttributes = /^<p\b([^>]*)>/i.exec(firstLead[0])?.[1] || '';
+  const leadClass = leadAttributes.match(/(?:^|\s)class\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+  if (!/\bprose-title(?:-[\w-]+)?\b/i.test(leadClass?.[1] ?? leadClass?.[2] ?? leadClass?.[3] ?? '')) return markup;
+
+  const leadStart = headingEnd + (firstLead.index ?? 0);
+  if (cleanHtmlText(markup.slice(headingEnd, leadStart)).trim()) return markup;
+
+  const withoutLead = `${markup.slice(0, leadStart)}${' '.repeat(firstLead[0].length)}${markup.slice(leadStart + firstLead[0].length)}`;
+  const remainingRuleMarkup = removeLinkOnlyRuleBlocks(removeRuleMetadataContainers(removeBlockWrappingLinks(withoutLead)))
+    .replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]\s*>/gi, ' ');
+  if (cleanHtmlText(extractRuleBearingMarkup(remainingRuleMarkup)).trim()) return markup;
+  return withoutLead;
+}
+
 /** Remove page chrome before topic matching so menu labels cannot act as evidence. */
-function extractVisiblePageText(rawDocument: string, requireSubstantiveBody = false): string {
-  const withoutChrome = rawDocument
+function extractVisiblePageText(
+  rawDocument: string,
+  options: {
+    preferMainContent?: boolean;
+    requireSubstantiveBody?: boolean;
+    requireAcraAnnualReturnDeadlineTable?: boolean;
+    acraAuditExemptionContextRequest?: AcraAuditExemptionContextRequest;
+    cpfOrdinaryWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
+    cpfAdditionalWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
+    preserveNativeDisclosureProse?: boolean;
+  } = {}
+): string {
+  const withoutChrome = (options.preferMainContent ? removeCorporateNavigationMarkup(rawDocument) : rawDocument)
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<(head|script|style|noscript|svg|template|nav|footer|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
     .replace(/<(div|section|ul)\b(?=[^>]*(?:id|class)\s*=\s*["'][^"']*(?:navigation|navbar|breadcrumb|menu|sidebar|site-search|cookie|utility-links|social-links)[^"']*["'])[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
+  // Prefer the page's main even when an unrelated article or banner precedes it.
   const contentMatch = withoutChrome.match(/<main\b[^>]*>([\s\S]*?)<\/main\s*>/i) ||
     withoutChrome.match(/<article\b[^>]*>([\s\S]*?)<\/article\s*>/i);
   const bodyMatch = withoutChrome.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i);
   let visibleMarkup = contentMatch?.[1] || bodyMatch?.[1] || withoutChrome;
-  if (requireSubstantiveBody) {
-    visibleMarkup = visibleMarkup
-      .replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]\s*>/gi, ' ');
+  const cpfWageDefinitionRequest = options.cpfAdditionalWageDefinitionRequest || options.cpfOrdinaryWageDefinitionRequest;
+  const preserveNativeDisclosureProse = options.preserveNativeDisclosureProse === true && !cpfWageDefinitionRequest;
+  if (contentMatch && /^<main\b/i.test(contentMatch[0]) && (cpfWageDefinitionRequest || preserveNativeDisclosureProse) &&
+      !/<\/?main\b/i.test(contentMatch[1])) {
+    const mainMarkup = rawDocument
+      .replace(/<!--[\s\S]*?-->/g, ' ')
+      .replace(/<(head|script|style|noscript|svg|template)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
+    const mainOpenings = [...mainMarkup.matchAll(/<main\b([^>]*)>/gi)];
+    const mainClosings = [...mainMarkup.matchAll(/<\/main\s*>/gi)];
+    const mainOpen = mainOpenings[0];
+    const mainOpenIndex = mainOpen?.index ?? -1;
+    const mainCloseIndex = mainClosings[0]?.index ?? -1;
+    const mainPrefix = mainOpen
+      ? parseBalancedMarkupElements(mainMarkup.slice(0, mainOpenIndex), true)
+      : undefined;
+    const outerAncestors = mainPrefix?.filter(element => element.end === undefined) || [];
+    let visibleMain = Boolean(mainOpen && mainOpenings.length === 1 && mainClosings.length === 1 &&
+      mainCloseIndex > mainOpenIndex && mainPrefix && !isHiddenMarkupAttributes(mainOpen[1]));
+    for (const ancestor of outerAncestors) {
+      const identity = `${markupAttribute(ancestor.attributes, 'class')} ${markupAttribute(ancestor.attributes, 'id')}`;
+      if (!['html', 'body', 'div', 'section', 'article'].includes(ancestor.tagName) ||
+          isHiddenMarkupElement(ancestor) || ['nav', 'aside', 'header', 'footer', 'a'].includes(ancestor.tagName) ||
+          RULE_METADATA_CONTAINER_MARKER.test(identity) ||
+          /\b(?:navigation|navbar|breadcrumb|menu|sidebar|quick[-_ ]?link|related|page[-_ ]?index)\b/i.test(identity)) {
+        visibleMain = false;
+        break;
+      }
+    }
+    if (visibleMain && mainOpen && mainClosings[0]) {
+      const mainContentStart = mainOpenIndex + mainOpen[0].length;
+      const originalMainContent = mainMarkup.slice(mainContentStart, mainCloseIndex);
+      const candidateMarkup = preserveNativeDisclosureProse
+        ? preserveRegisteredCpfDisclosureProse(originalMainContent) : originalMainContent;
+      visibleMarkup = (cpfWageDefinitionRequest
+        ? preserveSupportedCpfWageCard(candidateMarkup, cpfWageDefinitionRequest) : candidateMarkup)
+        .replace(/<(head|script|style|noscript|svg|template|nav|footer|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
+        .replace(/<(div|section|ul)\b(?=[^>]*(?:id|class)\s*=\s*["'][^"']*(?:navigation|navbar|breadcrumb|menu|sidebar|site-search|cookie|utility-links|social-links)[^"']*["'])[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
+    }
+  }
+  const deadlineTable = options.requireAcraAnnualReturnDeadlineTable
+    ? findSimpleAcraDeadlineTable(visibleMarkup) : undefined;
+  if (options.requireAcraAnnualReturnDeadlineTable && !deadlineTable && hasAcraDeadlineTableHeader(visibleMarkup)) return '';
+  const tableMarker = '\uE100ACRA_DEADLINE_TABLE\uE101';
+  if (deadlineTable) {
+    for (const tableMarkup of deadlineTable.rawHtml) {
+      visibleMarkup = visibleMarkup.replace(tableMarkup, `<p>${tableMarker}</p>`);
+    }
+  }
+  if (options.acraAuditExemptionContextRequest) {
+    const visibleAuditMarkup = removeHiddenAcraAuditMarkup(visibleMarkup, options.acraAuditExemptionContextRequest);
+    if (visibleAuditMarkup === undefined) return '';
+    visibleMarkup = visibleAuditMarkup;
+  }
+  if (options.requireSubstantiveBody) {
+    visibleMarkup = removeNavigationalSummaryLead(visibleMarkup, rawDocument);
     visibleMarkup = removeLinkOnlyRuleBlocks(removeRuleMetadataContainers(removeBlockWrappingLinks(visibleMarkup)));
+    if (options.acraAuditExemptionContextRequest) visibleMarkup = preserveAcraAuditExemptionContext(
+      visibleMarkup, options.acraAuditExemptionContextRequest
+    );
     visibleMarkup = extractRuleBearingMarkup(visibleMarkup);
   }
   // Keep nested list-item identity after HTML cleanup so evidence-only fallback
   // can exclude a dangling introduction and every child item. Bullet markers
   // are visible list formatting, not added tax-rule text.
   const listAwareMarkup = preserveListItemBoundaries(visibleMarkup);
-  return cleanHtmlText(listAwareMarkup);
+  const visibleText = cleanHtmlText(listAwareMarkup);
+  return deadlineTable ? visibleText.replaceAll(tableMarker, deadlineTable.text) : visibleText;
 }
 
 const TOPIC_TERM_STOPWORDS = new Set(['a', 'an', 'and', 'of', 'the']);
@@ -446,7 +1118,31 @@ export class ExternalSourceValidator {
 
     const titleMatch = rawDocument.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
     const pageTitle = titleMatch ? cleanHtmlText(titleMatch[1]) : '';
-    const substantiveText = extractVisiblePageText(rawDocument, expectation.requireSubstantiveBody === true);
+    const cpfWageDefinitionRequest = expectation.cpfAdditionalWageDefinitionRequest ||
+      expectation.cpfOrdinaryWageDefinitionRequest;
+    const substantiveText = extractVisiblePageText(rawDocument, {
+      preferMainContent: expectation.preferMainContent,
+      requireSubstantiveBody: expectation.requireSubstantiveBody,
+      requireAcraAnnualReturnDeadlineTable: expectation.requireAcraAnnualReturnDeadlineTable,
+      acraAuditExemptionContextRequest: expectation.acraAuditExemptionContextRequest,
+      cpfOrdinaryWageDefinitionRequest: expectation.cpfOrdinaryWageDefinitionRequest,
+      cpfAdditionalWageDefinitionRequest: expectation.cpfAdditionalWageDefinitionRequest,
+      preserveNativeDisclosureProse: expectation.preserveNativeDisclosureProse
+    });
+    if (cpfWageDefinitionRequest &&
+        (!isBoundedStatutoryAdvisoryRequest(cpfWageDefinitionRequest) ||
+         supportBoundedStatutoryAdvisory({
+           ...cpfWageDefinitionRequest,
+           sourceText: substantiveText
+         }) !== true)) {
+      return {
+        isValid: false,
+        errorCode: 'MALFORMED_DOCUMENT_STRUCTURE',
+        reason: 'Fetched CPF wage-definition page does not contain both complete source-stated ordinary-wage conditions',
+        pageTitle,
+        substantiveText
+      };
+    }
     if (!pageTitle || /^(?:home(?:page)?|search(?: results)?|sign in|log in|login|access denied|not found|error)(?:\s*[-|:].*)?$/i.test(pageTitle)) {
       return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched page has a generic, unavailable, or login title', pageTitle, substantiveText };
     }
@@ -469,6 +1165,10 @@ export class ExternalSourceValidator {
     });
     if (!titleSpecificity || !identityMatched) {
       return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched page title or content does not identify the mapped standard/source', pageTitle, substantiveText };
+    }
+
+    if (expectation.requireAcraAnnualReturnDeadlineTable && !supportsAcraAnnualReturnDeadlineTable(substantiveText)) {
+      return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched ACRA annual-return page does not contain one complete, unambiguous deadline table', pageTitle, substantiveText };
     }
 
     const terms = [...new Set(expectation.topicTerms.map(normalize).filter(term => term.length > 2))];
@@ -717,8 +1417,14 @@ export class ExternalSourceValidator {
       return { isValid: true };
     }
 
-    // For HTML/text records: cleanHtmlText of the raw slice must match record.sourceText
-    const reconstructed = cleanHtmlText(rawSlice);
+    // Preserve native table cells only for locators whose extraction recorded
+    // an unambiguous table structure. Other HTML/text records retain the
+    // existing whitespace-normalized boundary contract.
+    const visibleRawSlice = rawSlice.replace(/<!--[\s\S]*?(?:-->|$)/g, ' ')
+      .replace(/<(script|style|noscript|svg|template|nav|footer|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
+    const reconstructed = locator.tableStructure === 'PRESERVED'
+      ? cleanHtmlTextPreservingTableCells(visibleRawSlice)
+      : cleanHtmlText(rawSlice);
     if (reconstructed.trim() !== record.sourceText.trim()) {
       return {
         isValid: false,
@@ -917,7 +1623,13 @@ export class ExternalSourceValidator {
           reason: `IRAS guidance structural node must identify tax rate/rebate topic (e.g. cit-rate), found '${nodeIdentifier}'`
         };
       }
-      if (doc.authority === 'ACRA' && !nodeIdentifier.includes('small-company')) {
+      const verifiedAcraAnnualReturnSection = doc.authority === 'ACRA' &&
+        doc.officialSourceUrl === ACRA_2022_ANNUAL_RETURN_TIMELINES_URL &&
+        doc.domain === 'ACRA_CORP' &&
+        doc.paragraphOrSection === 'Reminder to file Annual Returns (AR)' &&
+        doc.acraFyeCohortApplicability?.kind === 'ACRA_FYE_ON_OR_AFTER' &&
+        supportsAcraAnnualReturnDeadlineTable(doc.sourceText);
+      if (doc.authority === 'ACRA' && !nodeIdentifier.includes('small-company') && !verifiedAcraAnnualReturnSection) {
         return {
           isValid: false,
           errorCode: 'PROVISION_MAPPING_MISMATCH',

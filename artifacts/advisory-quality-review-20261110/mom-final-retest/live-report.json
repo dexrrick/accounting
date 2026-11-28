@@ -1,0 +1,129 @@
+{
+  "savedAt": "2026-11-10T07:25:54.739Z",
+  "status": "INCOMPLETE_PROVIDER_UNAVAILABLE",
+  "head": "bef2cffbadbc8f4d7264a73b20f97b83dbecda78",
+  "sourceDiffSha256": "abaada4c5d376233ac16e236abadfea60ee221c94ba54cb59b999df2b527c08e",
+  "uncommitted": true,
+  "unpushed": true,
+  "modelBudget": {
+    "approvedTotal": 87,
+    "usedTotal": 86,
+    "remaining": 1,
+    "breakdown": {
+      "previousBatches": 55,
+      "initialSeven": 15,
+      "temporary503Attempts": 2,
+      "pacedThree": 9,
+      "momInlineRetest": 2,
+      "cachedPlan503": 1,
+      "freshMom503": 2
+    }
+  },
+  "attempts": [
+    {
+      "capture": "mom-inline-retest/mom-salary-overtime.json",
+      "status": "COMPLETED",
+      "scope": "Headless real provider and retrieval; no browser or deployed acceptance.",
+      "sourceDiffSha256": "2496686a06fcd0ade7102b2005bdf5090cdce1f1fd8ff352abd2b4b05fdb5b5c",
+      "modelRequests": 2,
+      "sourceRequests": 16,
+      "durationMs": 7419,
+      "noJournal": true,
+      "responses": [
+        {
+          "number": 1,
+          "status": 200,
+          "stage": "Interpret the user question only. Do not answer it or provide accounting, tax, or legal conclusions. Do not invent rules. Identify governing versus contextual authorities. Return only one JSON object matching the requested schema; no explanation or reasoning.",
+          "requestStartedAt": "2026-11-10T07:07:40.680Z"
+        },
+        {
+          "number": 2,
+          "status": 200,
+          "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+          "requestStartedAt": "2026-11-10T07:07:45.786Z"
+        }
+      ]
+    },
+    {
+      "capture": "mom-cached-plan-retest/mom-salary-overtime.json",
+      "status": "PROVIDER_STOP",
+      "scope": "Headless fresh official-source retrieval and real generation/support calls with retained understanding; not fresh end-to-end acceptance.",
+      "sourceDiffSha256": "abaada4c5d376233ac16e236abadfea60ee221c94ba54cb59b999df2b527c08e",
+      "modelRequests": 1,
+      "sourceRequests": 16,
+      "durationMs": 4022,
+      "noJournal": true,
+      "responses": [
+        {
+          "number": 1,
+          "status": 503,
+          "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+          "providerError": {
+            "code": 503,
+            "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+            "status": "UNAVAILABLE"
+          },
+          "requestStartedAt": "2026-11-10T07:20:31.190Z"
+        }
+      ]
+    },
+    {
+      "capture": "mom-final-retest/mom-salary-overtime.json",
+      "status": "PROVIDER_STOP",
+      "scope": "Headless real provider and retrieval; no browser or deployed acceptance.",
+      "sourceDiffSha256": "abaada4c5d376233ac16e236abadfea60ee221c94ba54cb59b999df2b527c08e",
+      "modelRequests": 2,
+      "sourceRequests": 10,
+      "durationMs": 7398,
+      "noJournal": true,
+      "responses": [
+        {
+          "number": 1,
+          "status": 200,
+          "stage": "Interpret the user question only. Do not answer it or provide accounting, tax, or legal conclusions. Do not invent rules. Identify governing versus contextual authorities. Return only one JSON object matching the requested schema; no explanation or reasoning.",
+          "requestStartedAt": "2026-11-10T07:23:38.782Z"
+        },
+        {
+          "number": 2,
+          "status": 503,
+          "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+          "providerError": {
+            "code": 503,
+            "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+            "status": "UNAVAILABLE"
+          },
+          "requestStartedAt": "2026-11-10T07:23:43.888Z"
+        }
+      ]
+    }
+  ],
+  "lastCompletedAnswer": "FAIL: both generated claims mixed issue scopes; deterministic checks rejected both; fallback official excerpts rendered.",
+  "latestRevisionLiveQuality": "UNVERIFIED: both generation attempts returned HTTP503 UNAVAILABLE; no generated answer available.",
+  "review": {
+    "product": "No material findings after inline issue-ID correction",
+    "harness": "Cap/pacing race fixed; local three-concurrent-reservation check admitted exactly two, rejected third, spacing5100ms; second understanding rejected in cached mode"
+  },
+  "checks": {
+    "focusedSynthesis": "PASS final revision",
+    "sourceDiscovery": "PASS pointer revision; unaffected by later prompt-row change",
+    "typescript": "PASS final revision",
+    "lintBuild": "mom-final-retest/validation/supervisor-checks.json",
+    "builderEvidence": "mom-inline-retest/validation/builder-issue-inline-checks.json",
+    "actualProductionPacketProfile": "mom-inline-retest/issue-inline-offline-diagnosis.json",
+    "smoke": {
+      "passed": 165,
+      "failed": 1,
+      "failedSuite": "Evidence-Grounded Synthesis Claim Review",
+      "reason": "Run started before final fixture increase; compact-path assertion at197 used undersized fixture.",
+      "resolution": "Corrected fixture and final focused synthesis suite pass; full smoke was not repeated."
+    },
+    "previousFull189": "PASS at324bcd; not a full-suite pass for the latest revision."
+  },
+  "limitations": [
+    "All grades are review judgments.",
+    "No fresh final-revision eight-case acceptance; other cases retain their prior outcomes.",
+    "No browser, CI, deployment or production acceptance.",
+    "One approved request remains; insufficient for a complete ordinary three-request replay.",
+    "No commit, push, merge, deployment, source activation or external evidence publication."
+  ]
+}

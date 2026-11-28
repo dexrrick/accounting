@@ -1,6 +1,6 @@
 import type { AccountingScenarioState, MissingFieldInfo } from '../types/accounting';
 import { hasCurrentIrasEvidencePresentation } from './irasEvidencePresentation';
-import { hasCurrentAuthorityEvidencePresentation } from './authorityEvidencePresentation';
+import { hasCompleteRequestRepresentation, hasCurrentAuthorityEvidencePresentation } from './authorityEvidencePresentation';
 
 export interface OfficialAnswerLink {
   title: string;
@@ -136,6 +136,9 @@ export function createChatPreview(
     }
     if (currentAuthorityPresentation.status === 'INSUFFICIENT') {
       return 'The whole-question evidence is incomplete for one or more material workstreams; see Supporting Official Guidance for issue-level sources and gaps.';
+    }
+    if (!hasCompleteRequestRepresentation(currentAuthorityPresentation) && currentAuthorityPresentation.evidenceStatus === 'VERIFIED') {
+      return `Evidence verified for mapped issues; full request coverage unconfirmed${currentAuthorityPresentation.applicationStatus === 'UNRESOLVED' ? ', and application remains unresolved' : ''}; see Supporting Official Guidance.`;
     }
     if (currentAuthorityPresentation.status === 'CONDITIONAL') {
       return 'Verified source coverage is available, but application remains unresolved for one or more workstreams; see Supporting Official Guidance.';

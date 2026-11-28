@@ -1,0 +1,232 @@
+{
+  "reviewedAtUTC": "2026-10-25T12:37:48.8859361Z",
+  "sourceSnapshot": "pre-mom-scope-fix-replay.json",
+  "sourceReportSha256": "84d656d27978d00d2d5554b75e3601e4efde31840ac31f7cd9b28efbfb9700eb",
+  "reviews": [
+    {
+      "caseId": "iras-eci-03",
+      "question": "Is there a general waiver from filing ECI and what conditions apply?",
+      "questionSha256": "40ab9ad7fe0ebcc164690e13e562944cddb1d6c4fc597a7914932d5ad5880599",
+      "answerSha256": "f1d7ac7837e76f70afa4438e0015f6795aa4bfa27f9a2756a995aef4eb41d6ee",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_review"
+      },
+      "outcome": "PARTIAL",
+      "reason": "Mentions waiver but omits both requested revenue and nil-ECI conditions.",
+      "reviewScope": "Offline question-level answer against current official facts; not live, model-interpretation or whole-request acceptance",
+      "wasAdditionalEvidenceGain": false
+    },
+    {
+      "caseId": "iras-withholding-tax-05",
+      "question": "What WHT checks should finance make before paying a non-resident company for services?",
+      "questionSha256": "1d1ae4d2adede590105b6f697a7b008c02dd1853a07dcc264864ee47461d0dff",
+      "answerSha256": "b9a801ba035d81fc21066a0b4f8cc17e6e38eec84e4e416c28d39d99db8f89ee",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_review"
+      },
+      "outcome": "CORRECT",
+      "reason": "General withholding-tax explanation matches current official guidance; not an additional-gain case.",
+      "reviewScope": "Offline question-level answer against current official facts; not live, model-interpretation or whole-request acceptance",
+      "wasAdditionalEvidenceGain": false
+    },
+    {
+      "caseId": "cpf-additional-wages-definition-01",
+      "question": "What does CPF mean by Additional Wages?",
+      "questionSha256": "88fcae4719213124d32da13d32def353429d41563b72ef7a17e9a1ec2ce39fd1",
+      "answerSha256": "0b42701f8e1b49f59de260c7020f025821d411ec17949f810c983527bac7a9da",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_review"
+      },
+      "outcome": "CORRECT",
+      "reason": "Defines Additional Wages as wages not classified as Ordinary Wages.",
+      "reviewScope": "Offline question-level answer against current official facts; not live, model-interpretation or whole-request acceptance",
+      "wasAdditionalEvidenceGain": true
+    },
+    {
+      "caseId": "cpf-additional-wages-definition-03",
+      "question": "What kind of wage payment is an Additional Wage for CPF?",
+      "questionSha256": "74300fdeff2728a6f8da97c38de5461244177ac776f7886d0ee4da7b6fbc17bf",
+      "answerSha256": "073ffada3861dfdce88fafbc40c1f56c56e5e10c5488b46143bf37e4194f39e8",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_review"
+      },
+      "outcome": "CORRECT",
+      "reason": "The supported AW definition answers which wage payments qualify.",
+      "reviewScope": "Offline question-level answer against current official facts; not live, model-interpretation or whole-request acceptance",
+      "wasAdditionalEvidenceGain": true
+    },
+    {
+      "caseId": "cpf-additional-wages-definition-04",
+      "question": "Is an annual performance bonus treated as AW or OW?",
+      "questionSha256": "4daf47ce10c3eb6053b0de09dd687780471da6eb197561cca771f1e9c668f478",
+      "answerSha256": "e059a6bacc2e4c7b062a5b69ec629e5c69752e058f0af2200f62583cb677afb8",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_review"
+      },
+      "outcome": "CORRECT",
+      "reason": "Identifies annual performance bonus as AW without inventing a contribution amount.",
+      "reviewScope": "Offline question-level answer against current official facts; not live, model-interpretation or whole-request acceptance",
+      "wasAdditionalEvidenceGain": true
+    },
+    {
+      "caseId": "cpf-cpf-aw-ceiling-02",
+      "question": "What formula determines how much AW can attract CPF?",
+      "questionSha256": "2ae934d1eebdd27ed15919548ec830e098d885bdc408ab1cedd10bbe3e34d887",
+      "answerSha256": "0eeef37861b13b40d10bfb85926c11723f6c59a25d95db8d13edfe4d412d1b52",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_review"
+      },
+      "outcome": "CORRECT",
+      "reason": "Gives 102000 less CPF-subject annual OW, per employee, employer and year; no personal calculation.",
+      "reviewScope": "Offline question-level answer against current official facts; not live, model-interpretation or whole-request acceptance",
+      "wasAdditionalEvidenceGain": true
+    },
+    {
+      "caseId": "cpf-cpf-aw-ceiling-03",
+      "question": "How do OW payments affect the Additional Wage limit?",
+      "questionSha256": "3d6a1c482836afbb2bfbbaf7563a54f32cbe16c8950d8f72e871c1633d5606de",
+      "answerSha256": "0eeef37861b13b40d10bfb85926c11723f6c59a25d95db8d13edfe4d412d1b52",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_review"
+      },
+      "outcome": "CORRECT",
+      "reason": "Explains the annual OW offset in the AW ceiling formula.",
+      "reviewScope": "Offline question-level answer against current official facts; not live, model-interpretation or whole-request acceptance",
+      "wasAdditionalEvidenceGain": true
+    },
+    {
+      "caseId": "mom-final-salary-01",
+      "question": "When is final salary due if an employee serves the full notice period?",
+      "questionSha256": "43ed93ca911f32ba59eddbddde3043998829317e2d19291021eeb9102d88a9c1",
+      "answerSha256": "bac164299c6b7be11a75e236c665adadda991ffbfbec112cb6821ec3eaeb1ea4",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_review"
+      },
+      "outcome": "UNSUPPORTED",
+      "reason": "Salary-deduction evidence does not establish the requested payment deadline; repair pending.",
+      "reviewScope": "Offline question-level answer against current official facts; not live, model-interpretation or whole-request acceptance",
+      "wasAdditionalEvidenceGain": false
+    },
+    {
+      "caseId": "mom-annual-leave-01",
+      "question": "When does statutory paid annual leave begin under the Employment Act?",
+      "questionSha256": "9f66de4327ac62e396de0cf557252e1562f97c8a20c1fceb6fe7bf755f42b13e",
+      "answerSha256": "6ce04550008cf70acfb8064866f47b8130cb0f1989cd4d43f32a832695fb89f4",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_review"
+      },
+      "outcome": "CORRECT",
+      "reason": "General current annual-leave explanation matches official MOM guidance; not an additional-gain case.",
+      "reviewScope": "Offline question-level answer against current official facts; not live, model-interpretation or whole-request acceptance",
+      "wasAdditionalEvidenceGain": false
+    },
+    {
+      "caseId": "mom-annual-leave-04",
+      "question": "For an eligible employee in the 2018 leave year, what statutory annual leave rule applied?",
+      "questionSha256": "47bc4a0983406b7ca6942ea1e11d03f8e22dfddfab2f7d8efb3340f157c7c5e5",
+      "answerSha256": "de38c41e07f06cf4e13cad3a5b5b52a5b38503f1a6d1473107cb3e5723bfdcae",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_review"
+      },
+      "outcome": "UNSUPPORTED",
+      "reason": "Current undated guidance does not independently establish 2018 applicability.",
+      "reviewScope": "Offline question-level answer against current official facts; not live, model-interpretation or whole-request acceptance",
+      "wasAdditionalEvidenceGain": false
+    },
+    {
+      "caseId": "mom-salary-deductions-04",
+      "question": "What facts determine whether a salary deduction is lawful?",
+      "questionSha256": "8d6da24de9e9bedfdae011027a10ece5d74228713389d4c566a19c0a313b3957",
+      "answerSha256": "cf313b2e262e18bf17addaf950287a7ba537e853bb852d20e57260a144a0098b",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_review"
+      },
+      "outcome": "PARTIAL",
+      "reason": "Useful grounds, inquiry, caps and consent information; omits work-permit status and MOM notification condition.",
+      "reviewScope": "Offline question-level answer against current official facts; not live, model-interpretation or whole-request acceptance",
+      "wasAdditionalEvidenceGain": true
+    },
+    {
+      "caseId": "acra-audit-exemption-01",
+      "question": "What tests make a Singapore private company a small company for audit exemption?",
+      "questionSha256": "51e3f1a4acebff189fa1a0b1f11d4aea71f83f240f2a1b5bb8b304dd81ec88c5",
+      "answerSha256": "9c64591daf941341e08487e5d8bf9ca8332fdf33625b0ad76ce9956d70bc8509",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_review"
+      },
+      "outcome": "CORRECT",
+      "reason": "General private-company size, period, group and new-company criteria match current ACRA guidance; not an additional-gain case.",
+      "reviewScope": "Offline question-level answer against current official facts; not live, model-interpretation or whole-request acceptance",
+      "wasAdditionalEvidenceGain": false
+    },
+    {
+      "caseId": "acra-annual-return-officer-particulars-01",
+      "question": "From 20 October 2026, what officer particulars must a local company confirm when it files its annual return?",
+      "questionSha256": "c1678685c053b2bd907909c47b3c23c3586d0f1f522e685b75b23625307044f7",
+      "answerSha256": "b22f5bb17a63755c44d230a3ce0eafc4b21d7b009980db0e48653784382013db",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_review"
+      },
+      "outcome": "UNSUPPORTED",
+      "reason": "No supported practical answer to the officer-particular confirmation request was produced.",
+      "reviewScope": "Offline question-level answer against current official facts; not live, model-interpretation or whole-request acceptance",
+      "wasAdditionalEvidenceGain": false
+    },
+    {
+      "caseId": "mas-fund-management-licence-02",
+      "question": "If our firm manages funds, when is an MAS licence generally required?",
+      "questionSha256": "8a108e71878feb28ce984cbcae5cddab4d02e2ee3eb385c672e5d9800519ea16",
+      "answerSha256": "108c456ddddfa7f1139985316d12128b2ddd4e06818326a0ceaa6b4779ec549e",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_review"
+      },
+      "outcome": "CORRECT",
+      "reason": "Explains the SFA-regulated fund-management licensing duty together with class-exemption qualification.",
+      "reviewScope": "Offline question-level answer against current official facts; not live, model-interpretation or whole-request acceptance",
+      "wasAdditionalEvidenceGain": true
+    },
+    {
+      "caseId": "mas-fund-management-licence-04",
+      "question": "What is the general licensing rule for fund management under the SFA?",
+      "questionSha256": "4013af1a3663af5eafc2cfe9e5bd4c95b18b4ce6d84e3b1af59ec5777243b422",
+      "answerSha256": "cfa4483c83e3d2b64827e31cd174cee33aef2025bb9d7722c2b8bf68e7e559b8",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_review"
+      },
+      "outcome": "CORRECT",
+      "reason": "Explains the general SFA licensing duty and conditional class exemption.",
+      "reviewScope": "Offline question-level answer against current official facts; not live, model-interpretation or whole-request acceptance",
+      "wasAdditionalEvidenceGain": true
+    },
+    {
+      "caseId": "mas-vcfm-01",
+      "question": "What is MAS’s VCFM regime for venture capital fund managers?",
+      "questionSha256": "02a1253d35e767869c8655631d19f99c34f76723736c113bd2494f70fe59ae63",
+      "answerSha256": "678702fc34645d158923e0c4c49eeb0b5b09843777b52543296bf6440c27a0ea",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_review"
+      },
+      "outcome": "UNSUPPORTED",
+      "reason": "The requested VCFM answer remains unsupported by admitted evidence.",
+      "reviewScope": "Offline question-level answer against current official facts; not live, model-interpretation or whole-request acceptance",
+      "wasAdditionalEvidenceGain": false
+    }
+  ],
+  "reuseRule": "Apply only when caseId, exact question hash and exact rendered-answer hash still match; changed answers require renewed review."
+}

@@ -126,7 +126,7 @@ addCheck('mom-work-permit-specific', 'What are the requirements for a Work Permi
   momPass('Work Permit requirements')
 ], { disallowedTopicIds: ['mom-work-passes-general'] });
 
-addCheck('mom-background-does-not-route', 'A foreign employee works here; what CPF contributions must the employer make?', ['cpf_contribution_rates'], [
+addCheck('mom-background-does-not-route', 'A foreign employee works here; what CPF contributions must the employer make?', ['cpf-employee-coverage'], [
   employerCpf('employer CPF contribution obligation for a foreign employee')
 ], { disallowedWorkstreamAuthorities: ['MOM'], disallowedTopicIds: ['mom-work-passes-general'] });
 

@@ -2,6 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "accounting",
   "compatibility_date": "2026-09-28",
+  "compatibility_flags": ["enable_request_signal"],
   "main": "dist/_worker.js",
   "assets": {
     "directory": "./dist",

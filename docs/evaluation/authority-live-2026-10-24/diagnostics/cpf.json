@@ -1,0 +1,1670 @@
+{
+  "schemaVersion": 1,
+  "caseId": "cpf",
+  "answerStatus": "VERIFIED",
+  "providerStatus": "NOT_EXPOSED",
+  "semanticPlanSource": "SEMANTIC_ISSUES",
+  "declaredCaptureStatus": "CAPTURE_WINDOW_SETTLED",
+  "captureWindow": {
+    "boundedWaitMs": 12000,
+    "timedOut": false,
+    "pendingCapturesAtDeadline": 0,
+    "inFlightFetchesAtDeadline": 0,
+    "cloneReadersCancelledAtDeadline": 0,
+    "inFlightFetchesAtReceipt": 0,
+    "pendingCapturesAtReceipt": 0
+  },
+  "payloadAvailability": "PRESENT_NO_TRUNCATION_RECORDED",
+  "bodyPayloads": [
+    {
+      "pointer": "/modelResponses/0/rawResponseBodyText",
+      "sha256": "5cfbfbf75eca3216559076fb732a9df46909c0c3bb7676979afbf278cd66b4dc",
+      "encoding": "utf8",
+      "byteLength": 1773,
+      "artifactPath": "bodies/5cfbfbf75eca3216559076fb732a9df46909c0c3bb7676979afbf278cd66b4dc.gz",
+      "declaredResponseBodySha256": "5cfbfbf75eca3216559076fb732a9df46909c0c3bb7676979afbf278cd66b4dc",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 1773,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/0/bodyBase64",
+      "sha256": "9a2166a835a32c60561bf8420a7de10e166e681d251473746915f06a2780ad1f",
+      "encoding": "base64",
+      "byteLength": 251313,
+      "artifactPath": "bodies/9a2166a835a32c60561bf8420a7de10e166e681d251473746915f06a2780ad1f.gz",
+      "declaredResponseBodySha256": "9a2166a835a32c60561bf8420a7de10e166e681d251473746915f06a2780ad1f",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 251313,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/0/bodyText",
+      "sha256": "9a2166a835a32c60561bf8420a7de10e166e681d251473746915f06a2780ad1f",
+      "encoding": "utf8",
+      "byteLength": 251313,
+      "artifactPath": "bodies/9a2166a835a32c60561bf8420a7de10e166e681d251473746915f06a2780ad1f.gz",
+      "declaredResponseBodySha256": "9a2166a835a32c60561bf8420a7de10e166e681d251473746915f06a2780ad1f",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 251313,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/1/bodyBase64",
+      "sha256": "861d3810024ef8f69758621b0a6a748e39b2b4a901e80dde2691e64cdd7b8969",
+      "encoding": "base64",
+      "byteLength": 231112,
+      "artifactPath": "bodies/861d3810024ef8f69758621b0a6a748e39b2b4a901e80dde2691e64cdd7b8969.gz",
+      "declaredResponseBodySha256": "861d3810024ef8f69758621b0a6a748e39b2b4a901e80dde2691e64cdd7b8969",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 231112,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/1/bodyText",
+      "sha256": "861d3810024ef8f69758621b0a6a748e39b2b4a901e80dde2691e64cdd7b8969",
+      "encoding": "utf8",
+      "byteLength": 231112,
+      "artifactPath": "bodies/861d3810024ef8f69758621b0a6a748e39b2b4a901e80dde2691e64cdd7b8969.gz",
+      "declaredResponseBodySha256": "861d3810024ef8f69758621b0a6a748e39b2b4a901e80dde2691e64cdd7b8969",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 231112,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    }
+  ],
+  "issuePlan": {
+    "source": "SEMANTIC_ISSUES",
+    "issues": [
+      {
+        "subject": "general definition of ordinary wages for CPF contributions",
+        "population": "EMPLOYER",
+        "domain": "CPF_PAYROLL",
+        "governingAuthorities": [
+          "CPF"
+        ],
+        "contextualAuthorities": [],
+        "operation": "EXPLAIN_RULE",
+        "mappedTopicIds": [
+          "cpf-ordinary-wages"
+        ],
+        "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+        "confidence": 1,
+        "id": "issue_d254fd9e",
+        "status": "MAPPED"
+      }
+    ],
+    "coverageEstablished": true,
+    "hasUnmappedResidual": false
+  },
+  "issues": [
+    {
+      "issueId": "issue_d254fd9e",
+      "subject": "general definition of ordinary wages for CPF contributions",
+      "population": "EMPLOYER",
+      "domain": "CPF_PAYROLL",
+      "operation": "EXPLAIN_RULE",
+      "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+      "governingAuthority": "CPF",
+      "sourceSections": [
+        "CPF_CONTRIBUTIONS"
+      ],
+      "lifecycle": {
+        "requested": true,
+        "mapped": true,
+        "retrievalAttempted": true,
+        "evidenceFound": true,
+        "admitted": true,
+        "verified": true,
+        "covered": true
+      },
+      "applicationStatus": "NOT_REQUIRED",
+      "evidenceStatus": "VERIFIED",
+      "verifiedClaims": [
+        {
+          "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+          "quoteMetadata": {
+            "sha256": "9afa14055fa6966a0747756658861cb76ff703b0e4a0bc8595a808d60aeed25f",
+            "byteLength": 1045,
+            "characterLength": 997,
+            "redacted": true
+          },
+          "canonicalUrl": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+          "supportKind": "EXACT_SOURCE_QUOTE"
+        }
+      ],
+      "sources": [
+        {
+          "id": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+          "authority": "CPF",
+          "authorityName": "Central Provident Fund Board (CPF Board)",
+          "sourcePublisher": "Central Provident Fund Board (CPF Board)",
+          "legalOrStandardInstrument": "CPF Treatment of Ordinary Wages",
+          "standardOrActCode": "CPF Treatment of Ordinary Wages",
+          "paragraphOrSection": "CPF Treatment of Ordinary Wages",
+          "principleSummary": "CPF Treatment of Ordinary Wages",
+          "officialSourceUrl": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+          "domain": "CPF_BOARD",
+          "jurisdiction": "Singapore",
+          "tags": [
+            "cpf-ordinary-wages"
+          ],
+          "sourceStatus": "NEEDS_REVIEW",
+          "sourceType": "OFFICIAL_GUIDANCE",
+          "evidenceTier": "OFFICIAL_GUIDANCE",
+          "isVerbatimText": false,
+          "lastVerifiedDate": "2026-10-24",
+          "provenance": "LIVE_EXTERNAL",
+          "canonicalSourceUrl": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+          "sourceAuthority": "CPF",
+          "retrievedAt": "2026-10-24T08:52:17.358Z",
+          "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+          "extractionStatus": "PARTIAL",
+          "documentHash": "861d3810024ef8f69758621b0a6a748e39b2b4a901e80dde2691e64cdd7b8969",
+          "contentHash": "861d3810024ef8f69758621b0a6a748e39b2b4a901e80dde2691e64cdd7b8969",
+          "lifecycleState": "CANDIDATE",
+          "recordRole": "DISCOVERED_EVIDENCE",
+          "groundingEligible": true,
+          "urlVerificationStatus": "VERIFIED",
+          "urlVerifiedDate": "2026-10-24",
+          "sourceLocator": {
+            "heading": "CPFB | What constitutes wages for CPF contributions",
+            "sourceType": "HTML"
+          }
+        }
+      ],
+      "gaps": [],
+      "retrievalTrace": {
+        "stages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "EXHAUSTED",
+            "reason": "The stage was exhausted without sufficient admitted evidence."
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SKIPPED",
+            "reason": "This retrieval stage was skipped by the configured scope."
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SUFFICIENT",
+            "reason": "The stage supplied reviewed evidence candidates."
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED",
+            "reason": "This retrieval stage was skipped by the configured scope."
+          }
+        ],
+        "attempts": [
+          {
+            "topicId": "cpf-ordinary-wages",
+            "fetchStatus": "SUCCESS",
+            "pageTitle": "CPFB | What constitutes wages for CPF contributions"
+          }
+        ]
+      },
+      "admissionDiagnostics": {
+        "retrievalTraceStatus": "AVAILABLE",
+        "retrievalTraceOptionalMetadataStatus": "VALID",
+        "retrievalEvidenceQualityTrace": {
+          "path": "DISCOVERED_SOURCE",
+          "sourceMapIds": [],
+          "selectedRecordIds": [
+            "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e"
+          ],
+          "finalVerifiedUrls": [
+            "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+          ],
+          "candidateOnly": true,
+          "attempts": [
+            {
+              "topicId": "cpf-ordinary-wages",
+              "candidateUrl": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+              "fetchStatus": "SUCCESS",
+              "finalUrl": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+              "pageTitle": "CPFB | What constitutes wages for CPF contributions",
+              "titleMatched": true,
+              "contentMatched": true,
+              "discoveryStage": "SITEMAP_DISCOVERY"
+            }
+          ],
+          "discoveryFetchAttempts": [
+            {
+              "topicId": "cpf-ordinary-wages",
+              "fetchStatus": "SUCCESS"
+            }
+          ],
+          "coverageDecisions": [
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages"
+              ]
+            }
+          ],
+          "stages": [
+            {
+              "stage": "LOCAL_VERIFIED",
+              "status": "EXHAUSTED",
+              "reason": "Local retrieval was insufficient for at least one routed topic."
+            },
+            {
+              "stage": "MAPPED_SOURCE",
+              "status": "SKIPPED",
+              "reason": "No applicable reviewed source-map pointer was available."
+            },
+            {
+              "stage": "SITEMAP_DISCOVERY",
+              "status": "SUFFICIENT",
+              "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+            },
+            {
+              "stage": "OFFICIAL_DOMAIN_SEARCH",
+              "status": "SKIPPED",
+              "reason": "Official-domain search was not attempted for this request."
+            }
+          ]
+        },
+        "candidates": [
+          {
+            "recordId": "CPF_WAGE_CEILINGS_2026",
+            "admitted": false,
+            "firstFailedPredicate": "topic:cpf-ordinary-wages.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "cpf-ordinary-wages",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "CPFA_SEC7_FIRST_SCHEDULE",
+            "admitted": false,
+            "firstFailedPredicate": "topic:cpf-ordinary-wages.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "cpf-ordinary-wages",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "CPF_ACCOUNT_ALLOCATION_RATES",
+            "admitted": false,
+            "firstFailedPredicate": "topic:cpf-ordinary-wages.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "cpf-ordinary-wages",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "CPF_RATES_BY_AGE_2026",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "CPF_SDL_SKILLS_DEVELOPMENT_LEVY",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+            "documentHash": "861d3810024ef8f69758621b0a6a748e39b2b4a901e80dde2691e64cdd7b8969",
+            "admitted": true,
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "liveExternal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "VALIDATED_CURRENT_FETCH"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "cpf-ordinary-wages",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": true
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "presentationIssues": [
+    {
+      "id": "issue_d254fd9e",
+      "subject": "general definition of ordinary wages for CPF contributions",
+      "population": "Employer",
+      "operation": "EXPLAIN_RULE",
+      "evidenceStatus": "VERIFIED",
+      "applicationStatus": "NOT_REQUIRED",
+      "claims": [
+        {
+          "supportKind": "EXACT_SOURCE_QUOTE",
+          "issueIds": [
+            "issue_d254fd9e"
+          ],
+          "provenance": "LIVE_EXTERNAL"
+        }
+      ],
+      "gaps": []
+    }
+  ],
+  "conceptOwnership": [
+    {
+      "issueId": "issue_d254fd9e",
+      "authority": [
+        "CPF"
+      ],
+      "domain": "CPF_PAYROLL",
+      "population": "EMPLOYER",
+      "operation": "EXPLAIN_RULE",
+      "concepts": "UNOBSERVED"
+    }
+  ],
+  "admissionDiagnostics": [
+    {
+      "issueId": "UNOBSERVED",
+      "admissionDiagnostics": {
+        "retrievalTraceStatus": "AVAILABLE",
+        "retrievalTraceOptionalMetadataStatus": "VALID",
+        "retrievalEvidenceQualityTrace": {
+          "path": "DISCOVERED_SOURCE",
+          "sourceMapIds": [],
+          "selectedRecordIds": [
+            "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e"
+          ],
+          "finalVerifiedUrls": [
+            "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+          ],
+          "candidateOnly": true,
+          "attempts": [
+            {
+              "topicId": "cpf-ordinary-wages",
+              "candidateUrl": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+              "fetchStatus": "SUCCESS",
+              "finalUrl": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+              "pageTitle": "CPFB | What constitutes wages for CPF contributions",
+              "titleMatched": true,
+              "contentMatched": true,
+              "discoveryStage": "SITEMAP_DISCOVERY"
+            }
+          ],
+          "discoveryFetchAttempts": [
+            {
+              "topicId": "cpf-ordinary-wages",
+              "fetchStatus": "SUCCESS"
+            }
+          ],
+          "coverageDecisions": [
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages"
+              ]
+            }
+          ],
+          "stages": [
+            {
+              "stage": "LOCAL_VERIFIED",
+              "status": "EXHAUSTED",
+              "reason": "Local retrieval was insufficient for at least one routed topic."
+            },
+            {
+              "stage": "MAPPED_SOURCE",
+              "status": "SKIPPED",
+              "reason": "No applicable reviewed source-map pointer was available."
+            },
+            {
+              "stage": "SITEMAP_DISCOVERY",
+              "status": "SUFFICIENT",
+              "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+            },
+            {
+              "stage": "OFFICIAL_DOMAIN_SEARCH",
+              "status": "SKIPPED",
+              "reason": "Official-domain search was not attempted for this request."
+            }
+          ]
+        },
+        "candidates": [
+          {
+            "recordId": "CPF_WAGE_CEILINGS_2026",
+            "admitted": false,
+            "firstFailedPredicate": "topic:cpf-ordinary-wages.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "cpf-ordinary-wages",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "CPFA_SEC7_FIRST_SCHEDULE",
+            "admitted": false,
+            "firstFailedPredicate": "topic:cpf-ordinary-wages.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "cpf-ordinary-wages",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "CPF_ACCOUNT_ALLOCATION_RATES",
+            "admitted": false,
+            "firstFailedPredicate": "topic:cpf-ordinary-wages.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "cpf-ordinary-wages",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "CPF_RATES_BY_AGE_2026",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "CPF_SDL_SKILLS_DEVELOPMENT_LEVY",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+            "documentHash": "861d3810024ef8f69758621b0a6a748e39b2b4a901e80dde2691e64cdd7b8969",
+            "admitted": true,
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "liveExternal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "VALIDATED_CURRENT_FETCH"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "cpf-ordinary-wages",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": true
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "requestCompletenessContext": {
+    "contractVersion": 1,
+    "identity": "[1,\"Under CPF Board guidance, what makes a payment ordinary wages for CPF contributions? Explain the general definition using official CPF Board guidance. Do not calculate contribution rates or amounts and do not create journal entries.\"]",
+    "inputLength": 232,
+    "inventory": {
+      "state": "UNCERTAIN",
+      "fullyConsumed": false,
+      "outcomes": [],
+      "facts": [],
+      "findings": [
+        {
+          "stage": "INVENTORY",
+          "code": "UNKNOWN_PREFIX_OR_REQUEST",
+          "span": {
+            "start": 0,
+            "end": 232
+          }
+        }
+      ],
+      "inputLength": 232
+    },
+    "declaredFacts": [],
+    "excludedSpans": [],
+    "observationSnapshot": {
+      "hasWrapper": true,
+      "mode": "SEMANTIC_INTERPRETATION",
+      "format": "STORED_NORMALIZED_OR_LEGACY",
+      "normalizedInterpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "CPF"
+        ],
+        "contextualAuthorities": [],
+        "domain": "CPF_PAYROLL",
+        "population": "EMPLOYER",
+        "primarySubject": "ordinary wages definition for CPF contributions",
+        "concepts": [
+          {
+            "concept": "ordinary wages",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "CPF contributions",
+            "role": "RELATED"
+          }
+        ],
+        "requestedOperation": "EXPLAIN_RULE",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "confidence": 1,
+        "issues": [
+          {
+            "subject": "general definition of ordinary wages for CPF contributions",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 1
+          }
+        ]
+      },
+      "structuralAcceptance": "ACCEPTED",
+      "confidenceAcceptance": "ACCEPTED",
+      "observedConfidence": 1
+    },
+    "evaluation": {
+      "status": "UNCERTAIN",
+      "structuralAcceptance": "ACCEPTED",
+      "confidenceAcceptance": "ACCEPTED",
+      "minimumConfidence": 0.72,
+      "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+      "observedConfidence": 1,
+      "findings": [
+        {
+          "stage": "BRIDGE",
+          "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+          "issueIndex": 0,
+          "subject": "general definition of ordinary wages for CPF contributions"
+        }
+      ],
+      "matches": [],
+      "issues": [
+        {
+          "subject": "general definition of ordinary wages for CPF contributions",
+          "population": "EMPLOYER",
+          "operation": "EXPLAIN_RULE"
+        }
+      ]
+    }
+  },
+  "groundedContext": "UNOBSERVED",
+  "evidenceQuality": "UNOBSERVED",
+  "sourceMapFallbackTrace": "UNOBSERVED",
+  "directGroups": [],
+  "observedStatus": {
+    "workstreamStatus": "VERIFIED",
+    "evidenceStatus": "VERIFIED",
+    "applicationStatus": "NOT_REQUIRED",
+    "presentationStatus": "VERIFIED",
+    "requestCompletenessEvaluation": "UNCERTAIN"
+  },
+  "gaps": []
+}

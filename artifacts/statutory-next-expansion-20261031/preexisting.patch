@@ -1,0 +1,762 @@
+diff --git a/src/classification/questionClassifier.ts b/src/classification/questionClassifier.ts
+index a206000..6b58a42 100644
+--- a/src/classification/questionClassifier.ts
++++ b/src/classification/questionClassifier.ts
+@@ -161,7 +161,11 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
+   // for accounting analysis. Keep that filing language from setting the
+   // generic financial-statement accounting signal unless the query also asks
+   // about accounting work or describes an actual transaction.
+-  const isAcraXbrlFilingAdvisory = topicIds.includes('acra_xbrl') &&
++  const isAcraFinancialStatementFilingAdvisory = topicIds.includes('acra_financial_statements') &&
++    /\bfinancial statements?\b/i.test(entryIntentQuery) &&
++    /\b(?:annual[- ]return|file|filing|omit|exempt\w*|dormant|newly incorporat\w*)\b/i.test(entryIntentQuery) &&
++    /\b(?:company|companies|incorporat\w*|annual[- ]return|dormant)\b/i.test(entryIntentQuery);
++  const isAcraXbrlFilingAdvisory = (topicIds.includes('acra_xbrl') || isAcraFinancialStatementFilingAdvisory) &&
+     !/\b(?:journal|bookkeeping|debit|credit|how to record|how do i record|accounting treatment|recognition|measurement|depreciat\w*|amorti\w*|capitalis\w*|capitaliz\w*|sfrs|ifrs|ias\s*\d*|intangible assets?|financial assets?|trade discount|accruals?|leases?|rou asset|fvtpl|fvtoci|balance sheet|p&l|statement of profit|statement of comprehensive income|restatement|restate|reclassif\w*|presentation of income|revenue presentation|bought|sold|purchased|acquired|invested|disposed of|issued|allotted)\b/i.test(entryIntentQuery);
+ 
+   // 1. Domain Indicator Detection
+diff --git a/src/retrieval/acraMomKnowledge20261027b.ts b/src/retrieval/acraMomKnowledge20261027b.ts
+index 923c621..9265f30 100644
+--- a/src/retrieval/acraMomKnowledge20261027b.ts
++++ b/src/retrieval/acraMomKnowledge20261027b.ts
+@@ -90,11 +90,11 @@ const RULES: readonly Rule[] = [
+     subjectPattern: /\bannual[- ]return\b/i
+   },
+   {
+-    id: 'ACRA_XBRL_FINANCIAL_STATEMENT_TEMPLATES', authority: 'ACRA', topicIds: ['acra_xbrl'], officialUrl: ACRA_XBRL_URL,
++    id: 'ACRA_XBRL_FINANCIAL_STATEMENT_TEMPLATES', authority: 'ACRA', topicIds: ['acra_xbrl', 'acra_financial_statements'], officialUrl: ACRA_XBRL_URL,
+     title: 'Financial statements: Filing requirements and exemptions', fixtureFile: 'acra-xbrl-requirements.txt',
+     population: 'Singapore-incorporated companies required to file financial statements; template varies by company type, size and regulatory status',
+     provisions: ['Companies Act section 201A for dormant relevant company exemption; other categories are described in ACRA guidance without section numbers in the cited passage.'],
+-    rule: 'The ACRA guidance lists simplified XBRL plus an authorised PDF for smaller and non-publicly accountable companies; XBRL FSH (Banks) or XBRL FSH (Insurance) plus an authorised PDF for the regulated bank, finance and insurance group; PDF only for companies limited by guarantee or companies approved to use other standards; and Full XBRL for all other Singapore-incorporated companies required to file financial statements. “Smaller” requires both current-year revenue and assets not exceeding S$500,000. “Non-publicly accountable” also excludes listed and specified regulated entity types. The dormant-relevant-company and solvent-EPC financial-statement exceptions have separate qualification conditions. ACRA labels technical resources as applying from 19 October 2026 onwards and identifies ACRA Taxonomy 2026 resources.',
++    rule: 'ACRA says all Singapore-incorporated companies must prepare financial statements, except dormant relevant companies, and must file them unless exempted. A solvent exempt private company may qualify not to file; dormant-relevant-company relief requires all Companies Act section 201A conditions. Newly incorporated or inactive status alone is not listed as an exemption in this guidance. For required filings, ACRA lists simplified XBRL plus an authorised PDF for smaller and non-publicly accountable companies; XBRL FSH (Banks) or XBRL FSH (Insurance) plus an authorised PDF for the regulated bank, finance and insurance group; PDF only for companies limited by guarantee or companies approved to use other standards; and Full XBRL for all other Singapore-incorporated companies required to file financial statements. “Smaller” requires both current-year revenue and assets not exceeding S$500,000. “Non-publicly accountable” also excludes listed and specified regulated entity types. ACRA labels technical resources as applying from 19 October 2026 onwards and identifies ACRA Taxonomy 2026 resources.',
+     effectiveFrom: '2026-10-19',
+     conditions: ['A company must first determine whether it is required to file financial statements; dormant relevant companies and solvent EPCs may qualify for separate financial-statement exceptions.', 'Small-company revenue and asset thresholds must both be met; group consolidation and currency translation details apply under the ACRA definitions page.', 'The Full/Simplified/FSH/PDF template depends on the company’s exact status and regulatory category.'],
+     exceptions: ['Dormant relevant companies need not prepare/file only if all Companies Act section 201A requirements are met, including the assets, dormancy and listing/subsidiary conditions.', 'A solvent EPC meeting an EPC definition may elect not to file financial statements but may file voluntarily; its annual-return solvency declaration still applies.', 'Foreign companies with Singapore branches and some individually approved cases are addressed elsewhere on the ACRA filing guidance and are not classified by this local-company rule summary.'],
+@@ -103,8 +103,8 @@ const RULES: readonly Rule[] = [
+     limitations: ['Does not determine an individual company’s template without classification facts.', 'The complete definitions and section 201A eligibility must be checked against ACRA’s linked guidance and law.', 'Do not apply the current page or 19 October 2026 XBRL boundary to a historical filing unless the relevant year-specific official source supports it.'],
+     requiredSourceTerms: ['xbrl filing requirements (from 19 october 2026 onwards)', 'all singapore-incorporated companies must', 'dormant relevant companies', 'section 201a', 'smaller and non-publicly accountable companies', 'simplified xbrl financial statements', 'banks, finance and insurance companies', 'xbrl fsh (banks)', 'companies limited by guarantee', 'all other singapore-incorporated companies', 'full xbrl financial statements', 'revenue for the current financial year does not exceed $500,000', 'total assets for the current financial year do not exceed $500,000', 'fewer than 20 members', 'solvent exempt private company', 'your company is non-publicly accountable if it is'],
+     quoteMatchers: [/All Singapore-incorporated companies must:[\s\S]{0,180}unless exempted\./i, /A company meeting all requirements under section 201A[^.]*\./i, /Smaller and non-publicly accountable companies[^.]*\./i, /A smaller company meets both tests:[^.]*\./i, /Banks, finance and insurance companies[^.]*\./i, /Companies limited by guarantee[^.]*\./i, /All other Singapore-incorporated companies[^.]*\./i, /Solvent EPCs that voluntarily file[^.]*\./i, /ACRA labels the technical resources[^.]*\./i],
+-    queryPattern: /\b(?:xbrl|taxonomy)\b[\s\S]{0,150}\b(?:filing|requirements?|template|full|simplified|financial statement|fs|from|effective|effective date)\b|\b(?:filing|requirements?|template|full|simplified|financial statement|effective date)\b[\s\S]{0,150}\b(?:xbrl|taxonomy)\b/i,
+-    subjectPattern: /\b(?:xbrl|financial statement filing template)\b/i
++    queryPattern: /\b(?:xbrl|taxonomy)\b[\s\S]{0,150}\b(?:filing|requirements?|template|full|simplified|financial statement|fs|from|effective|effective date)\b|\b(?:filing|requirements?|template|full|simplified|financial statement|effective date)\b[\s\S]{0,150}\b(?:xbrl|taxonomy)\b|\bfinancial statements?\b[\s\S]{0,120}\b(?:prepar\w*|file|filing|omit|exempt\w*|dormant|newly incorporat\w*)\b|\b(?:prepar\w*|file|filing|omit|exempt\w*|dormant|newly incorporat\w*)\b[\s\S]{0,120}\bfinancial statements?\b/i,
++    subjectPattern: /\b(?:xbrl|financial statement(?:s)? filing(?: template| requirement)?|financial statement preparation|dormant company accounts?)\b/i
+   },
+   {
+     id: 'MOM_ANNUAL_LEAVE_ENTITLEMENT', authority: 'MOM', topicIds: ['mom_annual_leave'], officialUrl: MOM_ANNUAL_LEAVE_URL,
+diff --git a/src/retrieval/irasMasKnowledge20261027b.ts b/src/retrieval/irasMasKnowledge20261027b.ts
+index f19fc01..1a3422e 100644
+--- a/src/retrieval/irasMasKnowledge20261027b.ts
++++ b/src/retrieval/irasMasKnowledge20261027b.ts
+@@ -4,7 +4,7 @@ import type {
+   AuthorityPresentedWorkstream
+ } from '../utils/authorityEvidencePresentation';
+ import { groupExactIssueClaimsByDocument } from '../utils/authorityEvidencePresentation';
+-import { defaultTargetDateResolver, TargetDateResolver } from './targetDateResolver';
++import { currentCompanyEciFyeWorkflowDate, defaultTargetDateResolver, TargetDateResolver } from './targetDateResolver';
+ import { hasConflictingMasNoticeIdentity, masSfa04N24CommencementScope } from './statutoryCommencementScope';
+ 
+ export interface IrasMasKnowledgeRequest {
+@@ -309,7 +309,9 @@ function hasNonCurrentScope(query: string, rule: Rule): boolean {
+   return resolved.source === 'EXPLICIT' && resolved.targetDate !== TargetDateResolver.CURRENT_SYSTEM_DATE
+     && !((rule.id === 'IRAS_GST_STAFF_MEDICAL_INPUT_TAX' && resolved.targetDate === '2021-10-01')
+       || (rule.id === 'IRAS_GST_MOTOR_CAR_INPUT_TAX' && ['2022-04-01', '2023-01-01'].includes(resolved.targetDate ?? ''))
+-      || (hasDatedWhtPayment && resolved.targetDate?.startsWith(`${currentYear}-`)));
++      || (hasDatedWhtPayment && resolved.targetDate?.startsWith(`${currentYear}-`))
++      || (rule.id === 'IRAS_ECI_PRACTICAL_WAIVER'
++        && currentCompanyEciFyeWorkflowDate(query) === resolved.targetDate));
+ }
+ 
+ function toolkitScopePassagePatterns(): RegExp[] {
+@@ -522,7 +524,7 @@ function answerText(rule: Rule, query: string): string {
+   switch (rule.id) {
+     case 'IRAS_GST_STAFF_MEDICAL_INPUT_TAX': return 'IRAS states that staff medical input tax is generally disallowed under regulation 26 of the GST (General) Regulations. Subject to the ordinary input-tax conditions, the stated exceptions are expenses obligatory under WICA or a qualifying Industrial Relations Act collective agreement; or, for expenses incurred on or after 1 October 2021, treatment connected with a work-related health risk or requirement and required under relevant Singapore written law. For the advisory limb, IRAS specifies treatment related to COVID-19 and required under a written advisory of the Government or a Singapore public authority. IRAS specifically says Primary Care Plan expenses do not meet the described work-related exception. A claim needs the expense date, legal/collective-agreement basis, work-related risk and mandate evidence, GST registration and invoice facts.';
+     case 'IRAS_GST_MOTOR_CAR_INPUT_TAX': return 'IRAS generally disallows input tax on a motor car’s purchase and running costs under regulation 27, unless the vehicle is outside the regulation 25(1) motor-car definition or a specific exception applies. Its examples include qualifying chauffeured pay-per-trip transport services from 1 April 2022; qualifying costs for cars used by a third party from 1 January 2023; and vehicles such as lorries, vans and motorcycles that are not motor cars. Costs for cars used physically or economically by you or your employees remain disallowed. For a connected person’s car, the claimant must recover the expense and the recovery must not be ancillary to a primary supply; partial recovery limits the claim to the recovered portion. If only half the expenses are recovered, the exception permits input tax only to the extent of that half, not the unrecovered half. All exceptions remain subject to the ordinary claim conditions and records.';
+-    case 'IRAS_ECI_PRACTICAL_WAIVER': return 'IRAS generally requires ECI filing within three months after FYE. The general waiver requires both annual revenue of S$5 million or less for that financial year and nil ECI for the YA, with ECI measured before partial or start-up exemption. Revenue is the company’s main source of income; for an investment holding company it is investment income. A nil ECI or book loss alone does not qualify a company whose relevant revenue exceeds S$5 million; likewise, revenue below the threshold does not qualify when ECI is positive. IRAS gives separate entity categories that need not file and says companies self-assess the waiver. To assess a particular YA, confirm FYE, principal/investment revenue, pre-exemption ECI and any specifically excluded category.';
++    case 'IRAS_ECI_PRACTICAL_WAIVER': return eciAnswerText(query);
+     case 'IRAS_WHT_SERVICES': return 'IRAS says WHT applies to specified service and management fees paid to a non-resident company to the extent attributable to work done in Singapore; a mixed Singapore/overseas engagement must be apportioned. Services supplied electronically from overseas without sending staff are described as performed outside Singapore. The current page states the prevailing 17% Corporate Income Tax rate on gross service fees for Singapore work, but the applicable DTA, payee residence and permanent-establishment facts may change the rate or treatment. IRAS also says the old related-party cost-pooling concession was withdrawn for payments liable on or after 1 November 2022. Specific treatment requires the payee type and residence, service scope/location, DTA and relevant dates.';
+     case 'IRAS_WHT_FILING_DATE': return 'IRAS requires WHT filing and payment by the 15th of the second month after its defined date of payment. For most payments, use the earliest of the contractual due date (or invoice date if there is no agreement, ignoring credit terms), credit to an account designated by the non-resident, and actual payment. Director fees have separate timing rules based on arrears/advance approval, entitlement, credit and actual payment. WHT still must be filed when a DTA or ARI makes the rate zero. GIRO is normally deducted on the 25th of the due month, or the next working day if that date is a weekend/public holiday. The exact deadline requires the payment type and all relevant dates.';
+     case 'MAS_SFA_MISCONDUCT_REPORTING_2027': {
+@@ -535,3 +537,27 @@ function answerText(rule: Rule, query: string): string {
+     case 'MAS_LFMC_TOOLKIT_SCOPE': return 'The MAS LFMC toolkit is a reference for common SFA approvals, notifications and regulatory submissions applicable to LFMCs. MAS says it is not exhaustive and expressly excludes obligations outside the SFA and fund-level requirements, such as the Code of Collective Investment Schemes. It therefore is not a complete checklist for all duties affecting a managed fund. Identify applicable fund-level requirements and other legislation separately. This scope statement applies to the LFMC toolkit; it does not establish the scope of VCFM or other licence-class toolkits.';
+   }
+ }
++
++function eciAnswerText(query: string): string {
++  const explanation = 'IRAS generally requires ECI filing within three months after FYE. The general waiver requires both annual revenue of S$5 million or less for that financial year and nil ECI for the YA, with ECI measured before partial or start-up exemption. Revenue is the company’s main source of income; for an investment holding company it is investment income. A nil ECI or book loss alone does not qualify a company whose relevant revenue exceeds S$5 million; likewise, revenue below the threshold does not qualify when ECI is positive. IRAS gives separate entity categories that need not file and says companies self-assess the waiver. To assess a particular YA, confirm FYE, principal/investment revenue, pre-exemption ECI and any specifically excluded category.';
++  const fye = currentCompanyEciFyeWorkflowDate(query);
++  if (!fye) return explanation;
++
++  const deadline = addMonthsClamped(fye, 3);
++  return `${explanation} For the stated FYE of ${formatSingaporeIso(fye)}, the three-month ECI filing deadline is ${formatSingaporeIso(deadline)}, unless a filing exception applies.`;
++}
++
++function addMonthsClamped(iso: string, months: number): string {
++  const [year, month, day] = iso.split('-').map(Number);
++  const monthIndex = month - 1 + months;
++  const targetYear = year + Math.floor(monthIndex / 12);
++  const targetMonth = monthIndex % 12;
++  const targetLastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
++  const sourceLastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
++  const targetDay = day === sourceLastDay ? targetLastDay : Math.min(day, targetLastDay);
++  return `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
++}
++
++function formatSingaporeIso(iso: string): string {
++  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
++}
+diff --git a/src/retrieval/statutoryWorkflows20261029.ts b/src/retrieval/statutoryWorkflows20261029.ts
+index 11cb78a..aad0a5c 100644
+--- a/src/retrieval/statutoryWorkflows20261029.ts
++++ b/src/retrieval/statutoryWorkflows20261029.ts
+@@ -676,32 +676,40 @@ function cpfRefundDateApplication(query: string): string | undefined {
+   let suppliedDate: string | undefined;
+   if (conditional) {
+     const wageReference = String.raw`(?:(?:conditional\s+)?(?:(?:joining|sign[- ]on|retention)\s+)?bonus|(?:conditional\s+)?wages?)`;
+-    const dateSuffix = String.raw`\s*${datePattern}`;
+     const repaymentDateClauses = conditionClauses.filter(clause =>
+       /\b(?:repay\w*|repayment|repayable)\b/i.test(clause) &&
+       [...clause.matchAll(new RegExp(datePattern, 'gi'))].length > 0);
+     const hasCompetingRepaymentDates = repaymentDateClauses.some(clause =>
+       [...clause.matchAll(new RegExp(datePattern, 'gi'))].length > 1 ||
+       /\b(?:unclear|uncertain|not sure|unknown|cannot determine|don't know|do not know|either|alternatively)\b/i.test(clause));
+-    if (hasCompetingRepaymentDates) return undefined;
+-    const hasUnownedRepaymentDate = repaymentDateClauses.some(clause => {
+-      const trimmed = clause.replace(/^\s*(?:CPF refund deadline:\s*)?/i, '').trim();
+-      const bareGenericStart = /^(?:the\s+)?(?:repayment due date|(?:repayment|repayable)\s+(?:is|was|becomes?)\s+due)\b/i.test(trimmed);
+-      const explicitlyWageOwned = new RegExp(String.raw`\b${wageReference}\s+repayment\s+(?:due date|(?:is|was|becomes?)\s+due)\b`, 'i').test(trimmed) ||
+-        /\b(?:bonus|wages?|salary|remuneration|payroll payment)\b/i.test(trimmed);
+-      const unambiguousEmployeePronoun = /\bemployee\s+(?:must|has to|is required to)\s+repay\s+(?:it|this)\b/i.test(trimmed);
+-      return !bareGenericStart && !explicitlyWageOwned && !unambiguousEmployeePronoun;
+-    });
+-    if (hasUnownedRepaymentDate) return undefined;
++    if (hasCompetingRepaymentDates || repaymentDateClauses.length > 1) return undefined;
++    const employmentDateTail = String.raw`under (?:the )?(?:terms of employment|employment terms|employment agreement|employment contract)`;
++    const serviceConditionDateTail = String.raw`after (?:the employee )?(?:leav\w*|resign\w*|depart\w*)(?: early)?`;
++    const dateEnding = String.raw`(?=\s*(?:(?:${employmentDateTail}|${serviceConditionDateTail})\s*)?(?:[.!?;]|$))`;
++    const ownedDateSuffix = String.raw`\s*${datePattern}${dateEnding}`;
++    // Contextual dates and pronouns need a directly preceding wage condition.
++    // Employment terms can also contain non-wage obligations.
++    const wageCondition = new RegExp(String.raw`^(?:(?:the|our)\s+)?${wageReference}\s+(?:is conditional on completing (?:\d+|[a-z]+) months? (?:of )?service|(?:must|has to) be (?:repaid|returned) if the employee (?:leaves|resigns|departs) early|becomes? repayable upon resignation)$`, 'i');
++    const hasImmediateWageAntecedent = (index: number): boolean => {
++      const preceding = query.slice(0, index).split(/[.!?;\n]+/)
++        .map(clause => clause.replace(/^\s*CPF refund deadline:\s*/i, '').trim()).filter(Boolean);
++      const last = preceding.at(-1) || '';
++      if (wageCondition.test(last)) return true;
++      const prior = preceding.at(-2) || '';
++      return /^(?:it|this|the bonus)\s+/i.test(last)
++        && wageCondition.test(last.replace(/^(?:it|this|the bonus)\s+/i, 'The bonus '))
++        && new RegExp(String.raw`^(?:CPF was paid on|we paid)\s+(?:a|an|the)\s+${wageReference}$`, 'i').test(prior);
++    };
+     const dueDatePatterns = [
+-      new RegExp(String.raw`\b${wageReference}\s+repayment due date\b[^.!?;\n]{0,40}\b(?:is|was|of|:)?${dateSuffix}`, 'gi'),
+-      new RegExp(String.raw`(?:^|[.!?;\n])\s*(?:CPF refund deadline:\s*)?(?:the\s+)?repayment due date\b[^.!?;\n]{0,40}\b(?:is|was|of|:)?${dateSuffix}`, 'gi'),
+-      new RegExp(String.raw`\bunder (?:the )?(?:terms of employment|employment terms|employment agreement|employment contract)\b[^.!?;\n]{0,120}\b(?:had|has|have|was|were) to repay\s+(?:the\s+)?${wageReference}\s+on${dateSuffix}`, 'gi'),
+-      new RegExp(String.raw`\b${wageReference}\s+repayment\s+(?:is|was|becomes?)\s+due\b[^.!?;\n]{0,100}\bon${dateSuffix}`, 'gi'),
+-      new RegExp(String.raw`(?:^|[.!?;\n])\s*(?:CPF refund deadline:\s*)?(?:the\s+)?(?:repayment|repayable)\s+(?:is|was|becomes?)\s+due\b[^.!?;\n]{0,100}\bon${dateSuffix}`, 'gi'),
+-      // A pronoun is safe only when the question describes a single repayable
+-      // wage and no separate loan, advance or debt that could own the date.
+-      new RegExp(String.raw`\b(?:the\s+)?employee\s+(?:must|has to|is required to)\s+repay\s+(?:it|this|(?:the\s+)?(?:conditional\s+)?(?:(?:joining|sign[- ]on|retention)\s+)?bonus|the\s+conditional wages?)\s+on${dateSuffix}`, 'gi')
++      new RegExp(String.raw`\b${wageReference}\s+repayment due date\s*(?:(?:is|was|of)\s*|:\s*)?${ownedDateSuffix}`, 'gi'),
++      new RegExp(String.raw`\bunder (?:the )?(?:terms of employment|employment terms|employment agreement|employment contract)\b[^.!?;\n]{0,120}\b(?:had|has|have|was|were) to repay\s+(?:the\s+)?${wageReference}\s+on${ownedDateSuffix}`, 'gi'),
++      new RegExp(String.raw`\b${wageReference}\s+repayment\s+(?:is|was|becomes?)\s+due\s+(?:under (?:the )?(?:terms of employment|employment terms|employment agreement|employment contract)\s+)?on${ownedDateSuffix}`, 'gi'),
++      new RegExp(String.raw`\b(?:the\s+)?employee\s+(?:must|has to|is required to)\s+repay\s+(?:(?:the\s+)?(?:conditional\s+)?(?:(?:joining|sign[- ]on|retention)\s+)?bonus|the\s+conditional wages?)\s+on${ownedDateSuffix}`, 'gi')
++    ];
++    const contextualDueDatePatterns = [
++      new RegExp(String.raw`(?:^|[.!?;\n])\s*(?:CPF refund deadline:\s*)?(?:the\s+)?repayment due date\s*(?:(?:is|was|of)\s*|:\s*)?${datePattern}\s+${employmentDateTail}(?=[.!?;]|$)`, 'gi'),
++      new RegExp(String.raw`(?:^|[.!?;\n])\s*(?:CPF refund deadline:\s*)?(?:the\s+)?(?:repayment|repayable)\s+(?:is|was|becomes?)\s+due\s+under (?:the )?(?:terms of employment|employment terms|employment agreement|employment contract)\s+on${ownedDateSuffix}`, 'gi'),
++      new RegExp(String.raw`\b(?:the\s+)?employee\s+(?:must|has to|is required to)\s+repay\s+(?:it|this)\s+on${ownedDateSuffix}`, 'gi')
+     ];
+     const hasSeparateDebt = /\b(?:loan|advance|debt)\b/i.test(query);
+     const hasSeparateNonWageRepayment = /\b(?:training|course|education|recruitment|relocation|equipment|uniform|accommodation|housing|travel)\s+(?:expenses?|costs?|fees?)\b[^.!?;\n]{0,120}\b(?:repay\w*|repaid|return\w*|due)\b|\b(?:repay\w*|repayment)\b[^.!?;\n]{0,120}\b(?:training|course|education|recruitment|relocation|equipment|uniform|accommodation|housing|travel)\s+(?:expenses?|costs?|fees?)\b/i.test(query);
+@@ -710,7 +718,11 @@ function cpfRefundDateApplication(query: string): string | undefined {
+     const hasSeparateWageTransactions = namedBonusKinds.size > 1
+       || /\b(?:another|second|separate|different|multiple|several|two)\b[^.!?;\n]{0,60}\b(?:bonus|wages?|payment|transaction)\b/i.test(query)
+       || /\bbonus\b[^.!?;\n]{0,100}\b(?:and|plus|as well as)\b[^.!?;\n]{0,80}\bbonus(?:es)?\b/i.test(query);
+-    const dueDates = dueDatePatterns.flatMap(pattern => [...query.matchAll(pattern)].map(match => match[1]));
++    const dueDates = [
++      ...dueDatePatterns.flatMap(pattern => [...query.matchAll(pattern)].map(match => match[1])),
++      ...contextualDueDatePatterns.flatMap(pattern => [...query.matchAll(pattern)]
++        .filter(match => hasImmediateWageAntecedent(match.index!)).map(match => match[1]))
++    ];
+     const conflictingDueDateLanguage = /\b(?:mutual agreement|contractual|agreed)\b[^.!?;\n]{0,100}\brepayment due date\b/i.test(query);
+     if (dueDates.length !== 1 || conflictingDueDateLanguage || hasSeparateDebt || hasSeparateNonWageRepayment || hasSeparateWageTransactions) return undefined;
+     suppliedDate = dueDates[0];
+diff --git a/src/retrieval/targetDateResolver.ts b/src/retrieval/targetDateResolver.ts
+index 5739df4..49a04dc 100644
+--- a/src/retrieval/targetDateResolver.ts
++++ b/src/retrieval/targetDateResolver.ts
+@@ -29,6 +29,38 @@ const MONTH_MAP: Record<string, string> = {
+ 
+ const EXPLICIT_DATE_PATTERN = String.raw`(?:\d{1,2}[/-]\d{1,2}[/-]20\d{2}|20\d{2}-\d{2}-\d{2}|\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+20\d{2})`;
+ 
++/** Returns one strictly valid current-year FYE date explicitly owned by the queried company. */
++export function currentCompanyEciFyeWorkflowDate(
++  query: string,
++  currentDate: string = TargetDateResolver.CURRENT_SYSTEM_DATE
++): string | undefined {
++  const fyePattern = new RegExp(String.raw`\b(?:(?:our|this|the)\s+company(?:['’]s)?|our)\s+(?:fye|financial year end|(?:financial )?year ended)\s*(?:(?:is|was|on|:)\s*)?(${EXPLICIT_DATE_PATTERN})`, 'gi');
++  const fyeMatches = [...query.matchAll(fyePattern)];
++  const explicitDates = [...query.matchAll(new RegExp(EXPLICIT_DATE_PATTERN, 'gi'))];
++  const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)];
++  if (fyeMatches.length !== 1 || explicitDates.length !== 1 || years.length !== 1
++      || fyeMatches[0][1] !== explicitDates[0][0] || years[0][0] !== currentDate.slice(0, 4)
++      || hasHistoricalStatutoryVersionIntent(query)) return undefined;
++
++  const value = fyeMatches[0][1];
++  let year: number, month: number, day: number;
++  let match = /^(\d{1,2})[/-](\d{1,2})[/-](20\d{2})$/.exec(value);
++  if (match) [, day, month, year] = match.map(Number);
++  else if ((match = /^(20\d{2})-(\d{2})-(\d{2})$/.exec(value))) {
++    [, year, month, day] = match.map(Number);
++  } else if ((match = /^(\d{1,2})\s+([a-z]+)\s+(20\d{2})$/i.exec(value))) {
++    const monthNumber = MONTH_MAP[match[2].toLowerCase()];
++    if (!monthNumber) return undefined;
++    month = Number(monthNumber);
++    day = Number(match[1]);
++    year = Number(match[3]);
++  } else return undefined;
++  if (![year, month, day].every(Number.isInteger)) return undefined;
++  const date = new Date(Date.UTC(year, month - 1, day));
++  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return undefined;
++  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
++}
++
+ /** Identifies requests for the legal version governing an earlier period. */
+ export function hasHistoricalStatutoryVersionIntent(query: string): boolean {
+   return /\b(?:historical|historic|back then|at that time|at that date|at the time|previous law|prior law|former rule|superseded|in force|governed|effective as of|effective during|as of|as at|which law|what law|what (?:law|rules?|requirements?) applied|which (?:law|rules?|requirements?) applied|law applicable in|rules? applicable in|requirements? applicable in|rules? applied|requirements? applied|used to|what deadline did we have|which rules? did[\s\S]{0,60}\bapply|did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what (?:was|were)[^.!?;]{0,50}\b(?:law|rules?|requirements?)\b|(?:requirements?|rules?|law) (?:in|for|applicable in|applied in) (?:19|20)\d{2})\b/i.test(query);
+@@ -92,10 +124,17 @@ export class TargetDateResolver {
+   }
+ 
+   /** Recognises fact dates only within one current compliance workflow. */
+-  private static isCurrentWorkflowFactDate(query: string): boolean {
++  private static isCurrentWorkflowFactDate(
++    query: string,
++    currentDate: string = TargetDateResolver.CURRENT_SYSTEM_DATE
++  ): boolean {
+     if (hasHistoricalStatutoryVersionIntent(query)) return false;
+     // These distinct requests must retain their date scope even without an authority acronym.
+     if (/\b(?:gst|goods and services tax|withholding tax|wht|public[- ]holidays?|holiday pay|overtime|sick leave|annual leave|rates?|percentages?|journal|bookkeeping|ifrs|sfrs)\b/i.test(query)) return false;
++    const currentCompanyFye = currentCompanyEciFyeWorkflowDate(query, currentDate);
++    if (currentCompanyFye && /\b(?:eci|estimated chargeable income)\b/i.test(query)
++        && /\b(?:deadline|due|file|filing|waiver|skip|exempt|qualif\w*)\b/i.test(query)
++        && !/\b(?:gst|goods and services tax|cpf|central provident fund|mom|acra|mas|withholding tax|\bwht\b|ifrs|sfrs)\b/i.test(query)) return true;
+     const dates = [...query.matchAll(new RegExp(EXPLICIT_DATE_PATTERN, 'gi'))];
+     const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)];
+     if (dates.length === 0 && years.length === 0) return false;
+@@ -161,7 +200,7 @@ export class TargetDateResolver {
+     if (acraOfficerCommencementScope(query) || masSfa04N24CommencementScope(query)) {
+       return { ...unresolved(), dateRole: 'DECLARED_COMMENCEMENT' };
+     }
+-    if (TargetDateResolver.isCurrentWorkflowFactDate(query)) return { ...unresolved(), dateRole: 'CURRENT_WORKFLOW_FACT' };
++    if (TargetDateResolver.isCurrentWorkflowFactDate(query, currentDate)) return { ...unresolved(), dateRole: 'CURRENT_WORKFLOW_FACT' };
+ 
+     const asksWhtDeadline = /\b(?:wht|withholding tax)\b/i.test(query) &&
+       /\b(?:filing|due date|deadline|when\b[^.!?;\n]{0,65}\b(?:file|filed|paid))\b/i.test(query) &&
+diff --git a/src/services/semanticQuestionUnderstanding.ts b/src/services/semanticQuestionUnderstanding.ts
+index b42ba73..8d0cf40 100644
+--- a/src/services/semanticQuestionUnderstanding.ts
++++ b/src/services/semanticQuestionUnderstanding.ts
+@@ -2800,6 +2800,9 @@ function refineTaxonomyRuleIntent(
+ ): SemanticQuestionIssue & { contextualTopicIds?: string[] } {
+   const topicIds = new Set(issue.mappedTopicIds);
+   const text = query.toLowerCase().replace(/[-_]/g, ' ');
++  const requestClauseOpening = /^(?:please\s+)?(?:can|could|may|must|should|do|does|is|are|what|which|when|where|who|how|explain|tell|list|describe|confirm|check|advise|clarify)\b/i;
++  const requestClauses = query.split(/[.!?;]+|\bseparately,?\s+|,\s*(?=(?:and\s+)?(?:what|which|when|where|who|how|explain|tell|list|describe|confirm|check)\b)|\band\s+(?=(?:what|which|when|where|who|how|explain|tell|list|describe|confirm|check)\b)/i)
++    .map(clause => clause.trim()).filter(clause => requestClauseOpening.test(clause));
+   const boundedPublicHolidayRestDayComparison = topicIds.has('mom-public-holidays') &&
+     /\bpublic holidays?\b/i.test(text) &&
+     /\bnon working day\b/i.test(text) && /\b(?:contractual )?rest day\b/i.test(text) &&
+@@ -2807,7 +2810,20 @@ function refineTaxonomyRuleIntent(
+   const boundedAcraCommencement = acraOfficerCommencementScope(query);
+   const boundedMasCommencement = masSfa04N24CommencementScope(query);
+   const separateAnnualReturnQuestion = topicIds.has('acra_annual-returns') &&
+-    /\b(?:annual return|annual-return)\b[^.!?;]{0,90}\b(?:filing deadline|deadline|due date|when must|how to file|filing process|file the return)\b/i.test(text);
++    (isAcraAnnualReturnDeadlineQuestion(query) ||
++      /\b(?:annual return|annual-return)\b[^.!?;]{0,90}\b(?:how to file|filing process|file the return)\b/i.test(text) ||
++      /\b(?:how|steps?|process|file|filing)\b[^.!?;]{0,90}\bannual[- ]returns?\b/i.test(text) ||
++      topicIds.has('acra_agm') && /\b(?:agm|annual general meetings?)\b/i.test(text)
++        && /\b(?:declare|declaration|details|enter|what date)\b/i.test(text));
++  const financialStatementQuestionHasSecondaryRequest = requestClauses.length !== 1 ||
++    (query.match(/\?/g) || []).length !== 1 || !/\?\s*$/.test(query) ||
++    /(?:,|\band\b|\bseparately\b|\balso\b)\s+(?:what|how|when|where|which|who|must|should|can|do|does|explain|tell|list|describe|confirm|check|advise|clarify)\b/i.test(query);
++  const financialStatementRequest = requestClauses.find(clause =>
++    /\bfinancial statements?\b/i.test(clause) &&
++    /\b(?:prepar\w*|file|filing|omit|exempt\w*|dormant|newly incorporat\w*)\b/i.test(clause) &&
++    /\b(?:annual return|company|incorporat\w*|dormant|exempt\w*|file|filing)\b/i.test(clause));
++  const boundedAcraFinancialStatementFiling = topicIds.has('acra_financial_statements') && Boolean(financialStatementRequest) &&
++    !separateAnnualReturnQuestion && !financialStatementQuestionHasSecondaryRequest;
+   const acraSecretaryCompanyFacts = topicIds.has('acra_company-secretary') &&
+     /\b(?:our|this|the)\s+(?:(?:singapore|local|private|public)\s+){0,2}company\b/i.test(text) &&
+     /\b(?:incorporated|registered|registration)\b/i.test(text) &&
+@@ -2825,7 +2841,7 @@ function refineTaxonomyRuleIntent(
+   // independently ask about a topic, keep that topic mapped as requested.
+   const mayDemoteToContext = !hasIndependentSemanticClause(query) || boundedPublicHolidayRestDayComparison
+     || Boolean(boundedAcraCommencement || boundedMasCommencement ||
+-      (boundedAcraSecretaryCase && !separateAnnualReturnQuestion));
++      (boundedAcraSecretaryCase && !separateAnnualReturnQuestion) || boundedAcraFinancialStatementFiling);
+   const asksForAmount = /\b(?:calculate|compute|work\s+out|estimate|how much (?:cpf|tax|salary|wht|gst|money|will|do|does|would|should)|what amount (?:is|are|do|does|would|will))\b/i.test(query);
+   if (asksForAmount || /\b(?:prepare|post|journal entry|calculate my|calculate our)\b/i.test(query)) return issue;
+ 
+@@ -3152,6 +3168,10 @@ function refineTaxonomyRuleIntent(
+         (boundedAcraSecretaryCase || /\b(?:in general|general rule|every company|all companies|a (?:singapore )?company|singapore companies|companies)\b/i.test(text))) {
+       const contextualAnnualReturn = acraAnnualReturnSecretarySubstitute && !separateAnnualReturnQuestion ? ['acra_annual-returns'] : [];
+       return makeRuleIssue('ACRA company secretary appointment and sole-director requirements', 'COMPANY', contextualAnnualReturn);
++    }
++    if (boundedAcraFinancialStatementFiling) {
++      const contextualAnnualReturn = separateAnnualReturnQuestion ? [] : ['acra_annual-returns'];
++      return makeRuleIssue('ACRA financial statement preparation and filing exemptions', 'COMPANY', contextualAnnualReturn);
+     }
+     if (topicIds.has('acra_xbrl') &&
+         /\b(?:xbrl|financial statement template)\b/i.test(text) &&
+diff --git a/src/standards/singaporeStatutesKnowledge.ts b/src/standards/singaporeStatutesKnowledge.ts
+index 6fd324e..9d4382b 100644
+--- a/src/standards/singaporeStatutesKnowledge.ts
++++ b/src/standards/singaporeStatutesKnowledge.ts
+@@ -26,6 +26,9 @@ export function querySingaporeStatutes(query: string): SingaporeStatuteRule[] {
+   const scoredResults: { rule: SingaporeStatuteRule; score: number }[] = [];
+ 
+   for (const rule of Object.values(SINGAPORE_STATUTORY_REPOSITORY)) {
++    // Avoid selecting a VCC-only rule for an ordinary company's annual return.
++    if (rule.id === 'ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE'
++        && !/\b(?:vccs?|variable\s+capital\s+compan(?:y|ies))\b/i.test(query)) continue;
+     let matchScore = 0;
+     for (const tag of rule.tags) if (q.includes(tag)) matchScore += 8;
+     if (q.includes(rule.sectionOrSchedule.toLowerCase())) matchScore += 10;
+diff --git a/tests/regression/test_acra_mom_knowledge_20261027b.mjs b/tests/regression/test_acra_mom_knowledge_20261027b.mjs
+index 71dae15..20e440d 100644
+--- a/tests/regression/test_acra_mom_knowledge_20261027b.mjs
++++ b/tests/regression/test_acra_mom_knowledge_20261027b.mjs
+@@ -12,6 +12,10 @@ import {
+ } from '../../src/retrieval/acraMomKnowledge20261027b.ts';
+ import { hasPracticalExpansionContradiction, practicalExpansionPointers, supportPracticalExpansionRule } from '../../src/retrieval/practicalStatutoryExpansion.ts';
+ import { processAccountingQuery } from '../../src/services/geminiService.ts';
++import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
++import { reconcileQuestionUnderstanding } from '../../src/services/semanticQuestionUnderstanding.ts';
++import { loadStatutoryKnowledgeSources } from '../../scripts/load_statutory_knowledge_sources.mjs';
++import { OFFICIAL_SOURCE_DISCOVERY_PROVIDERS } from '../../src/retrieval/officialSitemapDiscovery.ts';
+ 
+ const fixtureDir = new URL('../fixtures/statutoryKnowledge20261027b/', import.meta.url);
+ const manifest = JSON.parse(readFileSync(new URL('acra-mom-source-manifest.json', fixtureDir), 'utf8'));
+@@ -19,6 +23,72 @@ const fixtures = Object.fromEntries(manifest.sources.map(source => [source.fixtu
+   readFileSync(new URL(source.fixture, fixtureDir), 'utf8')]));
+ const legacySalaryHtml = readFileSync(new URL('../statutoryCoverageSources/mom-final-salary.html', fixtureDir), 'utf8');
+ 
++const newCompanyFinancialStatementQuestion = 'We formed a company with no operations. Can we omit financial statements from the annual return just because it is newly incorporated?';
++const newCompanyFinancialStatementClassification = classifyQuestion(newCompanyFinancialStatementQuestion);
++assert.equal(newCompanyFinancialStatementClassification.intent, 'STATUTORY_ADVISORY',
++  'A new-company financial statement filing question is sent to statutory guidance.');
++assert.equal(newCompanyFinancialStatementClassification.accountingAnalysisRequired, false,
++  'The annual-return filing question is not mistaken for financial-statement accounting analysis.');
++assert.ok(newCompanyFinancialStatementClassification.authorities.includes('ACRA'));
++const financialStatementAccountingClassification = classifyQuestion(
++  'We need prepare financial statements for the annual return and record our lease under IFRS 16.');
++assert.equal(financialStatementAccountingClassification.accountingAnalysisRequired, true,
++  'A real accounting question mentioning an annual filing remains an accounting question.');
++const newCompanyFinancialStatementPlan = reconcileQuestionUnderstanding(
++  newCompanyFinancialStatementQuestion, newCompanyFinancialStatementClassification,
++  { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' }
++).issuePlan;
++const newCompanyFinancialStatementIssue = newCompanyFinancialStatementPlan.issues.find(issue =>
++  issue.subject === 'ACRA financial statement preparation and filing exemptions');
++assert.ok(newCompanyFinancialStatementIssue, 'The natural-language question maps to the existing ACRA source family.');
++assert.equal(newCompanyFinancialStatementIssue.domain, 'ACRA_CORPORATE');
++assert.deepEqual(newCompanyFinancialStatementIssue.mappedTopicIds, ['acra_financial_statements']);
++assert.ok(newCompanyFinancialStatementIssue.contextualTopicIds?.includes('acra_annual-returns'),
++  'The annual return is retained as context when no annual-return deadline or process is requested.');
++const separateAnnualReturnQuestion = 'We are checking whether a new company can omit financial statements; separately, when must we file the annual return?';
++const separateAnnualReturnPlan = reconcileQuestionUnderstanding(
++  separateAnnualReturnQuestion, classifyQuestion(separateAnnualReturnQuestion),
++  { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' }
++).issuePlan;
++assert.ok(separateAnnualReturnPlan.issues.some(issue => issue.mappedTopicIds.includes('acra_annual-returns')),
++  'A separate annual-return deadline request remains an independent mapped issue.');
++assert.ok(!separateAnnualReturnPlan.issues.some(issue => issue.contextualTopicIds?.includes('acra_annual-returns')),
++  'A separately phrased reverse-order annual-return deadline is not demoted to context.');
++const separateAnnualReturnProcessQuestion = 'We formed a new company and need to know whether it must prepare financial statements. How do we file the annual return?';
++const separateAnnualReturnProcessPlan = reconcileQuestionUnderstanding(
++  separateAnnualReturnProcessQuestion, classifyQuestion(separateAnnualReturnProcessQuestion),
++  { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' }
++).issuePlan;
++assert.ok(separateAnnualReturnProcessPlan.issues.some(issue => issue.mappedTopicIds.includes('acra_annual-returns')),
++  'A separate reverse-order annual-return filing process remains mapped.');
++
++const financialStatementAndAgmQuestion = 'We formed a company with no operations. Can we omit financial statements just because it is newly incorporated? What AGM details must we declare in the annual return?';
++const financialStatementAndAgmPlan = reconcileQuestionUnderstanding(
++  financialStatementAndAgmQuestion, classifyQuestion(financialStatementAndAgmQuestion),
++  { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' }
++).issuePlan;
++assert.ok(financialStatementAndAgmPlan.issues.some(issue => issue.mappedTopicIds.includes('acra_agm')),
++  'A separate AGM declaration request remains mapped alongside the financial-statement question.');
++assert.ok(financialStatementAndAgmPlan.issues.some(issue => issue.mappedTopicIds.includes('acra_annual-returns')),
++  'The annual-return part of a separate AGM declaration request remains mapped.');
++
++const acra07MultipartQuestion = 'Our Singapore-incorporated company must file its statements and fits the category requiring a full set of financial statements in XBRL under the current ACRA taxonomy. We have two directors. Must we attach a PDF, and how many directors sign the directors statement?';
++const acra07MultipartPlan = reconcileQuestionUnderstanding(
++  acra07MultipartQuestion, classifyQuestion(acra07MultipartQuestion),
++  { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' }
++).issuePlan;
++assert.ok(acra07MultipartPlan.issues.some(issue => issue.mappedTopicIds.includes('acra_xbrl')),
++  'The source-backed XBRL attachment question remains mapped in the director-signing multipart case.');
++const imperativeSecondaryRequest = 'Can our company omit financial statements from the annual return just because it is newly incorporated? Also explain how to file it.';
++const imperativeSecondaryPlan = reconcileQuestionUnderstanding(
++  imperativeSecondaryRequest, classifyQuestion(imperativeSecondaryRequest),
++  { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' }
++).issuePlan;
++assert.ok(imperativeSecondaryPlan.issues.some(issue => issue.mappedTopicIds.includes('acra_financial_statements')),
++  'An imperative second request keeps the full issue plan instead of activating the single-question rule.');
++assert.ok(imperativeSecondaryPlan.issues.some(issue => issue.mappedTopicIds.includes('acra_annual-returns')),
++  'The trailing filing-process request remains mapped after the first question mark.');
++
+ const cases = [
+   {
+     id: 'acra-officer-particulars', authority: 'ACRA', topicId: 'acra-annual-return-officer-particulars',
+@@ -38,6 +108,12 @@ const cases = [
+     subject: 'XBRL filing template requirements by company type and size', source: 'acra-xbrl-requirements.txt',
+     operation: 'FILING_REQUIREMENT', expected: ['Simplified XBRL', '$500,000', 'Full XBRL', 'section 201A', '19 October 2026', 'XBRL FSH']
+   },
++  {
++    id: 'acra-financial-statement-exemption', authority: 'ACRA', topicId: 'acra_financial_statements',
++    query: 'We formed a company with no operations. Can we omit financial statements from the annual return just because it is newly incorporated?',
++    subject: 'ACRA financial statement preparation and filing exemptions', source: 'acra-xbrl-requirements.txt',
++    operation: 'EXPLAIN_RULE', expected: ['All Singapore-incorporated companies must', 'unless exempted', 'section 201A', 'Solvent EPC']
++  },
+   {
+     id: 'mom-annual-leave', authority: 'MOM', topicId: 'mom_annual_leave',
+     query: 'How many days of statutory annual leave do Employment Act employees receive and how is leave prorated?',
+@@ -64,6 +140,33 @@ const cases = [
+   }
+ ];
+ 
++const acraFilingCase = cases[3];
++const acraFilingSource = manifest.sources.find(source => source.fixture === acraFilingCase.source);
++const acraFilingIssue = {
++  id: 'new-company-financial-statement-filing', subject: acraFilingCase.subject, population: 'Company',
++  operation: 'EXPLAIN_RULE', evidenceStatus: 'VERIFIED', applicationStatus: 'UNRESOLVED', claims: [], gaps: []
++};
++const acraFilingSourceRecord = {
++  key: 'acra-financial-statement-requirements', title: acraFilingSource.pageTitle, publisher: 'ACRA',
++  documentTitle: acraFilingSource.pageTitle, officialUrl: acraFilingSource.url,
++  provenance: 'LIVE_EXTERNAL', validTo: undefined,
++  claims: [{ text: fixtures[acraFilingCase.source], issueIds: [acraFilingIssue.id],
++    supportKind: 'EXACT_SOURCE_QUOTE', provenance: 'LIVE_EXTERNAL',
++    fetchedSourceBinding: { recordId: 'record-acra-financial-statement-requirements',
++      documentHash: createHash('sha256').update(fixtures[acraFilingCase.source]).digest('hex'),
++      canonicalUrl: acraFilingSource.url, retrievedAt: '2026-10-27T00:00:00Z' } }]
++};
++const acraFilingStream = {
++  authority: 'ACRA', domain: 'ACRA_CORPORATE', issues: [acraFilingIssue], sources: [acraFilingSourceRecord]
++};
++const acraFilingExplanation = getAcraMomKnowledgeEvidence(acraFilingCase.query, acraFilingStream, acraFilingIssue);
++assert.ok(acraFilingExplanation, 'The matching ACRA source can answer the newly incorporated company filing question.');
++assert.match(acraFilingExplanation.text, /newly incorporated or inactive status alone is not listed as an exemption/i);
++assert.match(acraFilingExplanation.text, /all Companies Act section 201A conditions/i);
++assert.equal(getAcraMomKnowledgeEvidence(acraFilingCase.query,
++  { ...acraFilingStream, sources: [{ ...acraFilingSourceRecord, officialUrl: 'https://example.com' }] }, acraFilingIssue), undefined,
++  'The ACRA filing rule cannot be rendered from an unrelated source URL.');
++
+ assert.equal(ACRA_MOM_KNOWLEDGE_RULES_20261027B.length, 7);
+ assert.equal(ACRA_MOM_KNOWLEDGE_SOURCE_CATALOG_20261027B.length, 7);
+ assert.equal(manifest.sources.length, 8, 'The new source package also includes the current ACRA secretary page for the existing secretary family.');
+@@ -139,10 +242,11 @@ for (const [row, oldQuery] of [
+   [cases[0], 'What annual return officer particulars applied before 20 October 2026?'],
+   [cases[1], 'How did a company file its annual return in 2025?'],
+   [cases[2], 'Which XBRL requirements applied before 19 October 2026?'],
+-  [cases[3], 'What was the statutory annual leave entitlement in 2025?'],
+-  [cases[4], 'What sick leave entitlement applied in 2025?'],
+-  [cases[5], 'What public holiday pay rules applied in 2025?'],
+-  [cases[6], 'When must final salary be paid in 2025?']
++  [cases[3], 'What financial statement filing exemptions applied to new companies in 2025?'],
++  [cases[4], 'What was the statutory annual leave entitlement in 2025?'],
++  [cases[5], 'What sick leave entitlement applied in 2025?'],
++  [cases[6], 'What public holiday pay rules applied in 2025?'],
++  [cases[7], 'When must final salary be paid in 2025?']
+ ]) {
+   const sourceText = fixtures[row.source];
+   const source = manifest.sources.find(item => item.fixture === row.source);
+@@ -168,18 +272,18 @@ const wrongFacts = [
+   [cases[2], 'Revenue for the current financial year does not exceed $500,000.', 'Revenue for the current financial year exceeds $500,000.'],
+   [cases[2], 'Revenue for the current financial year does not exceed $500,000.', 'Revenue for the current financial year does not exceed $500,0000.'],
+   [cases[2], 'Total assets for the current financial year do not exceed $500,000.', 'Total assets for the current financial year do not exceed $500,000.50.'],
+-  [cases[3], '1st | 7', '1st | 9'],
+-  [cases[3], '÷ 12 months', '÷ 10 months'],
+-  [cases[3], 'If it is half or more, round it up to one day.', 'If it is half or more, round it down to zero days.'],
+-  [cases[4], '3 | 13 May | 5 | 15', '3 | 13 May | 14 | 60'],
+-  [cases[4], '6 and thereafter | 13 August | 14 | 60', '6 and thereafter | 13 August | 14 | 600'],
+-  [cases[4], '6 and thereafter | 13 August | 14 | 60', '6 and thereafter | 13 August | 140 | 60'],
+-  [cases[5], '11 paid public holidays', '12 paid public holidays'],
+-  [cases[5], 'were not absent on the working day immediately before or after a holiday without consent or a reasonable excuse.', 'were absent on the working day immediately before or after a holiday with consent and a reasonable excuse.'],
+-  [cases[6], 'Employee resigns and serves the required notice period | On the last day of employment.', 'Employee resigns and serves the required notice period | Within 7 days of the last day of employment.'],
+-  [cases[6], 'Employee resigns and does not serve the notice period | Within 7 days of the last day of employment.', 'Employee resigns and does not serve the notice period | Within 5 days of the last day of employment.'],
+-  [cases[6], 'Dismissal on grounds of misconduct | On the last day of employment. If this is not possible, then within 3 working days from date of dismissal.', 'Dismissal on grounds of misconduct | On the last day of employment. If this is not possible, then within 5 working days from date of dismissal.'],
+-  [cases[6], 'Employer terminates the contract | On the last day of employment. If this is not possible, then within 3 working days from date of termination.', 'Employer terminates the contract | On the last day of employment. If this is not possible, then within 5 working days from date of termination.']
++  [cases[4], '1st | 7', '1st | 9'],
++  [cases[4], '÷ 12 months', '÷ 10 months'],
++  [cases[4], 'If it is half or more, round it up to one day.', 'If it is half or more, round it down to zero days.'],
++  [cases[5], '3 | 13 May | 5 | 15', '3 | 13 May | 14 | 60'],
++  [cases[5], '6 and thereafter | 13 August | 14 | 60', '6 and thereafter | 13 August | 14 | 600'],
++  [cases[5], '6 and thereafter | 13 August | 14 | 60', '6 and thereafter | 13 August | 140 | 60'],
++  [cases[6], '11 paid public holidays', '12 paid public holidays'],
++  [cases[6], 'were not absent on the working day immediately before or after a holiday without consent or a reasonable excuse.', 'were absent on the working day immediately before or after a holiday with consent and a reasonable excuse.'],
++  [cases[7], 'Employee resigns and serves the required notice period | On the last day of employment.', 'Employee resigns and serves the required notice period | Within 7 days of the last day of employment.'],
++  [cases[7], 'Employee resigns and does not serve the notice period | Within 7 days of the last day of employment.', 'Employee resigns and does not serve the notice period | Within 5 days of the last day of employment.'],
++  [cases[7], 'Dismissal on grounds of misconduct | On the last day of employment. If this is not possible, then within 3 working days from date of dismissal.', 'Dismissal on grounds of misconduct | On the last day of employment. If this is not possible, then within 5 working days from date of dismissal.'],
++  [cases[7], 'Employer terminates the contract | On the last day of employment. If this is not possible, then within 3 working days from date of termination.', 'Employer terminates the contract | On the last day of employment. If this is not possible, then within 5 working days from date of termination.']
+ ];
+ for (const [row, expected, incorrect] of wrongFacts) {
+   const sourceText = fixtures[row.source].replaceAll(expected, incorrect);
+@@ -193,8 +297,8 @@ for (const [row, expected, incorrect] of wrongFacts) {
+ }
+ 
+ for (const [row, expected, incorrect] of [
+-  [cases[3], 'If it is half or more, round it up to one day.', ''],
+-  [cases[5], 'You are not entitled to holiday pay if the holiday falls on your approved unpaid leave.', '']
++  [cases[4], 'If it is half or more, round it up to one day.', ''],
++  [cases[6], 'You are not entitled to holiday pay if the holiday falls on your approved unpaid leave.', '']
+ ]) {
+   const sourceText = fixtures[row.source].replace(expected, incorrect);
+   assert.notEqual(sourceText, fixtures[row.source], `${row.id}: the incomplete-source mutation changes the source text`);
+@@ -227,12 +331,12 @@ const issueSource = {
+ const stream = {
+   authority: 'MOM', domain: 'MOM_EMPLOYMENT', issues: [noFactsIssue], sources: [issueSource]
+ };
+-const explanation = getAcraMomKnowledgeEvidence(cases[4].query, stream, noFactsIssue);
++const explanation = getAcraMomKnowledgeEvidence(cases[5].query, stream, noFactsIssue);
+ assert.ok(explanation);
+ assert.match(explanation.text, /case-specific conclusion requires:.*Employment Act coverage/i);
+ assert.equal(getAcraMomKnowledgeEvidence('What sick-leave table applied in 2025?', stream, noFactsIssue), undefined,
+   'The general explanation cannot present current entitlement as a historic answer.');
+-assert.equal(getAcraMomKnowledgeEvidence(cases[4].query, { ...stream, sources: [{ ...issueSource, officialUrl: 'https://example.com' }] }, noFactsIssue), undefined,
++assert.equal(getAcraMomKnowledgeEvidence(cases[5].query, { ...stream, sources: [{ ...issueSource, officialUrl: 'https://example.com' }] }, noFactsIssue), undefined,
+   'A general rendered explanation requires exact source identity and issue-bound source claims.');
+ 
+ const annualLeaveQuery = 'What is the minimum annual leave entitlement and how does it increase?';
+@@ -395,4 +499,42 @@ for (const sample of graduatedSickLeaveApplicationCases) {
+     `${sample.id}: the applicable graduated entitlement is not replaced by the full 14/60 schedule`);
+ }
+ 
++const mockedPages = new Map();
++for (const directory of ['tests/fixtures/statutoryKnowledge20261027b', 'tests/fixtures/statutoryKnowledge20261030',
++  'tests/fixtures/statutoryWorkflows20261029']) {
++  for (const page of await loadStatutoryKnowledgeSources(directory)) {
++    mockedPages.set(page.sourceUrl, { authority: page.authority, body: page.body, type: page.contentType });
++  }
++}
++const savedFetch = globalThis.fetch;
++const modelRequests = [];
++globalThis.fetch = async input => {
++  const url = typeof input?.url === 'string' ? input.url : String(input);
++  if (/generativelanguage|api\.openai|generateContent|chat\/completions/i.test(url)) modelRequests.push(url);
++  const page = mockedPages.get(url);
++  if (page) return new Response(page.body, { headers: { 'content-type': page.type } });
++  const provider = Object.values(OFFICIAL_SOURCE_DISCOVERY_PROVIDERS).find(candidate => candidate.sitemapUrls?.includes(url));
++  if (provider) return new Response('<urlset>' + [...mockedPages].filter(([, source]) => source.authority === provider.authority)
++    .map(([sourceUrl]) => `<url><loc>${sourceUrl.replaceAll('&', '&amp;')}</loc></url>`).join('') + '</urlset>',
++  { headers: { 'content-type': 'application/xml' } });
++  return new Response('Unavailable in frozen fixture set', { status: 404 });
++};
++try {
++  let acraWorkstreams;
++  const response = await processAccountingQuery(newCompanyFinancialStatementQuestion, null, 'IFRS', undefined, undefined, [], undefined,
++    { onAuthorityWorkstreams: value => { acraWorkstreams = value; } });
++  assert.equal(response.scenarioState.scenarioType, 'AUTHORITY_ADVISORY',
++    'The frozen acra-13 wording reaches the regular statutory query path.');
++  assert.deepEqual(response.scenarioState.directGroups || [], [], 'The filing question does not create a journal.');
++  assert.ok(acraWorkstreams, 'The filing question reaches governed ACRA source retrieval.');
++  assert.match(response.messageText, /all Singapore-incorporated companies must prepare financial statements/i);
++  assert.match(response.messageText, /newly incorporated or inactive status alone is not listed as an exemption/i);
++  assert.match(response.messageText, /all Companies Act section 201A conditions/i);
++  assert.doesNotMatch(response.messageText, /variable capital company|VCC/i,
++    'The unspecified company is not silently treated as a VCC.');
++  assert.equal(modelRequests.length, 0, 'The mocked application regression makes no model requests.');
++} finally {
++  globalThis.fetch = savedFetch;
++}
++
+ console.log('ACRA/MOM statutory knowledge rules passed (7 complete source families, transition-date guards and numeric/polarity mutations).');
+diff --git a/tests/regression/test_iras_mas_knowledge_20261027b.mjs b/tests/regression/test_iras_mas_knowledge_20261027b.mjs
+index 44abcb4..51e3412 100644
+--- a/tests/regression/test_iras_mas_knowledge_20261027b.mjs
++++ b/tests/regression/test_iras_mas_knowledge_20261027b.mjs
+@@ -12,6 +12,7 @@ import {
+   supportIrasMasKnowledgeRule
+ } from '../../src/retrieval/irasMasKnowledge20261027b.ts';
+ import { hasConflictingMasNoticeIdentity } from '../../src/retrieval/statutoryCommencementScope.ts';
++import { TargetDateResolver } from '../../src/retrieval/targetDateResolver.ts';
+ 
+ const fixtureRoot = new URL('../fixtures/statutoryKnowledge20261027b/', import.meta.url);
+ const manifest = JSON.parse(readFileSync(new URL('iras-mas-source-manifest.json', fixtureRoot), 'utf8'));
+@@ -238,6 +239,61 @@ assert.equal(supportIrasMasKnowledgeRule({ ...med, query: 'Can we recover GST on
+ const eci = cases[2];
+ assert.equal(supportIrasMasKnowledgeRule({ ...eci, query: 'For YA 2024, can this historical company skip ECI if revenue is S$5m or below and ECI is nil?', sourceText: textFor(eci.file) }), false,
+   'current source capture does not establish an older YA rule');
++const currentYear = Number(TargetDateResolver.CURRENT_SYSTEM_DATE.slice(0, 4));
++const currentFyeQuestion = `Our company year ended 30 June ${currentYear}. When is ECI due, and can we skip it if revenue was S$4.8 million but ECI is S$30,000?`;
++const currentFyeRequest = { ...eci, query: currentFyeQuestion, sourceText: textFor(eci.file) };
++assert.equal(supportIrasMasKnowledgeRule(currentFyeRequest), true,
++  'a strictly labelled, valid current-year FYE is a workflow fact, not a request for historical ECI law');
++assert.equal(supportIrasMasKnowledgeRule({ ...currentFyeRequest,
++  query: currentFyeQuestion.replace(`30 June ${currentYear}`, `31 February ${currentYear}`) }), false,
++  'an invalid current-year FYE date is not normalized into an ECI calculation');
++assert.equal(supportIrasMasKnowledgeRule({ ...currentFyeRequest,
++  query: `${currentFyeQuestion} The supplier invoice was due 15 September ${currentYear}.` }), false,
++  'a separate obligation date cannot be used to support the current-year ECI calculation');
++assert.equal(supportIrasMasKnowledgeRule({ ...currentFyeRequest,
++  query: `The supplier company year ended 30 June ${currentYear}. Can it skip ECI if revenue was S$4.8 million and ECI is S$30,000?` }), false,
++  'a third-party company FYE is not assigned to the company in the ECI issue');
++assert.equal(supportIrasMasKnowledgeRule({ ...currentFyeRequest,
++  query: `Our financial year ended 30 June ${currentYear}, but the reporting period was extended to 30 September ${currentYear}. When is ECI due?` }), false,
++  'competing FYE claims do not produce a filing deadline');
++const currentFyeIssue = {
++  id: 'issue-eci-current-fye', subject: 'Company ECI waiver and nil ECI filing rule', population: 'Company',
++  operation: 'FILING_REQUIREMENT', evidenceStatus: 'VERIFIED', applicationStatus: 'UNRESOLVED', claims: [], gaps: []
++};
++const eciManifestSource = manifest.sources.find(source => source.url === currentFyeRequest.url);
++const currentFyeStream = {
++  id: 'stream-eci-current-fye', authority: 'IRAS', authorityLabel: 'IRAS', domain: 'IRAS_CORPORATE_TAX',
++  domainLabel: 'IRAS corporate tax', evidenceStatus: 'VERIFIED', applicationStatus: 'UNRESOLVED',
++  issues: [currentFyeIssue], sources: [{ key: 'source-eci-current-fye', title: eciManifestSource.title,
++    publisher: 'IRAS', documentTitle: eciManifestSource.title, officialUrl: eciManifestSource.url,
++    provenance: 'LIVE_EXTERNAL', claims: [{ text: currentFyeRequest.sourceText, supportKind: 'EXACT_SOURCE_QUOTE',
++      issueIds: [currentFyeIssue.id], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: {
++        recordId: 'record-eci-current-fye', documentHash: eciManifestSource.sourceResponseSha256 || eciManifestSource.sha256,
++        canonicalUrl: eciManifestSource.url, retrievedAt: '2026-10-27T05:14:21Z'
++      } }] }], gaps: []
++};
++const currentFyeEvidence = getIrasMasKnowledgeEvidence(currentFyeQuestion, currentFyeStream, currentFyeIssue);
++assert.ok(currentFyeEvidence, 'the issue-bound current IRAS ECI source supports a case-specific application');
++assert.match(currentFyeEvidence.text, new RegExp(`three-month ECI filing deadline is 30/09/${currentYear}`));
++assert.match(currentFyeEvidence.text, /revenue below the threshold does not qualify when ECI is positive/);
++const septemberFyeQuestion = currentFyeQuestion.replace(`30 June ${currentYear}`, `30 September ${currentYear}`);
++const septemberFyeEvidence = getIrasMasKnowledgeEvidence(septemberFyeQuestion, currentFyeStream, currentFyeIssue);
++assert.ok(septemberFyeEvidence, 'a single, company-owned September FYE remains supported');
++assert.match(septemberFyeEvidence.text, new RegExp(`three-month ECI filing deadline is 31/12/${currentYear}`),
++  'month-end FYE uses IRAS quarter-end deadline when the target month ends later');
++const borrowedMetricsEvidence = getIrasMasKnowledgeEvidence(
++  `${currentFyeQuestion} The supplier revenue was S$3 million and the supplier ECI was nil.`, currentFyeStream, currentFyeIssue);
++assert.ok(borrowedMetricsEvidence, 'unambiguous owned FYE can still support its filing deadline');
++assert.match(borrowedMetricsEvidence.text, new RegExp(`three-month ECI filing deadline is 30/09/${currentYear}`));
++assert.doesNotMatch(borrowedMetricsEvidence.text, /S\$30,000 is positive|The general waiver is unavailable/,
++  'a numeric conclusion is not drawn from figures that may belong to another company');
++const disownedEciEvidence = getIrasMasKnowledgeEvidence(
++  `${currentFyeQuestion} Revenue was S$4.8 million but the ECI of S$30,000 is not ours. Can we skip filing?`,
++  currentFyeStream, currentFyeIssue);
++assert.ok(disownedEciEvidence, 'the company-owned FYE still supports its deadline when ECI is disowned');
++assert.match(disownedEciEvidence.text, new RegExp(`three-month ECI filing deadline is 30/09/${currentYear}`));
++assert.doesNotMatch(disownedEciEvidence.text, /S\$30,000 is positive|The general waiver is unavailable/,
++  'a disowned ECI amount does not become a conclusion about the queried company');
+ const futureMisconduct = cases[5];
+ assert.equal(supportIrasMasKnowledgeRule({ ...futureMisconduct, query: 'What were misconduct reporting deadlines for former representatives in 2026?', sourceText: masNativeText }), undefined,
+   'future Notice is not applied to a 2026 reporting period');
+diff --git a/tests/regression/test_statutory_review_date_roles_20261028.mjs b/tests/regression/test_statutory_review_date_roles_20261028.mjs
+index 638559b..fa0345d 100644
+--- a/tests/regression/test_statutory_review_date_roles_20261028.mjs
++++ b/tests/regression/test_statutory_review_date_roles_20261028.mjs
+@@ -24,6 +24,37 @@ for (const [query, date] of [
+   'The current WHT filing rule supports an ordinary dated payment question.');
+ }
+ 
++const eciRule = IRAS_MAS_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'IRAS_ECI_PRACTICAL_WAIVER');
++assert.ok(eciRule);
++const eciSource = readFileSync(new URL(`../fixtures/statutoryKnowledge20261027b/${eciRule.fixture}`, import.meta.url), 'utf8');
++const currentCompanyFye = 'Our company year ended 30 June 2026. When is ECI due, and can we skip it if revenue was S$4.8 million but ECI is S$30,000?';
++assert.equal(resolver.resolveTargetDate(currentCompanyFye, currentDate).targetDate, '2026-06-30',
++  'the general date resolver continues to expose the supplied FYE fact');
++assert.equal(resolver.resolveAuthorityEvidenceDate(currentCompanyFye, currentDate).dateRole, 'CURRENT_WORKFLOW_FACT',
++  'a current-year company-owned ECI FYE does not set the source-law date');
++assert.equal(resolver.resolveAuthorityEvidenceDate(currentCompanyFye, currentDate).targetDate, undefined);
++assert.notEqual(resolver.resolveAuthorityEvidenceDate(currentCompanyFye, '2027-01-02').dateRole, 'CURRENT_WORKFLOW_FACT',
++  'the workflow-year boundary follows the supplied reference date');
++const abbreviatedCompanyFye = 'Our company year ended 30 Jun 2026. When is ECI due?';
++assert.equal(resolver.resolveAuthorityEvidenceDate(abbreviatedCompanyFye, currentDate).dateRole, 'CURRENT_WORKFLOW_FACT',
++  'the exact canonical month abbreviation Jun remains accepted');
++assert.equal(supportIrasMasKnowledgeRule({ authority: 'IRAS', topicId: 'iras-cit-eci', query: currentCompanyFye,
++  subject: 'Company ECI filing and due date', sourceText: eciSource, officialUrl: eciRule.officialUrl }), true,
++  'the retained IRAS ECI source supports the current-year FYE workflow question');
++for (const query of [
++  'The supplier company year ended 30 June 2026. When is ECI due?',
++  'Our company year ended 30 June 2026. The supplier invoice was due 15 September 2026. When is ECI due?',
++  'Our company year ended 30 Junk 2026. When is ECI due?',
++  'Our company year ended 30 Juny 2026. When is ECI due?',
++  'Our company year ended 31 February 2026. When is ECI due?',
++  'Our company year ended 30 June 2025. When is ECI due?',
++  'Our company year ended 30 June 2026. Which ECI rules were in force for that period?',
++  'Our company year ended 30 June 2026. When is ECI due, and what journal entry should I post?'
++]) {
++  assert.notEqual(resolver.resolveAuthorityEvidenceDate(query, currentDate).dateRole, 'CURRENT_WORKFLOW_FACT',
++    `a third-party, competing, invalid, old, or legal-version date retains its date scope: ${query}`);
++}
++
+ const mixedWht = 'A contract was signed on 15 March 2025 and we paid a non-resident on 1 October 2026. Which WHT filing deadline applies?';
+ const transferredPaymentWht = 'We transferred a payment to a non-resident on 14 October 2026. Does that transaction date change the general rule for when WHT must be filed and paid?';
+ assert.equal(resolver.resolveAuthorityEvidenceDate(transferredPaymentWht, currentDate).source, 'NONE',
+diff --git a/tests/regression/test_statutory_workflows_20261029.mjs b/tests/regression/test_statutory_workflows_20261029.mjs
+index 9653b8d..424df9a 100644
+--- a/tests/regression/test_statutory_workflows_20261029.mjs
++++ b/tests/regression/test_statutory_workflows_20261029.mjs
+@@ -245,6 +245,12 @@ for (const sample of cases) {
+ 
+   if (sample.id === 'cpf-refund') {
+     const dateApplications = [
++      ['CPF refund deadline: The joining bonus must be repaid if the employee leaves early. The employee also owes a supplier deposit. The employee must repay it on 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025.', 'NO_MATCH', /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i],
++      ['CPF refund deadline: The joining bonus must be repaid if the employee leaves early. The employee also owes a supplier deposit. The repayment due date is 15 September 2026 under the employment agreement. PAYMENTS RECEIVED ON 1 October 2025.', 'NO_MATCH', /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i],
++      ['CPF refund deadline: The joining bonus must be repaid if the employee leaves early. The repayment due date for our supplier deposit is 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025. What is the deadline?', 'NO_MATCH', /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i],
++      ['CPF refund deadline: The joining bonus must be repaid if the employee leaves early. The repayment due date is 15 September 2026 for our supplier deposit. PAYMENTS RECEIVED ON 1 October 2025. What is the deadline?', 'NO_MATCH', /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i],
++      ['CPF refund deadline: The joining bonus must be repaid if the employee leaves early, and the repayment due date for our supplier deposit is 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025. What is the deadline?', 'NO_MATCH', /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i],
++      ['CPF refund deadline: The joining bonus must be repaid if the employee leaves early. The bonus repayment due date is 15 September 2026 under the employment agreement. PAYMENTS RECEIVED ON 1 October 2025.', 'MATCH', /one-year outer limit is 15\/09\/2027/i, /one-year outer limit 01\/10\/2026/i],
+       ['CPF refund deadline: CPF was paid on a conditional joining bonus in 2024. Under the employment terms, the employee had to repay the bonus on 15/09/2026.', 'MATCH', /one-year outer limit is 15\/09\/2027/i],
+       ['CPF refund deadline: CPF was paid on a joining bonus that is repayable if the employee resigns within twelve months. The employee resigned, and the bonus repayment due date was 15 September 2026. The CPF payment record shows 1 October 2025.', 'MATCH', /one-year outer limit is 15\/09\/2027/i, /one-year outer limit 01\/10\/2026/i],
+       ['CPF refund deadline: The joining bonus is conditional on completing twelve months of service. The employee must repay it on 15 September 2026 after leaving early.', 'MATCH', /one-year outer limit is 15\/09\/2027/i],
+@@ -272,7 +278,7 @@ for (const sample of cases) {
+     ];
+     for (const [query, outcome, pattern, forbidden] of dateApplications) {
+       const dateExplanation = getStatutoryWorkflowEvidence(query, stream, issue);
+-      assert.ok(dateExplanation, 'A date variant in the same refund family retains a verified general explanation.');
++      assert.ok(dateExplanation, `${query}: a date variant in the same refund family retains a verified general explanation.`);
+       if (outcome === 'MATCH') {
+         assert.match(dateExplanation.text, pattern, query);
+         if (forbidden) assert.doesNotMatch(dateExplanation.text, forbidden,
+@@ -434,6 +440,14 @@ for (const sample of cases) {
+ // No semantic fixture, mapped-topic injection, live source call or model call:
+ // the ordinary application entry must route and render each natural question.
+ const appCases = [
++  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
++    query: 'The joining bonus must be repaid if the employee leaves early. The employee also owes a supplier deposit. The employee must repay it on 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025. What is the CPF refund deadline?',
++    expected: /conditional-wage refunds use the repayment due date/i,
++    forbidden: /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i },
++  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
++    query: 'The joining bonus must be repaid if the employee leaves early. The employee also owes a supplier deposit. The repayment due date is 15 September 2026 under the employment agreement. PAYMENTS RECEIVED ON 1 October 2025. What is the CPF refund deadline?',
++    expected: /conditional-wage refunds use the repayment due date/i,
++    forbidden: /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i },
+   { authority: 'ACRA', topic: 'acra-entity-information-changes', url: manifest.sources.find(item => item.fixture === 'acra-entity-updates.html').url,
+     query: 'We are an overseas-incorporated company registered in Singapore as a foreign company. We changed our registered office twenty days ago. A colleague says every ACRA entity has only fourteen days. Are we already late?',
+     expected: /foreign companies have 30 days.*20 days is within the foreign-company 30-day period.*not yet late/i },
+@@ -464,6 +478,10 @@ const appCases = [
+   { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+     query: 'CPF was paid on a conditional joining bonus in 2024. Under the employment terms, the employee had to repay the bonus on 15/09/2026. We are applying in October 2026. Is the claim too old, and can we wait for CPF Board’s refund before returning the employee’s contribution share?',
+     expected: /^(?=[\s\S]*15\/09\/2027)(?=[\s\S]*before applying, the employer must return the employee share directly to the employee)[\s\S]*$/i },
++  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
++    query: 'The joining bonus must be repaid if the employee leaves early. The repayment due date for our supplier deposit is 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025. What is the CPF refund deadline?',
++    expected: /conditional-wage refunds use the repayment due date/i,
++    forbidden: /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i },
+   { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+     query: 'CPF was paid on a joining bonus that is repayable if the employee resigns within twelve months. The employee resigned, and the bonus repayment due date was 15 September 2026. The CPF payment record shows 1 October 2025. What is our CPF refund deadline?',
+     expected: /one-year outer limit is 15\/09\/2027/i, forbidden: /one-year outer limit 01\/10\/2026/i },
+diff --git a/tests/regression/test_verified_official_citation_fallback.mjs b/tests/regression/test_verified_official_citation_fallback.mjs
+index 6830e96..348baee 100644
+--- a/tests/regression/test_verified_official_citation_fallback.mjs
++++ b/tests/regression/test_verified_official_citation_fallback.mjs
+@@ -195,6 +195,13 @@ async function run() {
+     'A stale deep link is not exposed in rendered answer text.');
+   assert.ok(querySingaporeStatutes('Section 14 wholly and exclusively business expenses').some(rule => rule.id === section14.id),
+     'Local statutory knowledge remains queryable when its public URL cannot be verified');
++  const ordinaryCompanyFilingRules = querySingaporeStatutes(
++    'We formed a company with no operations. Can we omit financial statements from the annual return just because it is newly incorporated?');
++  assert.ok(!ordinaryCompanyFilingRules.some(rule => rule.id === 'ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE'),
++    'An ordinary company filing question cannot inherit the VCC framework without explicit VCC facts.');
++  assert.ok(querySingaporeStatutes('What annual return requirements apply to our VCC?')
++    .some(rule => rule.id === 'ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE'),
++  'A question explicitly about a VCC can still retrieve the VCC framework.');
+ 
+   const verifiedSnapshotUrl = 'https://www.iras.gov.sg/taxes/income-tax/verified-section-14';
+   for (const mutatedUrl of [

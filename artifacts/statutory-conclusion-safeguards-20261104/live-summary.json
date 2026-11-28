@@ -1,0 +1,43 @@
+{
+  "model": "gemini-3.5-flash-lite",
+  "scope": "Live generation and scoped support checks with retained registry passages and fixture workstream admission; no live retrieval, upstream admission, or browser acceptance.",
+  "initialRealGeneratedAnswers": {
+    "cases": 6,
+    "returned": 4,
+    "withheld": [
+      "MOM",
+      "ACRA"
+    ]
+  },
+  "injectedContradictionsWithRealVerifier": {
+    "cases": 8,
+    "withheld": 8
+  },
+  "baselineOfflineReplay": {
+    "injectedContradictionsDisplayed": 6,
+    "originalGeneratedRepliesWithheld": [
+      "MOM",
+      "ACRA"
+    ]
+  },
+  "finalMissingFactRecheck": [
+    {
+      "status": "ANSWER_RETURNED",
+      "providerCalls": 2
+    }
+  ],
+  "successfulRealProviderRequests": 20,
+  "supportCallElapsedMs": {
+    "min": 633,
+    "max": 10834
+  },
+  "limitations": [
+    "MOM and ACRA generated answers were withheld before support verification; offline baseline replay reproduces this.",
+    "CPF, MOM, ACRA and MAS registry fixtures did not produce canonical inline links; no citation-completeness acceptance is claimed.",
+    "Injected contradictions use scripted generation plus a real verifier, distinct from the six real generated answers.",
+    "Small single-model sample; no production, browser, CI or provider-cost verification.",
+    "The support checker is probabilistic and uses the same configured model.",
+    "All freeform statutory claims receive a support check, including some ordinary explanations; exact whole-source rules and accounting-only packets retain no-review paths.",
+    "Token usage and provider cost were not captured."
+  ]
+}

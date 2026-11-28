@@ -1,0 +1,833 @@
+{
+  "schemaVersion": 1,
+  "expectedHead": "2a282cef56a42e99b7f057de22e863258fddb972",
+  "scope": "Headless real provider and retrieval; no browser or deployed acceptance.",
+  "caseId": "mas-fund-management-startup",
+  "question": "We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.",
+  "reviewFocus": "Recognises regulatory perimeter, distinguishes checking licensing/exemptions from confirming eligibility, identifies missing facts and provides useful official sources.",
+  "authorities": [
+    "MAS"
+  ],
+  "model": "gemini-3.5-flash-lite",
+  "startedAt": "2026-11-08T02:47:19.393Z",
+  "status": "COMPLETED",
+  "stopRemainingCases": false,
+  "modelRequestCap": 8,
+  "modelRequests": [
+    {
+      "number": 1,
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "model": "gemini-3.5-flash-lite",
+      "systemFirstLine": "Interpret the user question only. Do not answer it or provide accounting, tax, or legal conclusions. Do not invent rules. Identify governing versus contextual authorities. Return only one JSON object matching the requested schema; no explanation or reasoning.",
+      "stage": "understanding-or-other",
+      "promptChars": 9249,
+      "status": 200,
+      "durationMs": 1796,
+      "candidateText": "{\n  \"schemaVersion\": 2,\n  \"jurisdiction\": [\n    \"Singapore\"\n  ],\n  \"authorityCandidates\": [\n    \"MAS\"\n  ],\n  \"contextualAuthorities\": [],\n  \"domain\": \"MAS_FUNDS\",\n  \"population\": \"COMPANY\",\n  \"primarySubject\": \"MAS licensing or exemptions for portfolio management\",\n  \"concepts\": [\n    {\n      \"concept\": \"MAS licensing\",\n      \"role\": \"PRIMARY\"\n    },\n    {\n      \"concept\": \"regulatory exemptions\",\n      \"role\": \"PRIMARY\"\n    },\n    {\n      \"concept\": \"external portfolio management\",\n      \"role\": \"CONTEXT_ONLY\"\n    }\n  ],\n  \"requestedOperation\": \"CHECK_ELIGIBILITY\",\n  \"factsExplicitlyProvided\": [\n    \"Managing external investors' portfolios from Singapore\"\n  ],\n  \"confidence\": 0.95,\n  \"issues\": [\n    {\n      \"subject\": \"MAS licensing or exemption eligibility for portfolio management\",\n      \"population\": \"COMPANY\",\n      \"domain\": \"MAS_FUNDS\",\n      \"governingAuthorities\": [\n        \"MAS\"\n      ],\n      \"contextualAuthorities\": [],\n      \"operation\": \"CHECK_ELIGIBILITY\",\n      \"mappedTopicIds\": [],\n      \"evidenceRequirement\": \"AUTHORITATIVE_SOURCE_AND_CASE_FACTS\",\n      \"confidence\": 0.95\n    }\n  ]\n}",
+      "usageMetadata": {
+        "promptTokenCount": 1915,
+        "candidatesTokenCount": 333,
+        "totalTokenCount": 2248,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1915
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "number": 2,
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "model": "gemini-3.5-flash-lite",
+      "systemFirstLine": "You are an expert economic and accounting transaction classifier for Singapore and international financial reporting.",
+      "stage": "understanding-or-other",
+      "promptChars": 6635,
+      "status": 200,
+      "durationMs": 2077,
+      "candidateText": "{\n  \"reportingEntity\": {\n    \"type\": \"company\",\n    \"description\": \"Entity planning to manage external investors' portfolios from Singapore\"\n  },\n  \"counterparty\": {\n    \"role\": \"investor\",\n    \"description\": \"External investors whose portfolios will be managed\"\n  },\n  \"transactionType\": \"advisory_inquiry\",\n  \"subject\": \"MAS licensing or regulatory exemptions for fund management\",\n  \"instrument\": \"regulatory_compliance_assessment\",\n  \"ownershipContext\": \"not_applicable\",\n  \"paymentStatus\": \"unknown\",\n  \"amount\": null,\n  \"currency\": {\n    \"value\": null,\n    \"source\": \"unknown\",\n    \"confidence\": 0.0,\n    \"rationale\": \"No monetary transaction or amount is mentioned in the advisory query.\"\n  },\n  \"transactionDate\": null,\n  \"jurisdiction\": \"SG\",\n  \"factsMissing\": [\n    \"Specific nature and scale of fund management activities\",\n    \"Types and number of investors (e.g., accredited, institutional)\",\n    \"Assets under management (AUM) projections\",\n    \"Legal structure of the entity\"\n  ],\n  \"assumptions\": [\n    \"Entity operates or intends to operate from Singapore\"\n  ],\n  \"confidence\": 0.95,\n  \"measurementBasis\": null,\n  \"isHypothetical\": true,\n  \"followUpAnalysis\": {\n    \"eventType\": \"other\",\n    \"isFollowUp\": false,\n    \"targetMeasurementBasis\": null,\n    \"targetOutstandingAccount\": null,\n    \"settlementAmount\": null,\n    \"remainingReceivableOrPayable\": null,\n    \"settlementAccount\": null,\n    \"isHypothetical\": true,\n    \"explanation\": \"This is an initial advisory inquiry regarding regulatory requirements and licensing from MAS rather than a financial transaction.\"\n  }\n}",
+      "usageMetadata": {
+        "promptTokenCount": 1751,
+        "candidatesTokenCount": 430,
+        "totalTokenCount": 2181,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1751
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "number": 3,
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:streamGenerateContent",
+      "model": "gemini-3.5-flash-lite",
+      "systemFirstLine": "You are an authoritative Senior Singapore Accounting & Statutory Research Assistant for professional accountants.",
+      "stage": "answer-generation",
+      "promptChars": 9427,
+      "status": 200,
+      "durationMs": 1392,
+      "responseJsonError": "Unexpected token 'd', \"data: {\"ca\"... is not valid JSON"
+    }
+  ],
+  "network": [
+    {
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "method": "POST",
+      "status": 200,
+      "durationMs": 1796,
+      "responseMetadata": {
+        "contentType": "application/json; charset=UTF-8"
+      },
+      "modelRequest": true
+    },
+    {
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "method": "POST",
+      "status": 200,
+      "durationMs": 2077,
+      "responseMetadata": {
+        "contentType": "application/json; charset=UTF-8"
+      },
+      "modelRequest": true
+    },
+    {
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:streamGenerateContent",
+      "method": "POST",
+      "status": 200,
+      "durationMs": 1392,
+      "responseMetadata": {
+        "contentType": "text/event-stream"
+      },
+      "modelRequest": true
+    }
+  ],
+  "groundedContext": {
+    "classification": {
+      "primaryDomain": "MAS_FUNDS",
+      "domains": [
+        "MAS_FUND_MANAGEMENT"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "MAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": false,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain MAS_FUNDS question governed by MAS."
+    },
+    "userFacts": [
+      "Numerical quantities stated: ,"
+    ],
+    "missingFacts": [],
+    "assumptions": [],
+    "primaryEvidence": [],
+    "officialGuidance": [
+      {
+        "id": "MAS_SFO_LICENSING_EXEMPTION_2026",
+        "authority": "MAS",
+        "authorityName": "Monetary Authority of Singapore (MAS)",
+        "sourcePublisher": "MAS via Ask.gov.sg",
+        "legalOrStandardInstrument": "MAS Single Family Office Licensing Exemption Framework",
+        "documentTitle": "Securities and Futures Act 2001 — Single Family Office Licensing Exemption",
+        "standardOrActCode": "SFA2001",
+        "paragraphOrSection": "MAS FAQ — SFO licensing exemption (effective 15 June 2026)",
+        "sourceText": "An SFO that manages assets of one family and does not serve third-party customers or manage third-party monies may rely on the MAS licensing exemption framework, subject to the framework conditions.",
+        "principleSummary": "Single Family Office Fund Management Licensing Exemption",
+        "effectiveDate": "2026-06-15",
+        "officialSourceUrl": "https://ask.gov.sg/mas/questions/clx8ktis900dbryozeeumiiux?from=relatedquestions",
+        "domain": "MAS_FUNDS",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "single family office",
+          "sfo",
+          "family office",
+          "cms licence",
+          "fund management",
+          "licensing exemption"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "OFFICIAL_GUIDANCE",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": false,
+        "validFrom": "2026-06-15",
+        "lastVerifiedDate": "2026-09-13",
+        "reviewAuditCycleDays": 90,
+        "provenance": "LOCAL_STATIC",
+        "lifecycleState": "ACTIVE",
+        "version": "2026.09",
+        "canonicalSourceUrl": "https://ask.gov.sg/mas/questions/clx8ktis900dbryozeeumiiux?from=relatedquestions",
+        "sourceAuthority": "ASK_GOV_SG",
+        "retrievedAt": "2026-09-01T00:00:00Z",
+        "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+        "urlVerificationStatus": "VERIFIED",
+        "urlVerifiedDate": "2026-09-26",
+        "contentHash": "49b572849ac3494c8b792ed8fba53367194047af1e9127b18eb8141076b866a9",
+        "provisionHash": "49b572849ac3494c8b792ed8fba53367194047af1e9127b18eb8141076b866a9",
+        "extractionStatus": "PARTIAL",
+        "freshnessStatus": "ACTIVE_CURRENT"
+      },
+      {
+        "id": "MAS_SFO_13O_13U_MATERIAL_CHANGES",
+        "authority": "MAS",
+        "authorityName": "Monetary Authority of Singapore (MAS)",
+        "sourcePublisher": "MAS via Ask.gov.sg",
+        "legalOrStandardInstrument": "MAS Schemes for Single Family Offices FAQ",
+        "documentTitle": "Income Tax Act 1947 — Sections 13O and 13U fund-tax incentive administration",
+        "standardOrActCode": "ITA1947",
+        "paragraphOrSection": "MAS FAQ — material changes to 13O/13U awardee",
+        "sourceText": "MAS asks an approved 13O/13U awardee to notify it of additions or replacements of relevant persons and entities because they are material changes from the application information.",
+        "principleSummary": "Notification of Material Changes for 13O/13U Family Office Awardees",
+        "officialSourceUrl": "https://ask.gov.sg/mas/questions/cm1syf4ir000ds9rhalte1md9",
+        "domain": "MAS_FUNDS",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "13o",
+          "13u",
+          "family office tax incentive",
+          "material change",
+          "beneficial owner",
+          "investment professional"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "OFFICIAL_GUIDANCE",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-09-13",
+        "reviewAuditCycleDays": 90,
+        "provenance": "LOCAL_STATIC",
+        "lifecycleState": "ACTIVE",
+        "version": "2026.09",
+        "canonicalSourceUrl": "https://ask.gov.sg/mas/questions/cm1syf4ir000ds9rhalte1md9",
+        "sourceAuthority": "ASK_GOV_SG",
+        "retrievedAt": "2026-09-01T00:00:00Z",
+        "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+        "contentHash": "3fd68f984837b6da61fe5546df07d8552470a1e74a0d57d05766538559da34be",
+        "provisionHash": "3fd68f984837b6da61fe5546df07d8552470a1e74a0d57d05766538559da34be",
+        "extractionStatus": "PARTIAL",
+        "freshnessStatus": "ACTIVE_CURRENT"
+      }
+    ],
+    "curatedSummaries": [
+      {
+        "id": "MAS_FMC_CMS_LICENSING",
+        "authority": "MAS",
+        "authorityName": "Monetary Authority of Singapore (MAS)",
+        "sourcePublisher": "Singapore Statutes Online / AGC",
+        "legalOrStandardInstrument": "Securities and Futures Act 2001",
+        "documentTitle": "Securities and Futures Act 2001",
+        "standardOrActCode": "SFA2001",
+        "paragraphOrSection": "Part IV — Capital Markets Services licensing",
+        "sourceText": "A person carrying on a regulated activity in Singapore must assess whether a Capital Markets Services licence, registration, or a statutory or MAS exemption applies before conducting fund management.",
+        "principleSummary": "Fund Management Activity and CMS Licensing Perimeter",
+        "officialSourceUrl": "https://sso.agc.gov.sg/Act/SFA2001",
+        "domain": "MAS_FUNDS",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "fund manager",
+          "fmc",
+          "lfmc",
+          "rfmc",
+          "vcfm",
+          "cms licence",
+          "fund management"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "CURATED_SUMMARY",
+        "evidenceTier": "CURATED_SUMMARY",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-09-13",
+        "reviewAuditCycleDays": 90,
+        "provenance": "LOCAL_STATIC",
+        "lifecycleState": "ACTIVE",
+        "version": "2026.09",
+        "canonicalSourceUrl": "https://sso.agc.gov.sg/Act/SFA2001",
+        "sourceAuthority": "AGC",
+        "retrievedAt": "2026-09-01T00:00:00Z",
+        "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+        "contentHash": "4cebc721b4398259b991d439125e79dd4ea351fa5dc563e77518390bdd423314",
+        "provisionHash": "4cebc721b4398259b991d439125e79dd4ea351fa5dc563e77518390bdd423314",
+        "extractionStatus": "PARTIAL",
+        "freshnessStatus": "ACTIVE_CURRENT"
+      },
+      {
+        "id": "MAS_FUND_ADMIN_OUTSOURCING",
+        "authority": "MAS",
+        "authorityName": "Monetary Authority of Singapore (MAS)",
+        "sourcePublisher": "Monetary Authority of Singapore",
+        "legalOrStandardInstrument": "MAS Guidelines on Outsourcing",
+        "documentTitle": "MAS Guidelines on Outsourcing",
+        "standardOrActCode": "MAS_OUTSOURCING",
+        "paragraphOrSection": "Outsourced fund-administration arrangements",
+        "sourceText": "Delegating fund administration does not remove the regulated financial institution’s responsibility for governance, risk assessment, oversight, confidentiality, business continuity, and audit access.",
+        "principleSummary": "Fund Administration Outsourcing Governance and Oversight",
+        "officialSourceUrl": "https://www.mas.gov.sg/regulation/guidelines/guidelines-on-outsourcing",
+        "domain": "MAS_FUNDS",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "fund administration",
+          "fund admin",
+          "nav",
+          "valuation",
+          "outsourcing",
+          "administrator"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "CURATED_SUMMARY",
+        "evidenceTier": "CURATED_SUMMARY",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-09-13",
+        "reviewAuditCycleDays": 90,
+        "provenance": "LOCAL_STATIC",
+        "lifecycleState": "ACTIVE",
+        "version": "2026.09",
+        "canonicalSourceUrl": "https://www.mas.gov.sg/regulation/guidelines/guidelines-on-outsourcing",
+        "sourceAuthority": "MAS",
+        "retrievedAt": "2026-09-01T00:00:00Z",
+        "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+        "contentHash": "96cb0204d180f9b6ab9dc9ed3f24c80170befdad7ba987a2a972e777fe40b702",
+        "provisionHash": "96cb0204d180f9b6ab9dc9ed3f24c80170befdad7ba987a2a972e777fe40b702",
+        "extractionStatus": "PARTIAL",
+        "freshnessStatus": "ACTIVE_CURRENT"
+      },
+      {
+        "id": "MAS_PSA_DIGITAL_TOKENS_AML",
+        "authority": "MAS",
+        "authorityName": "Monetary Authority of Singapore (MAS)",
+        "sourcePublisher": "Singapore Statutes Online / AGC",
+        "legalOrStandardInstrument": "Payment Services Act 2019",
+        "documentTitle": "Payment Services Act 2019",
+        "standardOrActCode": "PSA2019",
+        "paragraphOrSection": "Section 6 & MAS Notice PSN02",
+        "sourceText": "Entities providing digital payment token (DPT) dealing or exchange services in Singapore must be licensed under the Payment Services Act and comply with mandatory AML/CFT guidelines under MAS Notice PSN02.",
+        "principleSummary": "Payment Services Act (PSA) Licensing & Digital Payment Token (DPT) Framework",
+        "officialSourceUrl": "https://sso.agc.gov.sg/Act/PSA2019",
+        "domain": "MAS_FUNDS",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "payment services act",
+          "crypto tax",
+          "digital tokens",
+          "mas notice psn02",
+          "psa 2019"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "CURATED_SUMMARY",
+        "evidenceTier": "CURATED_SUMMARY",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-09-01",
+        "reviewAuditCycleDays": 365,
+        "provenance": "LOCAL_STATIC",
+        "lifecycleState": "ACTIVE",
+        "version": "2026.09",
+        "canonicalSourceUrl": "https://sso.agc.gov.sg/Act/PSA2019",
+        "sourceAuthority": "AGC",
+        "retrievedAt": "2026-09-01T00:00:00Z",
+        "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+        "contentHash": "594488b684dd7e7226fc152a9325a767cea84e1805fbf900f7f15ba9293fb19d",
+        "provisionHash": "594488b684dd7e7226fc152a9325a767cea84e1805fbf900f7f15ba9293fb19d",
+        "extractionStatus": "PARTIAL",
+        "freshnessStatus": "ACTIVE_CURRENT"
+      },
+      {
+        "id": "MAS_ZERO_EXCHANGE_CONTROLS",
+        "authority": "MAS",
+        "authorityName": "Monetary Authority of Singapore (MAS)",
+        "sourcePublisher": "Singapore Statutes Online / AGC",
+        "legalOrStandardInstrument": "Monetary Authority of Singapore Act 1970 & Foreign Exchange Framework",
+        "documentTitle": "Monetary Authority of Singapore Act 1970 & Foreign Exchange Framework",
+        "standardOrActCode": "MASA1970",
+        "paragraphOrSection": "Exchange Control Liberalisation Directive",
+        "sourceText": "Singapore has completely liberalised all foreign exchange controls. There are no restrictions on foreign currency exchange, cross-border remittances, or profit repatriation.",
+        "principleSummary": "Absence of Foreign Exchange Controls & Free Capital Movement in Singapore",
+        "officialSourceUrl": "https://sso.agc.gov.sg/Act/MASA1970",
+        "domain": "MAS_FUNDS",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "exchange control",
+          "capital controls",
+          "profit repatriation",
+          "mas policy",
+          "foreign currency"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "CURATED_SUMMARY",
+        "evidenceTier": "CURATED_SUMMARY",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-09-01",
+        "reviewAuditCycleDays": 365,
+        "provenance": "LOCAL_STATIC",
+        "lifecycleState": "ACTIVE",
+        "version": "2026.09",
+        "canonicalSourceUrl": "https://sso.agc.gov.sg/Act/MASA1970",
+        "sourceAuthority": "AGC",
+        "retrievedAt": "2026-09-01T00:00:00Z",
+        "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+        "contentHash": "b67734de4b375e86611dc4dcdd247df473c5932a7d0b39bbe1936789c93b9027",
+        "provisionHash": "b67734de4b375e86611dc4dcdd247df473c5932a7d0b39bbe1936789c93b9027",
+        "extractionStatus": "PARTIAL",
+        "freshnessStatus": "ACTIVE_CURRENT"
+      }
+    ],
+    "applicationRules": [],
+    "currentInformationRequired": false,
+    "semanticUnderstanding": {
+      "extractionSource": "deterministic_fallback",
+      "provenance": {
+        "tier": "DETERMINISTIC_HEURISTIC_FALLBACK",
+        "isFallback": true,
+        "engine": "heuristic_pattern_matcher",
+        "appliedRules": [],
+        "confidenceCapped": true,
+        "notice": "Heuristic rule fallback: extracted using regex/keyword patterns; not validated by LLM reasoning",
+        "timestamp": "2026-11-08T02:47:23.975Z"
+      },
+      "reportingEntity": {
+        "type": "unknown"
+      },
+      "transactionType": "unclassified_transaction",
+      "ownershipContext": "unknown",
+      "paymentStatus": "unknown",
+      "currency": {
+        "value": null,
+        "source": "unknown",
+        "confidence": 0,
+        "rationale": "No currency specified in query"
+      },
+      "transactionDate": null,
+      "jurisdiction": "SG",
+      "factsMissing": [
+        "Reporting entity perspective is unspecified",
+        "Transaction currency is unspecified"
+      ],
+      "assumptions": [],
+      "confidence": 0.3,
+      "actualMeasurementBasis": "UNKNOWN",
+      "measurementBasis": "UNKNOWN",
+      "isHypothetical": false
+    },
+    "questionUnderstanding": {
+      "mode": "SEMANTIC_PLUS_RULES",
+      "assessmentStatus": "PASSED",
+      "transportAttempts": [
+        {
+          "attempt": 1,
+          "status": 200,
+          "elapsedMs": 1801,
+          "retryScheduled": false
+        }
+      ],
+      "interpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "MAS"
+        ],
+        "contextualAuthorities": [],
+        "domain": "MAS_FUNDS",
+        "population": "COMPANY",
+        "primarySubject": "MAS licensing or exemptions for portfolio management",
+        "concepts": [
+          {
+            "concept": "MAS licensing",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "regulatory exemptions",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "external portfolio management",
+            "role": "CONTEXT_ONLY"
+          }
+        ],
+        "requestedOperation": "CHECK_ELIGIBILITY",
+        "requiresUserSpecificFacts": true,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [
+          "Managing external investors' portfolios from Singapore"
+        ],
+        "confidence": 0.95,
+        "issues": [
+          {
+            "subject": "MAS licensing or exemption eligibility for portfolio management",
+            "population": "COMPANY",
+            "domain": "MAS_FUNDS",
+            "governingAuthorities": [
+              "MAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.95
+          }
+        ]
+      }
+    },
+    "requestCompletenessContext": {
+      "contractVersion": 1,
+      "identity": "[1,\"We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.\"]",
+      "rawQuery": "We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.",
+      "inputLength": 276,
+      "inventory": {
+        "state": "UNCERTAIN",
+        "fullyConsumed": false,
+        "outcomes": [],
+        "facts": [],
+        "findings": [
+          {
+            "stage": "INVENTORY",
+            "code": "UNKNOWN_PREFIX_OR_REQUEST",
+            "span": {
+              "start": 0,
+              "end": 276
+            }
+          }
+        ],
+        "inputLength": 276
+      },
+      "declaredFacts": [],
+      "excludedSpans": [],
+      "observationSnapshot": {
+        "hasWrapper": true,
+        "mode": "SEMANTIC_INTERPRETATION",
+        "format": "STORED_NORMALIZED_OR_LEGACY",
+        "normalizedInterpretation": {
+          "jurisdiction": [
+            "Singapore"
+          ],
+          "authorityCandidates": [
+            "MAS"
+          ],
+          "contextualAuthorities": [],
+          "domain": "MAS_FUNDS",
+          "population": "COMPANY",
+          "primarySubject": "MAS licensing or exemptions for portfolio management",
+          "concepts": [
+            {
+              "concept": "MAS licensing",
+              "role": "PRIMARY"
+            },
+            {
+              "concept": "regulatory exemptions",
+              "role": "PRIMARY"
+            },
+            {
+              "concept": "external portfolio management",
+              "role": "CONTEXT_ONLY"
+            }
+          ],
+          "requestedOperation": "CHECK_ELIGIBILITY",
+          "requiresUserSpecificFacts": true,
+          "calculationRequested": false,
+          "factsExplicitlyProvided": [
+            "Managing external investors' portfolios from Singapore"
+          ],
+          "confidence": 0.95,
+          "issues": [
+            {
+              "subject": "MAS licensing or exemption eligibility for portfolio management",
+              "population": "COMPANY",
+              "domain": "MAS_FUNDS",
+              "governingAuthorities": [
+                "MAS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "CHECK_ELIGIBILITY",
+              "mappedTopicIds": [],
+              "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+              "confidence": 0.95
+            }
+          ]
+        },
+        "structuralAcceptance": "ACCEPTED",
+        "confidenceAcceptance": "ACCEPTED",
+        "observedConfidence": 0.95
+      },
+      "evaluation": {
+        "status": "UNCERTAIN",
+        "structuralAcceptance": "ACCEPTED",
+        "confidenceAcceptance": "ACCEPTED",
+        "minimumConfidence": 0.72,
+        "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+        "observedConfidence": 0.95,
+        "findings": [
+          {
+            "stage": "BRIDGE",
+            "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+            "issueIndex": 0,
+            "subject": "MAS licensing or exemption eligibility for portfolio management"
+          }
+        ],
+        "matches": [],
+        "issues": [
+          {
+            "subject": "MAS licensing or exemption eligibility for portfolio management",
+            "population": "COMPANY",
+            "operation": "CHECK_ELIGIBILITY"
+          }
+        ]
+      }
+    },
+    "sourceMapFallbackTrace": {
+      "path": "NOT_NEEDED",
+      "sourceMapIds": [],
+      "selectedRecordIds": [],
+      "finalVerifiedUrls": [],
+      "candidateOnly": false,
+      "attempts": [],
+      "stages": [
+        {
+          "stage": "LOCAL_VERIFIED",
+          "status": "SKIPPED",
+          "reason": "No fallback was requested for a routed topic."
+        },
+        {
+          "stage": "MAPPED_SOURCE",
+          "status": "SKIPPED",
+          "reason": "A source-map fetch was not needed."
+        },
+        {
+          "stage": "SITEMAP_DISCOVERY",
+          "status": "SKIPPED",
+          "reason": "Sitemap discovery was not needed."
+        },
+        {
+          "stage": "OFFICIAL_DOMAIN_SEARCH",
+          "status": "SKIPPED",
+          "reason": "Official-domain search was not needed."
+        }
+      ]
+    }
+  },
+  "finalResponse": {
+    "messageText": "### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.",
+    "scenarioState": {
+      "scenarioType": "UNRECOGNIZED",
+      "authorityStatus": "AI_PROPOSED",
+      "queryIntent": "TRANSACTION",
+      "rawQuery": "We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.",
+      "transactionTitle": "Transaction facts",
+      "functionalCurrency": "SGD",
+      "transactionCurrency": "SGD",
+      "directGroups": [],
+      "isComplete": false,
+      "missingFields": [],
+      "assumptions": [],
+      "requestCompletenessContext": {
+        "contractVersion": 1,
+        "identity": "[1,\"We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.\"]",
+        "rawQuery": "We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.",
+        "inputLength": 276,
+        "inventory": {
+          "state": "UNCERTAIN",
+          "fullyConsumed": false,
+          "outcomes": [],
+          "facts": [],
+          "findings": [
+            {
+              "stage": "INVENTORY",
+              "code": "UNKNOWN_PREFIX_OR_REQUEST",
+              "span": {
+                "start": 0,
+                "end": 276
+              }
+            }
+          ],
+          "inputLength": 276
+        },
+        "declaredFacts": [],
+        "excludedSpans": [],
+        "observationSnapshot": {
+          "hasWrapper": true,
+          "mode": "SEMANTIC_INTERPRETATION",
+          "format": "STORED_NORMALIZED_OR_LEGACY",
+          "normalizedInterpretation": {
+            "jurisdiction": [
+              "Singapore"
+            ],
+            "authorityCandidates": [
+              "MAS"
+            ],
+            "contextualAuthorities": [],
+            "domain": "MAS_FUNDS",
+            "population": "COMPANY",
+            "primarySubject": "MAS licensing or exemptions for portfolio management",
+            "concepts": [
+              {
+                "concept": "MAS licensing",
+                "role": "PRIMARY"
+              },
+              {
+                "concept": "regulatory exemptions",
+                "role": "PRIMARY"
+              },
+              {
+                "concept": "external portfolio management",
+                "role": "CONTEXT_ONLY"
+              }
+            ],
+            "requestedOperation": "CHECK_ELIGIBILITY",
+            "requiresUserSpecificFacts": true,
+            "calculationRequested": false,
+            "factsExplicitlyProvided": [
+              "Managing external investors' portfolios from Singapore"
+            ],
+            "confidence": 0.95,
+            "issues": [
+              {
+                "subject": "MAS licensing or exemption eligibility for portfolio management",
+                "population": "COMPANY",
+                "domain": "MAS_FUNDS",
+                "governingAuthorities": [
+                  "MAS"
+                ],
+                "contextualAuthorities": [],
+                "operation": "CHECK_ELIGIBILITY",
+                "mappedTopicIds": [],
+                "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+                "confidence": 0.95
+              }
+            ]
+          },
+          "structuralAcceptance": "ACCEPTED",
+          "confidenceAcceptance": "ACCEPTED",
+          "observedConfidence": 0.95
+        },
+        "evaluation": {
+          "status": "UNCERTAIN",
+          "structuralAcceptance": "ACCEPTED",
+          "confidenceAcceptance": "ACCEPTED",
+          "minimumConfidence": 0.72,
+          "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+          "observedConfidence": 0.95,
+          "findings": [
+            {
+              "stage": "BRIDGE",
+              "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+              "issueIndex": 0,
+              "subject": "MAS licensing or exemption eligibility for portfolio management"
+            }
+          ],
+          "matches": [],
+          "issues": [
+            {
+              "subject": "MAS licensing or exemption eligibility for portfolio management",
+              "population": "COMPANY",
+              "operation": "CHECK_ELIGIBILITY"
+            }
+          ]
+        }
+      },
+      "statutoryAdvisory": [],
+      "officialAnswerLinks": [],
+      "committedDirectGroups": [],
+      "projectedGroups": [],
+      "uncertaintyDisclaimer": "The original advisory response was not retained because its claims did not pass verification."
+    },
+    "sourceMapFallbackTrace": {
+      "path": "NOT_NEEDED",
+      "sourceMapIds": [],
+      "selectedRecordIds": [],
+      "finalVerifiedUrls": [],
+      "candidateOnly": false,
+      "attempts": [],
+      "stages": [
+        {
+          "stage": "LOCAL_VERIFIED",
+          "status": "SKIPPED",
+          "reason": "No fallback was requested for a routed topic."
+        },
+        {
+          "stage": "MAPPED_SOURCE",
+          "status": "SKIPPED",
+          "reason": "A source-map fetch was not needed."
+        },
+        {
+          "stage": "SITEMAP_DISCOVERY",
+          "status": "SKIPPED",
+          "reason": "Sitemap discovery was not needed."
+        },
+        {
+          "stage": "OFFICIAL_DOMAIN_SEARCH",
+          "status": "SKIPPED",
+          "reason": "Official-domain search was not needed."
+        }
+      ]
+    },
+    "groundingEvidence": [
+      {
+        "recordId": "MAS_SFO_LICENSING_EXEMPTION_2026",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "https://ask.gov.sg/mas/questions/clx8ktis900dbryozeeumiiux?from=relatedquestions",
+        "candidateOnly": false
+      },
+      {
+        "recordId": "MAS_SFO_13O_13U_MATERIAL_CHANGES",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "https://ask.gov.sg/mas/questions/cm1syf4ir000ds9rhalte1md9",
+        "candidateOnly": false
+      },
+      {
+        "recordId": "MAS_FMC_CMS_LICENSING",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "https://sso.agc.gov.sg/Act/SFA2001",
+        "candidateOnly": false
+      },
+      {
+        "recordId": "MAS_FUND_ADMIN_OUTSOURCING",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "https://www.mas.gov.sg/regulation/guidelines/guidelines-on-outsourcing",
+        "candidateOnly": false
+      },
+      {
+        "recordId": "MAS_PSA_DIGITAL_TOKENS_AML",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "https://sso.agc.gov.sg/Act/PSA2019",
+        "candidateOnly": false
+      },
+      {
+        "recordId": "MAS_ZERO_EXCHANGE_CONTROLS",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "https://sso.agc.gov.sg/Act/MASA1970",
+        "candidateOnly": false
+      }
+    ],
+    "displayFullAnswer": true,
+    "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+    "advisoryFailureStatus": "OTHER",
+    "clarifications": []
+  },
+  "noJournalCheck": {
+    "journalRequested": false,
+    "directGroupCount": 0,
+    "noJournalProduced": true
+  },
+  "durationMs": 7151,
+  "completedAt": "2026-11-08T02:47:26.544Z",
+  "modelRequestCount": 3,
+  "sourceCount": 0
+}

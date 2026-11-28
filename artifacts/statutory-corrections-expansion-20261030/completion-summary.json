@@ -1,0 +1,184 @@
+{
+  "status": "IMPLEMENTED_AND_REVIEWED_LOCAL_VALIDATION_QUALIFIED",
+  "repository": "https://github.com/dexrrick/accounting",
+  "branch": "codex/statutory-corrections-expansion-20261030",
+  "startingCommit": "59cede9c83c27d8398a97a49ddb246a547e771a8",
+  "implementationCommit": "6de920463d3f92c918fdf4ccc1946d1a4c4ef5bf",
+  "cohorts": {
+    "review30": {
+      "before": {
+        "CORRECT": 25,
+        "PARTIAL": 1,
+        "UNSUPPORTED": 4,
+        "INCORRECT": 0
+      },
+      "after": {
+        "CORRECT": 26,
+        "PARTIAL": 0,
+        "UNSUPPORTED": 4,
+        "INCORRECT": 0
+      }
+    },
+    "fresh10": {
+      "before": {
+        "CORRECT": 4,
+        "PARTIAL": 0,
+        "UNSUPPORTED": 6,
+        "INCORRECT": 0
+      },
+      "after": {
+        "CORRECT": 8,
+        "PARTIAL": 0,
+        "UNSUPPORTED": 2,
+        "INCORRECT": 0
+      }
+    },
+    "workflows10": {
+      "before": {
+        "CORRECT": 4,
+        "PARTIAL": 1,
+        "UNSUPPORTED": 5,
+        "INCORRECT": 0
+      },
+      "after": {
+        "CORRECT": 10,
+        "PARTIAL": 0,
+        "UNSUPPORTED": 0,
+        "INCORRECT": 0
+      }
+    }
+  },
+  "totalAfter": {
+    "CORRECT": 44,
+    "PARTIAL": 0,
+    "UNSUPPORTED": 6,
+    "INCORRECT": 0
+  },
+  "priorCorrectPreserved": 33,
+  "regressions": [],
+  "preservation": {
+    "status": "QUALIFIED_PRESERVATION",
+    "strictOriginalStatusPreservationPassed": false,
+    "originalPathsPreserved": 53,
+    "originalEvidenceLosses": [
+      "iras-eci-03"
+    ],
+    "nativeEnrichedPathsPreserved": 54,
+    "enrichedEvidenceLosses": [],
+    "previousGeneralExplanations": 25,
+    "originalExplanationLosses": [],
+    "enrichedExplanationLosses": [],
+    "fixed100CorpusUnchanged": true,
+    "exception": {
+      "id": "iras-eci-03",
+      "originalStatus": "INSUFFICIENT",
+      "enrichedStatus": "VERIFIED",
+      "admittedClaimsUnchanged": true,
+      "reason": "Original admitted quotation establishes filing timing and existence of a waiver, but omits waiver conditions. INSUFFICIENT is preserved; native enrichment separately supplies the complete conditions."
+    },
+    "limits": "Offline evidence-path and explanation-presence audits do not establish complete-answer correctness, historical-rule acceptance, CI or production readiness."
+  },
+  "checks": [
+    {
+      "completedUTC": "2026-10-30T00:30:38.9390121Z",
+      "startedUTC": "2026-10-30T00:30:38.7093572Z",
+      "check": "lint",
+      "exitCode": 0
+    },
+    {
+      "completedUTC": "2026-10-30T00:30:43.6508225Z",
+      "startedUTC": "2026-10-30T00:30:38.9578978Z",
+      "check": "typecheck",
+      "exitCode": 0
+    },
+    {
+      "completedUTC": "2026-10-30T00:30:46.2638278Z",
+      "startedUTC": "2026-10-30T00:30:43.6533738Z",
+      "check": "vite-build",
+      "exitCode": 0
+    },
+    {
+      "completedUTC": "2026-10-30T00:30:47.0306023Z",
+      "startedUTC": "2026-10-30T00:30:46.2663546Z",
+      "check": "worker-build",
+      "exitCode": 0
+    },
+    {
+      "completedUTC": "2026-10-30T00:34:08.3682217Z",
+      "startedUTC": "2026-10-30T00:30:47.0322239Z",
+      "check": "smoke",
+      "exitCode": 1
+    },
+    {
+      "completedUTC": "2026-10-30T00:37:49.4936913Z",
+      "startedUTC": "2026-10-30T00:34:08.3695545Z",
+      "check": "full",
+      "exitCode": 1
+    },
+    {
+      "completedUTC": "2026-10-30T00:37:53.0332165Z",
+      "startedUTC": "2026-10-30T00:37:49.4950048Z",
+      "check": "fixed100-original",
+      "exitCode": 0
+    },
+    {
+      "completedUTC": "2026-10-30T00:38:03.5374254Z",
+      "startedUTC": "2026-10-30T00:37:53.0344494Z",
+      "check": "fixed100-enriched",
+      "exitCode": 0
+    },
+    {
+      "completedUTC": "2026-10-30T00:38:07.5080253Z",
+      "startedUTC": "2026-10-30T00:38:03.5388734Z",
+      "check": "natural30-original",
+      "exitCode": 0
+    },
+    {
+      "completedUTC": "2026-10-30T00:38:11.4011693Z",
+      "startedUTC": "2026-10-30T00:38:07.5094799Z",
+      "check": "natural30-enriched",
+      "exitCode": 0
+    }
+  ],
+  "smoke": {
+    "passed": 153,
+    "total": 155
+  },
+  "full": {
+    "passed": 176,
+    "total": 178
+  },
+  "preexistingFailures": [
+    "test_iras_cpf_expansion_rules.mjs: retained excerpt digest disagrees with reviewed Git blob",
+    "test_mom_acra_mas_expansion_rules.mjs: MOM native fixture digest disagrees with reviewed Git blob"
+  ],
+  "remainingUnsupported": [
+    {
+      "id": "hold-acra-03",
+      "question": "Our return was filed on 19 October 2026. Did the officer-confirmation change that commenced on 20 October already govern that filing?"
+    },
+    {
+      "id": "hold-mas-03",
+      "question": "Can the misconduct notice that takes effect on 1 January 2027 be treated as already governing an October 2026 report?"
+    },
+    {
+      "id": "hold-mas-04",
+      "question": "Is the precise QDC form for our venture-capital fund established by the generic LFMC quarterly financial return table?"
+    },
+    {
+      "id": "fresh-mas-02",
+      "question": "Under the expressly future Notice SFA 04-N24 effective on 1 January 2027, who files the initial representative-misconduct report and what triggers its 21-calendar-day clock?"
+    },
+    {
+      "id": "reviewfresh-acra-01",
+      "question": "We lodged our annual return on 19 October 2026. Was the new question about a person carrying out the chief executive officer role already mandatory for that filing?"
+    },
+    {
+      "id": "reviewfresh-mas-02",
+      "question": "Notice SFA 04-N24 says it takes effect on 1 January 2027. Does its 21-day reporting rule already settle what a CMS licence holder had to do for misconduct first suspected in December 2026?"
+    }
+  ],
+  "ci": "Not run or verified by this task",
+  "liveAcceptance": "No live model/browser or production acceptance",
+  "release": "No merge, deployment, source activation or release approval"
+}

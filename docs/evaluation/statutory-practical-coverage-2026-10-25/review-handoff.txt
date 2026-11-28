@@ -1,0 +1,88 @@
+STATUTORY PRACTICAL COVERAGE — READ-ONLY REVIEW HANDOFF
+25/10/2026 (Singapore)
+
+GOAL AND STATUS
+Expand practically useful statutory answers across IRAS, CPF, MOM, ACRA and MAS using the governed retrieval/evidence pipeline. This offline development cycle is implemented, reviewed and validated, but broad statutory answer coverage remains incomplete. Live acceptance, source activation, merge and deployment were not performed.
+
+EXACT REVIEW TARGET
+Repository: https://github.com/dexrrick/accounting
+Published branch: codex/statutory-practical-coverage-20261025
+Application/evidence review commit: c3783109de0c7a8d1574a9a10cd1f338fee4ff26
+Base commit: 9f5f8a3309cf28b5dcf56eb3a78da6c693801208
+Commit: https://github.com/dexrrick/accounting/commit/c3783109de0c7a8d1574a9a10cd1f338fee4ff26
+Diff: https://github.com/dexrrick/accounting/compare/9f5f8a3309cf28b5dcf56eb3a78da6c693801208...c3783109de0c7a8d1574a9a10cd1f338fee4ff26
+PR: none. No merge or deployment performed.
+The source and all 16 evidence files have been pushed; the remote application commit SHA was verified. The earlier automatic publication rejection was resolved by the user's explicit approval for this payload and repository. A subsequent documentation-only commit publishes this handoff; the application review target remains the exact commit above.
+All 31 changed/new source files match the local review-bundle manifest. The bundle includes the preceding reviewed 19-file batch and current expansion. The patch covers tracked-file changes against the base; new files are also in source/. Unrelated local .tmp/ and artifacts/ files remain untracked and excluded. No intended source or evidence changes remain unpublished. Archive hashes refer to byte-exact local snapshots; Git may normalize text line endings.
+CHANGES
+- Broadened existing catalog query families and natural wording across all five authorities; retained source/admission safeguards.
+- LFMC/CMS acronym-only questions can use the bounded general licensing explanation with its class-exemption qualification. Bare CMS questions, distinct regulated activities and multi-issue scope remain separate.
+- Added a candidate ACRA annual-return officer-particulars topic, with independently checked commencement metadata of 20/10/2026. It is not a source activation or acceptance claim.
+- Added a 100-question corpus (20 per authority), question-specific expectations, historical and missing-input calculation cases, and separate routing, checklist, citation, temporal and calculation assessments.
+- Added an offline replay through classification/reconciliation, governed retrieval, claim verification and response presentation. Semantic interpretations are supplied fixtures; model interpretation is not independently exercised. Source bodies are explicitly labelled paraphrases or retained excerpts, not complete live captures.
+- Independent reviews are bound to case ID, question SHA-256 and answer SHA-256. Word matches alone cannot establish a correct answer. Literal heuristic false negatives remain possible.
+- Corrected MOM evidence selection: deduction-only guidance cannot verify a final-salary payment deadline. Unsupported final-salary cases remain insufficient; no new final-salary synthesized summary was enabled.
+- Retained the earlier ECI, CPF AW, MOM salary, MAS licensing and ACRA secretary repairs and their exact-quotation/document-binding/discovery safeguards.
+
+MAIN FILES
+src/standards/coverageRegistry.ts
+src/retrieval/queryTopicResolver.ts
+src/services/semanticQuestionUnderstanding.ts
+src/retrieval/cpfMasPracticalRules.ts
+src/retrieval/momSalaryPaymentRule.ts
+src/retrieval/irasAcraPracticalRules.ts
+src/services/authorityWorkstreams.ts
+src/services/groundingContextBuilder.ts
+src/utils/authorityEvidencePresentation.ts
+src/verification/claimEvidenceVerifier.ts
+scripts/evaluate_statutory_coverage.mjs
+scripts/generate_statutory_coverage_fixture.mjs
+scripts/replay_statutory_coverage.mjs
+tests/evaluation/statutory_coverage_wave_2026-10-25.json
+tests/fixtures/statutoryCoverageOfficialPages.mjs
+See the manifest for every included changed/new file.
+
+VERIFICATION ACTUALLY RUN
+Final Node22.23.3 checks with an external-fetch guard: preflight PASS; lint PASS; TypeScript build PASS; Vite build PASS; Worker build PASS; smoke 130/130 PASS; full 153/153 PASS. CRLF-aware git diff --check PASS. Focused source-discovery, benchmark, 22-family replay, ACRA presentation, CPF/MAS practical, IRAS GST locator/natural-language and MAS routing checks passed during development.
+The earlier interrupted checkpoint had benchmark/metadata regressions; those are superseded by the final post-mom-scope-fix logs included here. Final MOM tests and the refreshed 100-case replay were run after the last correction. Replay input hashes were stable.
+GitHub CI: not inspected or confirmed for the published batch. Local results do not establish CI success.
+Live model/source transport, browser, R2 acceptance and production checks: NOT RUN. No production deployment changed.
+
+COVERAGE RESULTS AND LIMITS
+100/100 original questions route to their expected catalog topic; this is not answer correctness. The baseline comparison swaps only the old resolver catalog into the same current application/fixtures, not a reconstruction of the old application. Baseline original-question routing was 58/100.
+Final fixture evidence statuses: IRAS 5 verified /15 insufficient; CPF 8/12; MOM 6/14; ACRA 5/15; MAS 4/16. These total 28 verified /72 insufficient and do not independently establish complete correct answers.
+Seven additional general answers were independently judged correct: CPF AW definition cases01/03/04, CPF AW ceiling cases02/03, MAS general licensing cases02/04. MOM deductions04 was partial. A further post-fix final-salary evidence candidate is unreviewed. Do not count all evidence-gain candidates as correct.
+Review records refer to an earlier retained replay snapshot. They were applied to final captures only when exact question and answer hashes still matched. The old MOM final-salary01 adjudication became stale after repair and was not applied.
+Known limitations: historical applicability; numerical contribution calculations; IRAS input-tax/GST filing evidence; CPF due-date/rate-factor evidence; ACRA annual-return/officer confirmations; MAS VCFM/exemptions/QDC/notifications. MAS QDC/notifications and MOM overtime eligibility lack supplied source fixtures. Final-salary coverage remains incomplete. Some literal checklist expectations under-score semantically correct wording; independent adjudications are separate from heuristic totals.
+The older docs/statutory_practical_coverage.json describes the prior narrow batch; use the final checkpoint/replay for this cycle. Historical ACRA acceptance holds remain separate and were not cleared.
+
+REVIEW FOCUS
+1. Inspect the exact published commit/base and verify no unrelated accounting or journal logic changed.
+2. Check question-family false positives, compound clauses, LFMC vs other CMS activities, and semantic subject ownership.
+3. Check MOM payment deadlines cannot be verified from deduction guidance; positive proof must preserve context, exceptions and exact-source binding.
+4. Check ACRA candidate dates do not silently establish historical applicability or source activation.
+5. Check every claimed answer against actual rendered text, exact cited page and qualifications, not routing or a verified status alone.
+6. Check benchmark review/hash/date/calculation gates, fixture limitations and before/after comparison boundaries.
+7. Confirm final test evidence and explicitly state that CI was not confirmed and live/browser/production acceptance was not run.
+
+EVIDENCE IN THE ZIP
+source-and-evidence-manifest.json — SHA-256 hashes of all copied source/evidence files.
+tracked-changes.patch — tracked-file delta against 9f5f8a3309cf28b5dcf56eb3a78da6c693801208; new files are in source/.
+evidence/statutory-coverage-replay-2026-10-25.json — full current/baseline outputs, exact claims, citations, traces and hashes.
+evidence/statutory-coverage-answers-2026-10-25.json — final captures, with only matching independent reviews applied.
+evidence/statutory-coverage-benchmark-actual-replay-2026-10-25.json — heuristic and independent-review dimensions.
+evidence/independent-answer-review.json — actual read-only reviewer judgments and bound hashes.
+evidence/pre-mom-scope-fix-replay.json — original snapshot inspected for those judgments.
+evidence/validation-results.json, smoke.log, full.log and build logs — final checks.
+evidence/checkpoint.json — final cycle scope and outstanding coverage.
+
+GITHUB EVIDENCE
+Handoff: https://github.com/dexrrick/accounting/blob/codex/statutory-practical-coverage-20261025/docs/evaluation/statutory-practical-coverage-2026-10-25/review-handoff.txt
+Replay: https://github.com/dexrrick/accounting/blob/c3783109de0c7a8d1574a9a10cd1f338fee4ff26/docs/evaluation/statutory-practical-coverage-2026-10-25/evidence/statutory-coverage-replay-2026-10-25.json
+Independent answer review: https://github.com/dexrrick/accounting/blob/c3783109de0c7a8d1574a9a10cd1f338fee4ff26/docs/evaluation/statutory-practical-coverage-2026-10-25/evidence/independent-answer-review.json
+Validation: https://github.com/dexrrick/accounting/blob/c3783109de0c7a8d1574a9a10cd1f338fee4ff26/docs/evaluation/statutory-practical-coverage-2026-10-25/evidence/validation-results.json
+Full regression log: https://github.com/dexrrick/accounting/blob/c3783109de0c7a8d1574a9a10cd1f338fee4ff26/docs/evaluation/statutory-practical-coverage-2026-10-25/evidence/full.log
+Benchmark: https://github.com/dexrrick/accounting/blob/c3783109de0c7a8d1574a9a10cd1f338fee4ff26/tests/evaluation/statutory_coverage_wave_2026-10-25.json
+
+READY-TO-COPY REVIEW PROMPT
+Independently review the changes identified above using your GitHub access. Repository: https://github.com/dexrrick/accounting. Branch: codex/statutory-practical-coverage-20261025. Review application/evidence commit c3783109de0c7a8d1574a9a10cd1f338fee4ff26 against base 9f5f8a3309cf28b5dcf56eb3a78da6c693801208; any subsequent handoff commit is documentation only. Confirm the exact commit you inspected. Use the handoff as context and verify its claims against the code, diff, tests, and available CI evidence. Report actionable findings with severity, file and line references, impact, and suggested fixes. State any access or verification limitations. Keep the review read-only.

@@ -20,6 +20,9 @@ const retainedProof = JSON.parse(readFileSync(new URL(
   '../../docs/evaluation/multi-authority-workstreams/iras-first-targeted-acceptance-2026-10-04-v4/routing-classification-proof.json',
   import.meta.url
 ), 'utf8'));
+const retainedParaphraseResponse = JSON.parse(readFileSync(new URL(
+  '../fixtures/iras-v4-a-paraphrase-2-semantic-response.json', import.meta.url
+), 'utf8'));
 const retainedQuery = retainedProof.question;
 const unknownRoot = retainedProof.rows[1].rawMock;
 
@@ -125,6 +128,68 @@ const salaryEmployeeRelief = reconcile(salaryEmployeeReliefQuery, [
 ]);
 assert.equal(salaryEmployeeRelief.issuePlan.coverageEstablished, true,
   'A salary fact plus the separately requested employer obligation bounds the individual-to-employee relief refinement.');
+
+const retainedMixedQuery = 'For someone earning SGD 6,000 a month, what can they claim for personal tax relief on compulsory CPF, and what does the employer have to pay into CPF?';
+const retainedMixedInterpretation = validateSemanticQuestionInterpretation(retainedParaphraseResponse, retainedMixedQuery);
+assert.ok(retainedMixedInterpretation, 'The retained A-paraphrase-2 response validates without model replay.');
+const retainedMixedPlan = reconcileQuestionUnderstanding(retainedMixedQuery, classifyQuestion(retainedMixedQuery), {
+  mode: 'SEMANTIC_INTERPRETATION', interpretation: retainedMixedInterpretation
+}).issuePlan;
+assert.equal(retainedMixedPlan.coverageEstablished, true,
+  'The retained employee phrasing owns the individual-relief request only with its salary fact and separate employer calculation.');
+const retainedReliefIssue = retainedMixedPlan.issues.find(item => item.domain === 'IRAS_INCOME_TAX');
+assert.deepEqual(retainedReliefIssue?.mappedTopicIds, ['iras-individual-cpf-relief']);
+assert.deepEqual(retainedReliefIssue?.routingTopicIds, ['iras-individual-reliefs']);
+assert.deepEqual(retainedMixedPlan.issues.find(item => item.domain === 'CPF_PAYROLL')?.mappedTopicIds, ['cpf_contribution_rates']);
+
+const retainedMixedInventory = inventoryRawRequest(retainedMixedQuery);
+const retainedMixedOutcome = retainedMixedInventory.outcomes.find(outcome => outcome.identity === 'CPF_RELIEF');
+const retainedMixedDescriptor = describeRawRequestSubject('employee personal tax relief on compulsory CPF');
+assert.ok(retainedMixedOutcome && retainedMixedDescriptor);
+assert.deepEqual(effectiveRawRequestSubjectFacets(retainedMixedOutcome, retainedMixedDescriptor,
+  'EMPLOYEE', 'CHECK_ELIGIBILITY', retainedMixedInventory), ['COMPULSORY']);
+assert.equal(effectiveRawRequestSubjectFacets(retainedMixedOutcome, retainedMixedDescriptor,
+  'EMPLOYEE', 'CHECK_ELIGIBILITY'), undefined,
+  'The retained alias cannot refine an INDIVIDUAL outcome without the complete raw inventory.');
+
+const retainedNoSalaryQuery = 'What can they claim for personal tax relief on compulsory CPF, and what does the employer have to pay into CPF?';
+const retainedNoSalaryInventory = inventoryRawRequest(retainedNoSalaryQuery);
+assert.equal(effectiveRawRequestSubjectFacets(retainedNoSalaryInventory.outcomes[0], retainedMixedDescriptor,
+  'EMPLOYEE', 'CHECK_ELIGIBILITY', retainedNoSalaryInventory), undefined,
+  'The retained alias cannot borrow employee context when the salary fact is absent.');
+const retainedNoEmployerQuery = 'For someone earning SGD 6,000 a month, what can they claim for personal tax relief on compulsory CPF?';
+const retainedNoEmployerInventory = inventoryRawRequest(retainedNoEmployerQuery);
+assert.equal(effectiveRawRequestSubjectFacets(retainedNoEmployerInventory.outcomes[0], retainedMixedDescriptor,
+  'EMPLOYEE', 'CHECK_ELIGIBILITY', retainedNoEmployerInventory), undefined,
+  'The retained alias cannot borrow employee context without a separate employer CPF calculation.');
+assert.equal(effectiveRawRequestSubjectFacets(retainedMixedOutcome, retainedMixedDescriptor,
+  'EMPLOYEE', 'CALCULATE', retainedMixedInventory), undefined,
+  'The retained alias remains limited to eligibility checks.');
+assert.deepEqual(effectiveRawRequestSubjectFacets(retainedMixedOutcome, retainedMixedDescriptor,
+  'INDIVIDUAL', 'CALCULATE', retainedMixedInventory), ['COMPULSORY'],
+  'The retained descriptor keeps its existing individual-population operation matching.');
+assert.equal(effectiveRawRequestSubjectFacets(retainedMixedOutcome,
+  describeRawRequestSubject('CPF relief for employees'), 'EMPLOYEE', 'CHECK_ELIGIBILITY', retainedMixedInventory), undefined,
+  'The separate employee-beneficiary descriptor cannot borrow this individual-claimant refinement.');
+
+const wrongRetainedAuthority = retainedMixedPlan.issues.map(item => item.domain === 'IRAS_INCOME_TAX'
+  ? { ...item, governingAuthorities: ['CPF'] } : item);
+assert.equal(proveRequestedTopicOwnership(retainedMixedQuery, wrongRetainedAuthority,
+  new Set(['iras-individual-reliefs', 'iras-individual-cpf-relief', 'cpf_contribution_rates']),
+  ['iras-individual-cpf-relief']).complete, false,
+  'CPF cannot own the IRAS individual-relief child topic.');
+const wrongRetainedOperation = retainedMixedPlan.issues.map(item => item.domain === 'IRAS_INCOME_TAX'
+  ? { ...item, operation: 'CALCULATE' } : item);
+assert.equal(proveRequestedTopicOwnership(retainedMixedQuery, wrongRetainedOperation,
+  new Set(['iras-individual-reliefs', 'iras-individual-cpf-relief', 'cpf_contribution_rates']),
+  ['iras-individual-cpf-relief']).complete, false,
+  'A calculation issue cannot own the retained eligibility request.');
+const wrongRetainedPopulation = retainedMixedPlan.issues.map(item => item.domain === 'IRAS_INCOME_TAX'
+  ? { ...item, population: 'COMPANY' } : item);
+assert.equal(proveRequestedTopicOwnership(retainedMixedQuery, wrongRetainedPopulation,
+  new Set(['iras-individual-reliefs', 'iras-individual-cpf-relief', 'cpf_contribution_rates']),
+  ['iras-individual-cpf-relief']).complete, false,
+  'A company-population issue cannot own the retained individual-relief request.');
 
 const noSalaryContextQuery = 'What can they claim for personal tax relief on compulsory CPF, and what does the employer have to pay into CPF?';
 const noSalaryContext = reconcile(noSalaryContextQuery, [

@@ -1,23 +1,43 @@
 import assert from 'assert';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
+import { SINGAPORE_STATUTORY_REPOSITORY } from '../../src/standards/singaporeStatutesKnowledge.ts';
 import { sanitizeStatutoryLinks, buildSsoUrl } from '../../src/utils/statutoryLinkResolver.ts';
+import { loadStatutoryKnowledgeSources } from '../../scripts/load_statutory_knowledge_sources.mjs';
+import { OFFICIAL_SOURCE_DISCOVERY_PROVIDERS } from '../../src/retrieval/officialSitemapDiscovery.ts';
+import { fileURLToPath } from 'node:url';
+
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async () => { throw new Error('EXTERNAL_FETCH_BLOCKED_BY_TEST'); };
 
 async function runTests() {
   console.log('=== STARTING SINGAPORE STATUTORY ENGINE VERIFICATION ===\n');
 
   // TEST 1: ACRA Small Company Audit Exemption Query
   console.log('Test 1: ACRA Small Company Audit Exemption Query');
+  const acraAuditRule = SINGAPORE_STATUTORY_REPOSITORY.ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION;
+  assert.ok(acraAuditRule, 'The curated ACRA audit-exemption record must remain available for review');
+  assert.strictEqual(acraAuditRule.sourceStatus, undefined, 'The ACRA record is not marked as verified source material');
+  assert.strictEqual(acraAuditRule.verbatimStatuteText, undefined, 'The ACRA record contains no verified verbatim statutory passage');
+  assert.strictEqual(acraAuditRule.evidenceTier, undefined, 'The ACRA record has no admitted evidence tier');
   const acraRes = await processAccountingQuery(
     'What are the ACRA requirements for small company audit exemption?',
     null,
     'SFRS_I'
   );
   assert(acraRes.scenarioState.queryIntent === 'STATUTORY_ADVISORY', 'Must be classified as STATUTORY_ADVISORY');
-  assert(acraRes.messageText.includes('Section 205C'), 'Must cite Section 205C');
-  assert(acraRes.messageText.includes('10,000,000') || acraRes.messageText.includes('10M'), 'Must mention 10M threshold');
+  const acraPresentation = acraRes.scenarioState.authorityEvidencePresentation;
+  assert.ok(acraPresentation, 'ACRA statutory response must carry a query-bound authority evidence presentation');
+  assert.strictEqual(acraPresentation.query, 'What are the ACRA requirements for small company audit exemption?');
+  assert.strictEqual(acraPresentation.status, 'INSUFFICIENT', 'The unverified record cannot establish the ACRA requirements offline');
+  assert.strictEqual(acraPresentation.evidenceStatus, 'INSUFFICIENT');
+  assert.ok(acraPresentation.gaps.length > 0, 'The whole-question evidence gap must be visible');
+  assert.doesNotMatch(acraRes.messageText, /Section 205C|10,000,000|10M/i,
+    'Unadmitted ACRA section and threshold details must not be asserted without evidence');
   assert(!acraRes.messageText.includes('sso.agc.gov.sg/Act/CoA1967'), 'An unverified statutory URL must not be emitted as a link');
-  console.log('✓ ACRA Audit Exemption verified successfully.\n');
+  assert.deepStrictEqual(acraPresentation.workstreams.flatMap(workstream => workstream.sources), [],
+    'No source may be presented for the ACRA query without admitted evidence');
+  console.log('✓ ACRA audit-exemption query correctly reports insufficient evidence without unsupported rule details.\n');
 
   // TEST 2: CPF 2026 Wage Ceilings Query
   console.log('Test 2: CPF 2026 Wage Ceilings Query');
@@ -26,10 +46,41 @@ async function runTests() {
     null,
     'SFRS_I'
   );
-  assert(cpfRes.messageText.includes('8,000'), 'Must cite 2026 $8,000 OW ceiling');
-  assert(cpfRes.messageText.includes('102,000'), 'Must cite AW ceiling formula');
-  assert(cpfRes.messageText.includes('Central Provident Fund Act 1953'), 'Must cite CPF Act 1953');
-  console.log('✓ CPF 2026 Wage Ceiling verified successfully.\n');
+  assert.equal(cpfRes.scenarioState.authorityEvidencePresentation?.evidenceStatus, 'INSUFFICIENT',
+    'Unavailable official sources cannot establish CPF rates or ceilings.');
+  assert.doesNotMatch(cpfRes.messageText, /8,000|102,000|Central Provident Fund Act 1953/i,
+    'An offline evidence gap must not be filled with unadmitted CPF statutory details.');
+
+  const cpfPages = await loadStatutoryKnowledgeSources(fileURLToPath(new URL('../fixtures/statutoryKnowledge20261027b', import.meta.url)));
+  const cpfFixtures = new Map(cpfPages.filter(page => page.authority === 'CPF').map(page => [page.sourceUrl, page]));
+  const blockedFetch = globalThis.fetch;
+  let sourcedCpfRes;
+  const cpfOfficialFetch = async input => {
+    const url = input && typeof input === 'object' && typeof input.url === 'string' ? input.url : String(input);
+    const page = cpfFixtures.get(url);
+    if (page) return new Response(page.body, { headers: { 'content-type': page.contentType } });
+    if (OFFICIAL_SOURCE_DISCOVERY_PROVIDERS.CPF.sitemapUrls.includes(url)) {
+      return new Response('<urlset>' + [...cpfFixtures.keys()].map(sourceUrl =>
+        `<url><loc>${sourceUrl.replaceAll('&', '&amp;')}</loc></url>`).join('') + '</urlset>',
+      { headers: { 'content-type': 'application/xml' } });
+    }
+    return new Response('Unavailable in frozen official-source fixtures', { status: 404 });
+  };
+  globalThis.fetch = cpfOfficialFetch;
+  try {
+    sourcedCpfRes = await processAccountingQuery(
+      'For a Singapore citizen employee aged below 55 earning more than S$750 a month in 2026, what are the CPF contribution rates and monthly Ordinary Wage ceiling?', null, 'SFRS_I');
+  } finally {
+    globalThis.fetch = blockedFetch;
+  }
+  assert.match(sourcedCpfRes.messageText, /8,000/, 'The retained official CPF source establishes the 2026 OW ceiling.');
+  const cpfSources = sourcedCpfRes.scenarioState.authorityEvidencePresentation?.workstreams.flatMap(stream => stream.sources) || [];
+  assert.ok(cpfSources.some(source => source.provenance === 'LIVE_EXTERNAL' &&
+    source.claims.some(claim => claim.supportKind === 'EXACT_SOURCE_QUOTE' && /8,000/.test(claim.text))),
+  'The ceiling is backed by an issue-bound official excerpt, rather than a local summary.');
+  assert.equal(sourcedCpfRes.scenarioState.isComplete, false,
+    'Source proof alone does not upgrade the complete-question issue plan.');
+  console.log('✓ CPF missing-source rejection and source-backed 2026 wage ceiling verified.\n');
 
   // TEST 3: Passenger Car (Blocked Input GST & Non-Deductible Depreciation)
   console.log('Test 3: Passenger Motor Car Purchase (Hybrid Query)');
@@ -155,9 +206,17 @@ async function runTests() {
     'SFRS_I'
   );
   assert(momRes.scenarioState.queryIntent === 'STATUTORY_ADVISORY', 'Must be STATUTORY_ADVISORY');
-  assert(momRes.messageText.includes('Employment Act 1968'), 'Must cite Employment Act 1968');
-  assert(momRes.messageText.includes('14 days') || momRes.messageText.includes('89'), 'Must cite Section 89 or 14 days sick leave');
-  console.log('✓ MOM Statutory Leave query verified.\n');
+  const momPresentation = momRes.scenarioState.authorityEvidencePresentation;
+  assert.ok(momPresentation, 'MOM statutory response must carry a query-bound authority evidence presentation');
+  assert.strictEqual(momPresentation.query, 'What are MOM statutory annual leave and outpatient sick leave entitlements, and overtime calculation rules?');
+  assert.strictEqual(momPresentation.status, 'INSUFFICIENT', 'Offline MOM sources cannot establish the requested entitlements');
+  assert.strictEqual(momPresentation.evidenceStatus, 'INSUFFICIENT');
+  assert.ok(momPresentation.gaps.length > 0, 'Unresolved MOM evidence gaps must remain visible');
+  assert.deepStrictEqual(momPresentation.workstreams.flatMap(workstream => workstream.sources), [],
+    'Offline unverified MOM material must not be presented as an admitted source');
+  assert.doesNotMatch(momRes.messageText, /Employment Act 1968|14 days|Section 89/i,
+    'Unadmitted MOM provisions and leave amounts must not be asserted');
+  console.log('✓ MOM statutory leave query correctly reports insufficient evidence offline.\n');
 
   // TEST 10: CPF Tiered Rates by Age & $8,000 Ceiling
   console.log('Test 10: CPF Tiered Contribution Rates by Age');
@@ -167,16 +226,34 @@ async function runTests() {
     'SFRS_I'
   );
   assert(cpfAgeRes.scenarioState.queryIntent === 'STATUTORY_ADVISORY', 'Must be STATUTORY_ADVISORY');
-  assert(cpfAgeRes.messageText.includes('8,000'), 'Must cite $8,000 OW ceiling');
-  assert(cpfAgeRes.messageText.includes('55'), 'Must cite age tiers');
-  console.log('✓ CPF Tiered Rates by Age verified.\n');
+  assert.equal(cpfAgeRes.scenarioState.authorityEvidencePresentation?.evidenceStatus, 'INSUFFICIENT');
+  assert.deepEqual(cpfAgeRes.scenarioState.authorityEvidencePresentation.workstreams.flatMap(stream => stream.sources), [],
+    'Age-tier amounts must not be fabricated when every official source is unavailable.');
+  let sourcedCpfAgeRes;
+  globalThis.fetch = cpfOfficialFetch;
+  try {
+    sourcedCpfAgeRes = await processAccountingQuery(
+      'For Singapore citizen employees earning more than S$750 a month in 2026, what are the CPF employer and employee contribution rates by age and Ordinary Wage ceiling?',
+      null, 'SFRS_I');
+  } finally {
+    globalThis.fetch = blockedFetch;
+  }
+  assert.match(sourcedCpfAgeRes.messageText, /8,000/, 'Official rate-table evidence includes the 2026 OW ceiling.');
+  assert.match(sourcedCpfAgeRes.messageText, /55/, 'Official rate-table evidence supplies the age tiers.');
+  assert.ok(sourcedCpfAgeRes.scenarioState.authorityEvidencePresentation?.workstreams.some(stream =>
+    stream.sources.some(source => source.provenance === 'LIVE_EXTERNAL' &&
+      source.claims.some(claim => claim.supportKind === 'EXACT_SOURCE_QUOTE' && /55/.test(claim.text)))),
+  'Age tiers require verified, issue-bound official evidence.');
+  console.log('✓ CPF source-backed age tiers and missing-source rejection verified.\n');
 
   console.log('====================================================');
-  console.log('ALL 10 TESTS PASSED! Statutory Engine 100% Verified.');
+  console.log('All 10 statutory-engine regression groups passed.');
   console.log('====================================================');
 }
 
 runTests().catch(err => {
   console.error('Test execution failed:', err);
-  process.exit(1);
+  process.exitCode = 1;
+}).finally(() => {
+  globalThis.fetch = originalFetch;
 });

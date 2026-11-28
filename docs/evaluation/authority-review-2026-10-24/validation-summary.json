@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "dateSingapore": "24/10/2026",
+  "baselineCommit": "630113b74f9ebcec7b3498644645b5ca61a0b73b",
+  "reviewBranch": "codex/acra-main-reconciliation",
+  "recordType": "SUPERVISOR_RECORDED_LOCAL_VALIDATION_NOT_CI_OR_LIVE_ACCEPTANCE",
+  "node": "22.23.1",
+  "checks": [
+    {
+      "check": "lint",
+      "exitCode": 0,
+      "startedAtUTC": "2026-10-24T07:20:35.8233611Z",
+      "completedAtUTC": "2026-10-24T07:20:36.1900279Z",
+      "offline": true
+    },
+    {
+      "check": "test",
+      "exitCode": 0,
+      "startedAtUTC": "2026-10-24T07:20:36.1949141Z",
+      "completedAtUTC": "2026-10-24T07:23:14.823993Z",
+      "offline": true
+    }
+  ],
+  "full": {
+    "passed": 148,
+    "failed": 0
+  },
+  "independentReview": "NO_REMAINING_MATERIAL_FINDINGS",
+  "applicationBuildAndSmoke": {
+    "build": "PRIOR_PASS_FRONTEND_AND_WORKER",
+    "smokePassed": 125,
+    "applicationFilesUnchanged": 19
+  },
+  "historicalReceiptExport": {
+    "exactRoundTrips": 5,
+    "unobservedCases": 5,
+    "missingSourceBodyPayloads": 18,
+    "stdoutBytes": 2036,
+    "stderrBytes": 0,
+    "freshEvidence": false
+  },
+  "r2": {
+    "bucket": "accounting-verification-receipts",
+    "location": "APAC",
+    "managedPublicAccessEnabled": false,
+    "customDomains": [],
+    "connectedApiJsonUploadReadback": "PASS",
+    "nodeAdapterRealCredentialAcceptance": "NOT_RUN",
+    "runtimeTokenProvisioned": false,
+    "offlineInjectedTransportRegression": "PASS"
+  },
+  "preparedHarness": {
+    "frozenCaseCount": 10,
+    "modelGate": "HELD",
+    "realModulesGateCheck": "PASS_NO_DISPATCH",
+    "referenceAppCommit": "630113b74f9ebcec7b3498644645b5ca61a0b73b",
+    "referenceIsFinalRepairedSource": false
+  },
+  "newModelCalls": 0,
+  "liveAcceptance": "UNTESTED",
+  "historicalCpfMasRejectionCauses": "UNAVAILABLE_ORIGINAL_TRACES",
+  "applicationDeployed": false,
+  "sourceActivated": false,
+  "validatedWorkingFileSha256": {
+    "src/retrieval/irasRuleConceptSupport.ts": "80577f17220451205e13d490ff543e8e699414793db6078c97c5b879656b6b90",
+    "src/services/authorityWorkstreams.ts": "cfe806f13945fae97a251d163639a23079abf4940b766148c6c1d9001e1f259a",
+    "src/services/groundingContextBuilder.ts": "ada1b2693f80613f962aa5653c05d5614d10bce8ca0c5783013094c70ebd5f31",
+    "src/services/irasEvidencePolicy.ts": "c3169d437d0f63da9b35ddac371aa9f621b493525ccd5274e653e2b22211a4b8",
+    "src/services/semanticQuestionUnderstanding.ts": "fc1d7acf8f6295185d42ca15491ed86d0de1d150bdec24f94168168aff7741c2",
+    "src/types/authorityEvidence.ts": "b1ec2c2712d3e4814adad8fee91f68a7a614307c38244981d0cc64e8b0be98ab",
+    "src/verification/claimEvidenceVerifier.ts": "b2026d826e27139412e40a77e5a7be72e636ee3430d575825f195c8234598134",
+    "tests/fixtures/iras_cpf_cash_top_up_current_excerpt.json": "2d59da53cac5805014cc5dbb3d06f1af50ed021c34ac8080efde6fe7a2f48ba5",
+    "tests/fixtures/retained-mom-semantic-response.json": "0b3126798049466672e4bb6d353c29aa6bc5d10ad0e16857634e458a35c08368",
+    "tests/fixtures/semantic_review_retained_interpretations.json": "d515cf04cac5c66087391524b52bf5348a6f41ef10677028e207f9044194c82f",
+    "tests/regression/test_authority_semantic_concept_ownership.mjs": "90f78c9a300c28fe464acf10e81107ac36c26d82752501b978ce5bcf777246ee",
+    "tests/regression/test_authority_workstreams.mjs": "72e584c98d709bdcab7865079ba3e5398b6d8d618bd821f7d00e48b20330c05e",
+    "tests/regression/test_development_live_routing.mjs": "1ada73c9485be686c3dc950c6a0996d877d4de55ac44e4b870a486a95da204f7",
+    "tests/regression/test_iras_claim_evidence_verifier.mjs": "81b0eff11e9c0590a72183f9c6ca6c1fbaa203599309353f3db62d2d34dccdd7",
+    "tests/regression/test_iras_evidence_pipeline.mjs": "04c1b5130947fb28e998ef769ee09ae79618e7d1ae892ba625e46e8de25224aa",
+    "tests/regression/test_iras_rule_concept_support.mjs": "99ae2a60927360d891d5d95f47221cebcf4e17eb89248ba076c03fa04270fea7",
+    "tests/regression/test_mas_cms_rule_support.mjs": "8db937f3249418c815897d3f4f04416f18706457566bd3e8dac3fbdd8ddf9dcc",
+    "tests/regression/test_semantic_intent_followup_runner.mjs": "879324b2d95cb369ee57516a53674fee09e9c8124901a81b9f34b513405daed9",
+    "tests/regression/test_semantic_question_understanding.mjs": "977b4690a880251390a61f90978687ac0961ff814b37c2b976ce12955ca0663b",
+    "scripts/verification_receipt_exporter.mjs": "c6b00b58cf5b5704bcf6170d5cf89a9e0e3d6a8f8cab98fee3d3ddf5eb288ff2",
+    "scripts/export_retained_verification_receipts.mjs": "44de8019d7a0366de460ae6e0bc369ef5d4aa092b083f0084e82ffafb50e2512",
+    "tests/regression/test_verification_receipt_exporter.mjs": "d5591e9d7dfcedd0b3b43142aa57596035bc49aae4b087440b8afd0cda26731c",
+    "scripts/run_all_tests.mjs": "199b7f711a5b48be5f741d9ae6f2b2d63c017f111f82f8753caf6d8302821cd5",
+    "docs/verification_receipt_export.md": "46a1d4abba78620c92af5469e490850302bdeb346f08bec470d6984e03a7d76e",
+    "scripts/cloudflare_verification_receipt_sink.mjs": "a24729fe9388978fe4cf799fa639fd3c11e501985045d3b967b0a6cb0f8c4312",
+    "tests/regression/test_cloudflare_verification_receipt_sink.mjs": "2462ee8d730dcddf3b15794e679b33bbd768f59fe327803be4a0755436397d6d",
+    "scripts/prepare_r2_verification_harness.mjs": "a521d656ad6ef8868e7419b82fe74e07197a35d42f6cef2566c73ee43ffeda9f",
+    "tests/regression/test_r2_verification_harness.mjs": "4d06f713ad96c221beea9535657d63d827c9444c6be4f9c062848b3c29dbe6a5",
+    "tests/fixtures/legacy_verification_harness_23637b.txt": "1441a80a0fcebe97269364caef84243cf6448b4e94a0222bf9cbcdf3f497c38a"
+  },
+  "postValidationPackagingChanges": [
+    {
+      "path": "scripts/cloudflare_verification_receipt_sink.mjs",
+      "beforeSha256": "a24729fe9388978fe4cf799fa639fd3c11e501985045d3b967b0a6cb0f8c4312",
+      "afterSha256": "443118ed152c0e904efcdbb524ca336c58c4f83cc06fb78d78f19207b3b68cd2",
+      "change": "Remove extra blank line at EOF only"
+    },
+    {
+      "path": "scripts/verification_receipt_exporter.mjs",
+      "beforeSha256": "c6b00b58cf5b5704bcf6170d5cf89a9e0e3d6a8f8cab98fee3d3ddf5eb288ff2",
+      "afterSha256": "f4833a676d44963e81566d4f6ebd15f312dfc9845c8707892b4dda05e9abc5f2",
+      "change": "Remove extra blank line at EOF only"
+    }
+  ],
+  "packagingValidationNote": "Only EOF blank lines changed after the final full run; no executable statement changed. Frozen template bytes are preserved by .gitattributes."
+}

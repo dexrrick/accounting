@@ -1,0 +1,3119 @@
+{
+  "status": "OFFLINE_BATCH_ACCEPTED_WITH_KNOWN_LINT_ARCHIVE_EXCEPTION",
+  "reviewers": {
+    "natural": "/root/final_acceptance_review; /root/complete_fixed100_grades",
+    "fixed80": "/root/fixed100_grading",
+    "fixedAcra20": "/root/complete_fixed100_grades",
+    "code": "/root/final_acceptance_review"
+  },
+  "corpora": {
+    "final75": {
+      "counts": {
+        "CORRECT": 30,
+        "PARTIAL": 8,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 37
+      },
+      "perAuthority": {
+        "IRAS": {
+          "CORRECT": 6,
+          "PARTIAL": 4,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 5
+        },
+        "CPF": {
+          "CORRECT": 7,
+          "PARTIAL": 0,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 8
+        },
+        "MOM": {
+          "CORRECT": 7,
+          "PARTIAL": 1,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 7
+        },
+        "ACRA": {
+          "CORRECT": 4,
+          "PARTIAL": 3,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 8
+        },
+        "MAS": {
+          "CORRECT": 6,
+          "PARTIAL": 0,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 9
+        }
+      },
+      "grades": [
+        {
+          "id": "iras-01",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "4b833e0eb3d675bcbc2e4477bf168981d1661df5b236a65c9ac8c768dc30b47d",
+          "answerSha256": "1eeff7d5cc124d1e6d0af052f53ab8bf03b995afaa2a32a9ec76f515e5b22e71",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-02",
+          "authority": "IRAS",
+          "grade": "PARTIAL",
+          "questionSha256": "5d5d251e0baf9e2a2ccdc7777af6dd0b76f09df3555650ec2dd87e27690222ca",
+          "answerSha256": "b135f5a22563daef6458a6a7f906e3df83ed714592aaeb05fbc5f43249026f0c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-03",
+          "authority": "IRAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "778d23e32bc99dff4e109ff504a3629a1c75ea603dc884365ed409d6eb66c32a",
+          "answerSha256": "f57562263ccc87098a562535349c308a06ed640e72dd30276a0b1778adffa6d0",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-04",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "3dc058b1b52c4cadd13ddb7e9dbe7ef6f9904e572a2e06fe80558a13937d5e9a",
+          "answerSha256": "fba6856da528d165dd4f9a35d859c3bf715c3df0ecb2ae79e3520297c21bb18c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-05",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "f59b3e5fd72ce065bb562f20df905b9acff27368ec8ce5e5b8f648e76b0f3f2b",
+          "answerSha256": "615c74c7961f932af3bf59fc9e519ca6c203325846315a3daa93a85f4426d084",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-06",
+          "authority": "IRAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "342b226c0826a32c285b862d9c025ef9a1256f98e6749dd80a91740c4eb1f57c",
+          "answerSha256": "06ee40e7b5d607982b852bef9b0f05ff3f3039b920f116aeb04bcbac8b97ac01",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-07",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "fb0e04e79c5a1f551a922c58a30bb207552c3b9653b428b9f2d21e3eb15d5a87",
+          "answerSha256": "bb91d1ac7c192f9d3456dfc34896a906576f5509994c30dc28f4a757e46e4f7d",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-08",
+          "authority": "IRAS",
+          "grade": "PARTIAL",
+          "questionSha256": "02aff2c9acb34b93623975cd80e241de68a8cd56b2a35f02f02547dddaa3ee7c",
+          "answerSha256": "bb91d1ac7c192f9d3456dfc34896a906576f5509994c30dc28f4a757e46e4f7d",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-09",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "71ed00650ae2ea653d189e719d2b1fb2d2fb9d41510fb0f99d848399aceb4e3c",
+          "answerSha256": "39da1ba72ee59cb1562e11ea204987c544a0dae82c771af2a800c1b2877808ae",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-10",
+          "authority": "IRAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "0e8b99926f51acff2f90b1b1e499f968165b80b9666726a4a7f12df79e492b0a",
+          "answerSha256": "ee1ef650fe09fc28e9ba0fa6b83121c74e9d0f3e06bf74c99a7f51360d6d5439",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-11",
+          "authority": "IRAS",
+          "grade": "PARTIAL",
+          "questionSha256": "fc3c26fe3912e1b074e23720fbf5e8cd57eab7d830b9a0f2c1fe3fb861c286d5",
+          "answerSha256": "bb91d1ac7c192f9d3456dfc34896a906576f5509994c30dc28f4a757e46e4f7d",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-12",
+          "authority": "IRAS",
+          "grade": "PARTIAL",
+          "questionSha256": "9096b8034e69c2fbd2a420e56ffaeb5e1837c6fccad0a83edfffe005a7292cd9",
+          "answerSha256": "b7a619c63f3c2cff2146294aa4fd0ee61c5452abae18b451bc4aa9583bf452bd",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-13",
+          "authority": "IRAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "e42dd687d798fc40166e15a3c19e267112f46e3de103aed95a8db7a283d33c4d",
+          "answerSha256": "4129aa2dc5c0b4210dec2f3df922bd638fee6a68057801cf4fbd4d5645e5cdf1",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-14",
+          "authority": "IRAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "4eea0998e67d15ad15c9857ab03bfb4924b2c1cded17f85cb6066fd0602b30fb",
+          "answerSha256": "703788ee303e17551cd0ca6eedb12becfdf3d0c5f0be5c58c7cc264dddb03808",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-15",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "5ee3e50c3b38be14588cbe26bc9c17195cd1b0af84c86ca0665bc5dfa71f54ac",
+          "answerSha256": "fae74982095108686b2995cd736ad68af4d17a9d4f6600472836d68a733ea50e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-01",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "fc7cb5c438987972f660dea1d24a1a0278d800c40b8081763b67e274a4739c4e",
+          "answerSha256": "eddec4557f67f99ce6698c638480eaefa3ce1d9252bc0806d1e167ed2a43b5ab",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-02",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "e64a01ffe7266f7b29db5c3e108aac09cca10c8873d928307867be34ae3441c9",
+          "answerSha256": "a03a113a69f2c0515c9caf844f08a71dd8d784a41e6032b98140bf7a05798671",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-03",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "70e88cc4c5a09be2fd9415e2a9d065e3eb81a513af4c26a01a0317f2b83e5499",
+          "answerSha256": "6a2b53617e45b06ae12736ef938f16fe305b3c8b5cf1347463985ee1ae53c3a5",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-04",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "00af9144e118fe9227c239fd747b44f96cf08f6948fc29c39d22c98122f17e44",
+          "answerSha256": "cf0bd3a563a79b215fb30f5d79697bea8008e7655d746731fc0651ccc611e345",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-05",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "e13b386938a8cb7d7daa6ed08c4cd0905516f1e2d2d5943d25edb3bb5db5e86b",
+          "answerSha256": "e9e0cbcd032d48edf82e575481da4ed518b8fd20e1421487cf33acda5b3287d0",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-06",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "052e80d1520798620ffc1d9db9caceb336a7490154df9b3b4cce5856931fa83a",
+          "answerSha256": "ffd45a7d382d00c1229c0a4152ba127a7cb0dc539bb41ee24b483448b2758205",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-07",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "496d94a08905e68173e7dca650aedb94bde920e542c000eb01aab1f3785fcdf0",
+          "answerSha256": "c843d02c88c19925ef3e274896efb16432688b052691ef62fcb4bed60a1fb922",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-08",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "259bc88c7b71abcdd6b7fecfb68e89710894e9cecee3d5a332a2c156efd5970a",
+          "answerSha256": "c023fceb8c325812938bdc9e4282998346cabbcd3781ea835a95b449d458a164",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-09",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "ba90de7db93a07cf8428ec8dbb7c71a22e5a781464f4565febe8f29420142fe0",
+          "answerSha256": "84a631ab51e6da175912ccb9afee1b15f10889939690139814b027b50cb83c98",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-10",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "23366b52ac27f2e1f04834ece90d38b4d2864d40e4749bc5da7356acc65cc899",
+          "answerSha256": "496bd6106cac2a01bde75514af17d82ac4d07335e813a9f6111c362280be749c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-11",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "7db14a30a581124f9758fb7275a6b759cc22a3c7d6f01e3d230aea64e9a47d53",
+          "answerSha256": "077d17a14e60023e6b589909f03dd993b71109f2c74bf7057a4e84f6cb430bae",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-12",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "6fa7ce5b4172ddca8a30bc3caafff31a4f0c6c4a6e0e58263139840129def2d5",
+          "answerSha256": "04d1d5343c185b5c8aaac4bc611f16fd2825198a26ebad5bddcf363e9f52c4a4",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-13",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "04281aae398be5a5b5d36f20738ee50e64cf2c7c6c001590f2d018359d0043df",
+          "answerSha256": "2314ae2953134824822c73e2f9ddfdaa3eb8344d0dbbd8c9abaf7efe7470ab82",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-14",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "fa27dfa975fc2998155728176bc42bc81ca2ecd853fb285dc59be3b7b8987076",
+          "answerSha256": "e9e0cbcd032d48edf82e575481da4ed518b8fd20e1421487cf33acda5b3287d0",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-15",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "2f8970f997f3ffb74e90398b5104866a0ca8f6d98171ebdc591afa508a226086",
+          "answerSha256": "37e7e7e40e4c8364160f0717c0c31236306e785b8181fa1f61c8ef69cb65cad2",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-01",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "a315e5be32a9abb8d45ac73ca444dbb671f1f14e3b97889560c2d5194befccc9",
+          "answerSha256": "496bd6106cac2a01bde75514af17d82ac4d07335e813a9f6111c362280be749c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-02",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "e15287fdf6491802b762ffd86b85c3e39c49b270275fc1c2593ea0a2ef902e3d",
+          "answerSha256": "01e731d4f17a8bce7a526c4a7aa6c530578fce277c3c42e0f7d5dbbc230e7c98",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-03",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "0150337a93f4fa16b8cc7b9ce2011e708b926e6cd23358d35516e5abc81b5830",
+          "answerSha256": "5a9ffd3108284847d6a5a701cb415b2dd793db4a301eb6d09502d1b1f0b5fd8c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-04",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "f457bacf0f3a1db5dac55aa0100a75fcb52867d38ba9c6a3db02048e590b0a96",
+          "answerSha256": "520c21b8fbbf3c86fe101f497872d386246458908a18296a20f743e4cd186139",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-05",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "e433adfc26587edf801b59b8e5c4c063967b17d162df6bf1da879a238f2f693e",
+          "answerSha256": "373a0425a4bdd1a4a8432bc38f6c71f4e52de9634f8593e6e324f2af260a1c17",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-06",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "6cb05e4610e364389e3350fcfab3b390c56de639f3ad0e9826ebc3c6254e7aa5",
+          "answerSha256": "cdd85bec08d3c11f2c449d890786915ae53b13a792262d2772cb8df1ee41dbd7",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-07",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "705825e8ae2a110cebc895e4a976f1c46c3c15e8f6f6fb2af2b69b4c7c9e3c2a",
+          "answerSha256": "78117a46dd554001dc6aabd7e483652e0d71ed49c91c4e49e5dd79bff014d64c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-08",
+          "authority": "MOM",
+          "grade": "PARTIAL",
+          "questionSha256": "55b46375affb00f7c34a12ba4a0f22900376b8d486dd3b64451e73f203517ecc",
+          "answerSha256": "b07d9149dc7ad43a64435b1abb53934b7820ad851ee4a394c44e8cbf5c06ace8",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-09",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "6e4fa22fe4e56766f0337a56794be33a8b134baea210b4d037befa302f7fbd78",
+          "answerSha256": "8518fd96cd231ed3c41644dada3cf517d216e14db5dfd0d7403621ad0c5c3100",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-10",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "0015f8b03dc3d91573d7fc2863700050faf9d59eb05a4ae38439947664fbcbc0",
+          "answerSha256": "cf0390ccc9e5fbcd36a201c9c15c1053059f718ef4a01633820dc388d4cb7c74",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-11",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "00c98dca85b88d74036b88a0be340a6383a75f87c812fcaf5a1bd340c3889ec6",
+          "answerSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-12",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "1f96353e6d8eb956f19a50ea20e801f777a29a680a4255f2736638d59dff6046",
+          "answerSha256": "630e08eaffdc2b72d9eac689d3471de26af97c681a78516774769029db9ffd8d",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-13",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "2fde6a68d3eccdacf23a9f9a5262619b1c33a37142167dfac9e899f8b06452cd",
+          "answerSha256": "eebc31ffc0abaa60954c6af315edbeceef3df75a87184b74a66754b820eb0c61",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-14",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "816c77405ea8c38274aa59b07baa13ca707905d5dadf1dd27442038c794ed722",
+          "answerSha256": "6d9766eb01cf0093a772253f986ccc426ba2a57c3240c0c8bc5e83b5d0e5741b",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-15",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "6f9ecd7c7cd31ffcc6ae6cf9d539c237aa3b83ed12c403b552cf3378f3d71dc2",
+          "answerSha256": "728c587154997ff38001f3bc4ecd66c4eede7b4b5845dd1a4df6fba7d5929a1f",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-01",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "60049f619e2dd578ea5f3ea535486a5a415871e5557bb1a20a7ef35f759bfc08",
+          "answerSha256": "0f3b90c8d660d2d8f37af8d04e4ec9d7c9820b24f34efeffcd78e805c6f6eec0",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-02",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "bb0c0abf3d49569975170685e4cd994e9c267825b5cd58cadeb1142ab20e102a",
+          "answerSha256": "2c692333086f4aab02be1dc82f8d500fc711eb70626cc9fe4aef680acf29609b",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-03",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "17edee9084b1ea6bbb9d2ce4b20c7071d18fd82f9ec51d8d34556f1fdd5f784d",
+          "answerSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-04",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "a40c3a1da274d5474dd19135bf7c0c24aac4482aa7d977bf44e9543af3f9a5fa",
+          "answerSha256": "521719313997405484e17658fdfccf7adbbb90b3d1fbcc7edd2fde07446a6729",
+          "reviewMethod": "INDEPENDENT_FINAL_ANSWER_REVIEW"
+        },
+        {
+          "id": "acra-05",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "c40bacd92fd9f9f34c7566b6e35cfbedfd38aedcfe6fd755f36ea7f622e329a1",
+          "answerSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-06",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "617e8e7422b5033d6684687194de740efb8a8ca4b6f9e7dac3b52f8f6711e58a",
+          "answerSha256": "1f700a3099470360a2efc87cc0b25fabe10afd972801ef405832b9e62135d3ff",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-07",
+          "authority": "ACRA",
+          "grade": "PARTIAL",
+          "questionSha256": "e26f4e20c4286cd8f3e9807c0cb28c703ba5d4ce9f1ef051a61fe57136ae172a",
+          "answerSha256": "683b2d0d436a61cacad170a058e8285652d0661d968c487fa01fdc3bcc7a4645",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-08",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "65b0f154d5e8b4200b99e16007ec0eb808dd583d1555c822fe60303c9473f3d6",
+          "answerSha256": "91b36ce2d5557c8b889e240bcf2b488dfce91f8b2e0d55aef7dda6fc03e8e092",
+          "reviewMethod": "INDEPENDENT_FINAL_ANSWER_REVIEW"
+        },
+        {
+          "id": "acra-09",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "9ec5e4ee29166f79e48e7ddd45df3cce6add6a3c8aefd0dae8841c955c84d1d6",
+          "answerSha256": "1cb770e5444e39904cf69fca015479ab4ac07a48cef90db31cc2de9badf35d00",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-10",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "db2b6aaa8f8020b558125a3b4d3cc96ce700892f7abe89aad54117de0fcf3cc0",
+          "answerSha256": "f79653140ab4837ce6d5d566230753a8c5b8367c912b33614748b9ee616531bd",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-11",
+          "authority": "ACRA",
+          "grade": "PARTIAL",
+          "questionSha256": "a56971e12a6be4071a2c749c50d22c82665f70dd23d9cf12c297be6b82c1fe05",
+          "answerSha256": "152c85c5dfaab9fb9ca47cde3f4eb9d6c70a6cd63fb8a15da5fd31b23856198b",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-12",
+          "authority": "ACRA",
+          "grade": "PARTIAL",
+          "questionSha256": "4af8647e395fbbde7614d3ef4c98d022368554b917cc53c5f12faa6dd9e251d8",
+          "answerSha256": "1e190ad84ea94ab4bc592a618e663163aeda096a3a124b449d9834e92e21b460",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-13",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "dbf0b599816c0eb0c7b913199168670bc9df02ae75f3c75a26a4cb0bbb1cbaf1",
+          "answerSha256": "6459698ed9d769a44750c96b1e915cf726d12baf6fec4e29ab60ac95c8a33649",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-14",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "5da32f4d0c8656914c6afce4ba7d5bf9c9b68644926bb88c987e21b6433a2461",
+          "answerSha256": "e35341de27304c6bbb19891e4c9f1547398b20c20f241847e5928b2e53acdb45",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-15",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "4c9eab85f1f548e9c97864830d72627c65c88c60613185262b98ce610948aaa3",
+          "answerSha256": "10b802539cdf838f33d8e9cf5fb183658528f10d2565b3977e4720eab4c6a310",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-01",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "21419ef0eb9196a386a7e8fc87032c8e09a092163af0aa17838dd6316d059a3f",
+          "answerSha256": "55502a9c240072a2e55ae5a93838b2eb9606047a5b234b5845aaa38ec41ed2f3",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-02",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "ac20ef8b84c6289f92fb9f50789c6d7860adb16c1c44d8780db5792b1c1457c9",
+          "answerSha256": "4fc549c751196c3e613431e04dc0f8ba25604a0c848a61343bf5aeb9eece917e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-03",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "2f9eefc01b299681cfe68414e2aa9139bbd77a0a5492889bb08a93ebe6378f1e",
+          "answerSha256": "9b1b6eaafc8ab4f8e50e5aa52a56c11a39116b1070075862b34501f4a7e83427",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-04",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "e76b91fcde16d34bd31d016eedc0a5d09130cda37f106c8b00ba2544b02c38cc",
+          "answerSha256": "6010b3ea9eee707581963a5a1c40796a67ecf691d3271c428ae5ac54ce58c99e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-05",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "15c9d080abf5dd380586e8a34222d789e9bc66590e02ee70c8f44d6153f3cfd0",
+          "answerSha256": "c8d17cbb9e64a1858cf4fc6110c43a79c38dace19bcc3d1bc73f799fb27fc7f2",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-06",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "210ab349bebef8e4c7c7e0e240a0adc0e9f38ce5c9f28567c2e179d9450b95c8",
+          "answerSha256": "550cf7cbf6a9b191d6c57c85321ad01ee5996903e45f6c25517dd602c31e793b",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-07",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "597f206fb700f3b667829c4620bca3d23ce363aa613f6c3c81807fcd5d8d6592",
+          "answerSha256": "336ff9e0ec5f3a452a57aa4fdc0d5bd260d9db69b3cbd149c814ba12fc06f010",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-08",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "54142c854e54a201f5641f44b358deb6d58bb865410e9e78c19d94dd7aa0c990",
+          "answerSha256": "336ff9e0ec5f3a452a57aa4fdc0d5bd260d9db69b3cbd149c814ba12fc06f010",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-09",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "2cff49c067c54097aa650a196c6bb81d7beba4c46c23350700c6c08d2fed52d7",
+          "answerSha256": "55502a9c240072a2e55ae5a93838b2eb9606047a5b234b5845aaa38ec41ed2f3",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-10",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "ff35b228afd9b4b93dcc1104c4d0a554653819802d8300ff19150605287effa5",
+          "answerSha256": "e35c589a580e2c93ac688b8594960c864576323d71e910c01acd3b96c3b85d15",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-11",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "605c7478ed3db15cd2cf598fd7046e2b3e2044e9db1f16f8088353ae32850e5c",
+          "answerSha256": "f98208dba0c4ef013150ac15044d04ebffbfa4d413b22f6f0da7c655ddd1a66a",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-12",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "6b126cb81ec1b4948692de201ff2880c5124c48abed8033e5d0495d26759df32",
+          "answerSha256": "c07392e248bd55271f30e435b1d53f83c1ee499ff31d14275d8a74ba27a829dd",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-13",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "a7ae1dcbd1014119b24e4979f6876cad92b854b2da2d4abb07e53bf37fc15407",
+          "answerSha256": "b2929d012c12f229e7d81b55815b1965e867fb4b266602318425fa801be690cd",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-14",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "f815bd29831f632336cb81f527dec0955be29e442bea5883fe2158b2e13fcff2",
+          "answerSha256": "e35c589a580e2c93ac688b8594960c864576323d71e910c01acd3b96c3b85d15",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-15",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "77bb4c4aa44c5ac1c57788ed8cb79b27c7ec22ab7bd89aade70b1774747fbc26",
+          "answerSha256": "b2929d012c12f229e7d81b55815b1965e867fb4b266602318425fa801be690cd",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        }
+      ],
+      "networkRequests": 0,
+      "modelRequests": 0
+    },
+    "final60": {
+      "counts": {
+        "CORRECT": 59,
+        "PARTIAL": 0,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 1
+      },
+      "perAuthority": {
+        "ACRA": {
+          "CORRECT": 12,
+          "PARTIAL": 0,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 0
+        },
+        "IRAS": {
+          "CORRECT": 12,
+          "PARTIAL": 0,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 0
+        },
+        "CPF": {
+          "CORRECT": 12,
+          "PARTIAL": 0,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 0
+        },
+        "MOM": {
+          "CORRECT": 12,
+          "PARTIAL": 0,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 0
+        },
+        "MAS": {
+          "CORRECT": 11,
+          "PARTIAL": 0,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 1
+        }
+      },
+      "grades": [
+        {
+          "id": "hold-acra-01",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "ab847287c3f1c2eeea2982d13c750840ac591aba095028e69b9d3f8c09d7ad94",
+          "answerSha256": "7e85a09aefd48825842f4b073736cc8c12ad68391cdc729ad1be891135aa8785",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-acra-02",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "14b9ec2bed9b1034aa72d5b9db44df41ab13a63328cc7987719d4824bb338d7d",
+          "answerSha256": "6495156457ce5652bb164ef4e3346605decf7ec95847c94d77e7c322f21d6408",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-acra-03",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "95f1c0b4574c266fb80273082ad09b2e3e8cdea3c81199dec676e4bba012a8bd",
+          "answerSha256": "750314e9bafaea0380cacf366e400c569fa69f9a88698679956b790b58dd8d0d",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-acra-04",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "a1cd635b4c6303b1fd00439e78d8f3a2daa0cf4fc9bf2277b33340fed25ac5f2",
+          "answerSha256": "2c190c3676d61e2d611931d6cca8c0e00a98c72e3fab7d9ed6b177591d9b2a39",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-iras-01",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "163706744992205a2c78ddfe4fd1a6a58523b4ea85089aeab2147f9f7c4654e8",
+          "answerSha256": "bf9d4064d4c64b2dbd23fe76f628602d99a79f268af48232ee92c9612ae8f687",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-iras-02",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "1414128886a69ed61e29be2a5543a7a7e197d1bf976603d000d2a72492b904a4",
+          "answerSha256": "22a2e83e438cb941514c095b68902846c4d7d8ce6abd8eeffe41ce30276e83d0",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-iras-03",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "4bd0dff3471c793f2eeee37030d5674b7598b04b112a1b328eaa569761b14f55",
+          "answerSha256": "22a2e83e438cb941514c095b68902846c4d7d8ce6abd8eeffe41ce30276e83d0",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-iras-04",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "397c67ee4b71b598cfd2a4342dad6920e7c78652d9fccc2e7408ba9a39c66226",
+          "answerSha256": "aed22a8b0a3e44fb427711b79bd8d200d966f3fb8eae2c5b53d857d757c36320",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-cpf-01",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "dc1038596a325546b0c9ccb62281172e1c82fdfa1557aa32ebfa156afb2e960d",
+          "answerSha256": "7c248c48a04b591d5577362c7e33034d585c01eeb1e6dc2a0de86ad88e8596d7",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-cpf-02",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "3075bdc8f3cb256ded1a1f2ab8d1f207f5237668948fbc49f8b3e6b0e8200aea",
+          "answerSha256": "e9e0cbcd032d48edf82e575481da4ed518b8fd20e1421487cf33acda5b3287d0",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-cpf-03",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "1829a175e31fac2f5fd58b3872af1edec33945f82a417959b7770d85f7898cd4",
+          "answerSha256": "1c830d8e4005377419e8ced8b7cec85eb994353bf07fdb1c5f5ef031f48827a8",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-cpf-04",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "65e262c6c15323c70e08f6f56252beda3a59238c58784085fca20182b534d458",
+          "answerSha256": "0985f0c252cc1339c3158a38ae875858ebd9b772b3f9466020667a590045f8f8",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-mom-01",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "96d4068002efdab7da6c9bef6935b679d4948944b60e1063c0776b8b65aadff4",
+          "answerSha256": "520c21b8fbbf3c86fe101f497872d386246458908a18296a20f743e4cd186139",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-mom-02",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "161b573e4fba5b4ad78f5998f98688889193096d69ef6dd25acd0435e3d2aa7d",
+          "answerSha256": "520c21b8fbbf3c86fe101f497872d386246458908a18296a20f743e4cd186139",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-mom-03",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "609a0350153aaa835af1707c2635c4c103692358ecf6cf6722ceeb1d1688337b",
+          "answerSha256": "a8c9eb31b4b556e87aa3ad4557a6b4b005e13d73e3cf3dc08c704dbec53fe1ff",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-mom-04",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "9c49a30902ab3f8db42110ecfa9315251fb184e3cbe74536b3278792b386de8e",
+          "answerSha256": "cdd85bec08d3c11f2c449d890786915ae53b13a792262d2772cb8df1ee41dbd7",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-mas-01",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "37d968fb06a48d491890f26926aa5271ef59312c2d2009e955e8d5933ab96ea7",
+          "answerSha256": "83f9b5c6df3ab8a643b53236502c26ba1aec171f3ff7a6097a6775a60687a444",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-mas-02",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "d9edeb96c72716bd1a3da31e7119b61c77f5a41d1552d6626e29682ab9d298a1",
+          "answerSha256": "c8d17cbb9e64a1858cf4fc6110c43a79c38dace19bcc3d1bc73f799fb27fc7f2",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-mas-03",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "941f7bcd42739e7bf51f01ce07ec043874588e396437abb36612cde28ed78fd9",
+          "answerSha256": "0f8a697ffaf85b01f6fd43d9a3d51879ba2e5022abecf4aa3054c173c593650e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "hold-mas-04",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "f322e680a3db28225e449a5798582e28fd49b13ce4b31b149d41846689a1da3f",
+          "answerSha256": "1cec4d2e26a00e64ffb5df2234b261db770cd63bcad786d3fb331e041cd4a846",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh-acra-01",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "0b4abbabf57561eba2ca071d17ac8ebaa9d5127ba7a700ce95e4625d231f8d45",
+          "answerSha256": "4d5f9c4ee4ad2a3e87890e7a54cc0a45f052c0967984da9f8d7e0f63ba509fab",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh-acra-02",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "b0691ef410856e4f9864de2cf4f4f3991e07c0a968987413999390b7b9236ba7",
+          "answerSha256": "3c2e93ee75a3043b13d0b4bd9f07043f53a6a2e522db32583f84668f634a6e89",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh-iras-01",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "5289daec773c34146b60ec5514e73f430a8c06d025e78b7a7aaf60cd95823b2a",
+          "answerSha256": "8e10276200991a65d7af1585882d96c7ff74780e48f8d70d65cbd6ed7e3ba78d",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh-iras-02",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "9b19eee29782f275c4f6deef72155f5a7542c4cc0ce5bf132011016ef609b696",
+          "answerSha256": "b2d19700fab248854af61b096522dc75178e0f8f7a14ebac0cb3a93198f90bb2",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh-cpf-01",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "8b99a0a5d1fc965e39df21fc16d8e45c97d949008a5ff016934d3771d3ab4cd4",
+          "answerSha256": "0cb47ca896726f12e7e9ff2c8548cfe514cfc5328d54f049182102ee4d19e264",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh-cpf-02",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "62f44b2b5e015242332264544d6c7df10461fa1e0f81b45a2a7f63a554a4d3e7",
+          "answerSha256": "c17336892d43e6b89b66bae9ebbd0daa13ff64a7528f28c2200d55aa599b9947",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh-mom-01",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "529675f57cd3e4cc11723cd562233d67a70429ed061212f2e1ebdb6f89fdfae7",
+          "answerSha256": "59482f1ac5fd1a8271ffc4b4a032f036ba9f52e5b75b0fb69acd00369efd0cf1",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh-mom-02",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "49fdf1334b007f3e13888432e5ae6c28dfde4971a86a2e9987ec8fcc359f44fd",
+          "answerSha256": "cdd85bec08d3c11f2c449d890786915ae53b13a792262d2772cb8df1ee41dbd7",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh-mas-01",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "42f0d384544e0c4fb7206ae9f5186cc12d38532476ffed9a1ba8d52c04699217",
+          "answerSha256": "83f9b5c6df3ab8a643b53236502c26ba1aec171f3ff7a6097a6775a60687a444",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh-mas-02",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "489ce66cf306a299e6f50a1ef69da30a104259a9b55d14add4acc91e5f800a87",
+          "answerSha256": "817c01ae9ef1c2d2147c49780590d59fe3c656d3c57bdaef7818b883f3bd37f1",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "reviewfresh-acra-01",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "f85de998ead7b118a2c4ae4ad5a85807095199d447081cc5a2ab09263fd42726",
+          "answerSha256": "750314e9bafaea0380cacf366e400c569fa69f9a88698679956b790b58dd8d0d",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "reviewfresh-acra-02",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "d9e16acee55e268d216434c09ce177154308c3a0672a1ee58aeb8dfff12789f1",
+          "answerSha256": "6aa5f2b31d7bcea26ecb575e52ce731f84a567948d7b8c9b8b2ecb64c2420fff",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "reviewfresh-iras-01",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "0d1ec002ae62dc909b6c95b21d80707a6a963a15d75c0253720b3594073a552a",
+          "answerSha256": "aed22a8b0a3e44fb427711b79bd8d200d966f3fb8eae2c5b53d857d757c36320",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "reviewfresh-iras-02",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "b9947c66c7ab8f47685c1bb82e6417a57fc99e403eaff4655a5d50cba3151ba0",
+          "answerSha256": "561a66b13684536c01d79258d847ff0598bea6f0bbc837df2dded8d84265b873",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "reviewfresh-cpf-01",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "2ce90114177eec46fe7fde73b4abf11374077261b767c397c39cb3c9b9b5c124",
+          "answerSha256": "0cb47ca896726f12e7e9ff2c8548cfe514cfc5328d54f049182102ee4d19e264",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "reviewfresh-cpf-02",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "052ce98c4a8acd17493f91ffb7acdcb68049f5ed53be2a121dc66400c3dc32ae",
+          "answerSha256": "3f5d5c177f5ee290095ed59285fdcffa8dff96cba71e314d16b3200ce2483d21",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "reviewfresh-mom-01",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "507c69c29b0188cde78b9fe131de2ecbb8bd3e4b4456799caa280c3037097a9e",
+          "answerSha256": "a8c9eb31b4b556e87aa3ad4557a6b4b005e13d73e3cf3dc08c704dbec53fe1ff",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "reviewfresh-mom-02",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "3e74552538f8e364aacddea75f28ec88faf3b32115aeb5163aef92fe634fd136",
+          "answerSha256": "cdd85bec08d3c11f2c449d890786915ae53b13a792262d2772cb8df1ee41dbd7",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "reviewfresh-mas-01",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "b1fda14f0b1470ccdf96b459076d85d77359f3fb843e021f57504eae371fb8bc",
+          "answerSha256": "c07392e248bd55271f30e435b1d53f83c1ee499ff31d14275d8a74ba27a829dd",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "reviewfresh-mas-02",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "05e010db34d8dbe3a61cbff31fb53849b4e5e4d89e17f22b822ea914c8bc888b",
+          "answerSha256": "1181d8833599361ebead98720452572846892e0bfbb7ebbc511d6be5717a3835",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh29-acra-01",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "79c58ff64f130803eef698bf907fb4492f9bb49c172ac9d20ee2b49dfc9697ef",
+          "answerSha256": "1f700a3099470360a2efc87cc0b25fabe10afd972801ef405832b9e62135d3ff",
+          "reviewMethod": "INDEPENDENT_FINAL_ANSWER_REVIEW"
+        },
+        {
+          "id": "fresh29-acra-02",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "5d2f0fd97e042fc92494aec4a5a86170d78ee4f67b7a7784e9f975ea79ca895d",
+          "answerSha256": "abe6fe7cc375ee2e218d667a9d394e80fa38101af9d1d88788258c6066320ba6",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh29-iras-01",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "8e5f18558d302cb3505cfc235a0990712d58bb8d5ba07d4787d294ade36f9326",
+          "answerSha256": "703d3a0ce04847df45b09a6a1dc38188fb3983196687bf01096289b67c1a734e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh29-iras-02",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "c85255f776851e960e98a92c4b2caad9fe4b30376e2cc4051c7d1bc76d78f20b",
+          "answerSha256": "8b8a3732717f0260b855fcf791a421be9f54440d1c24c75aab956406485bd199",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh29-cpf-01",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "a4258a63f819eca511594075247394fe8145a7d6f8efc0ed0325040c14e04d08",
+          "answerSha256": "d989e00ebf3bc3bae2ea6eff9e44cc282a561a8c2069fb6beb929ca224331fbf",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh29-cpf-02",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "f5a682e7b3ed61f9faa3ddc7855ae9e59d934e160050a12c62f41fb399f957c9",
+          "answerSha256": "508f1e3f9dbc26e3f1295d4264c556c6639a531d94114c20d5c9b51224dc7fd6",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh29-mom-01",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "ed93dd0867474c2cb64920d6c3a7e6b9c33e6fac7260aa9b989e638e4388897a",
+          "answerSha256": "5b3a7d41ebc319073701911632dce8e1f34dba4d8ef1860535fc3820349b2b22",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh29-mom-02",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "46b36d0179d3abd0724d2582aa53c48b5c84d88071849556333e70138aa6786f",
+          "answerSha256": "5b3a7d41ebc319073701911632dce8e1f34dba4d8ef1860535fc3820349b2b22",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh29-mas-01",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "8289deebbc8807e59774fab2ccabfbc8d7c0cf8fd429ccf4a3b8421c16808cd9",
+          "answerSha256": "5f8046a4b3aa07fddd15382cd5b102e410713e51192565a9d2dcb0f35b5a0e22",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh29-mas-02",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "2fe5fa4bfed88ba4534ae9ff0949038c5c372de78beee6fa65b359e103ef2507",
+          "answerSha256": "f890663e346ded12da74c93abcc32d14d53e5b3772a464e0665eda90503593a6",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "novel-acra-01",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "2fd5261cc508df601f839a096e642013666ea98336fadf8b21690a99f40a17d7",
+          "answerSha256": "152c85c5dfaab9fb9ca47cde3f4eb9d6c70a6cd63fb8a15da5fd31b23856198b",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "novel-acra-02",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "9accab13947016f35ad9fe16743a19e7217562daab01a61480cdbb15b6302ab2",
+          "answerSha256": "7bbb94bbd9732d8d82250541c9137de82bc355c673845865a767d5de36ec89ee",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "novel-iras-01",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "f5a68729a66c8cc5c96191d4a29eaeca6a10062aaff6c317a7d5f2f4c666616c",
+          "answerSha256": "cb12496f2cb2efadd6e105b15df020e515122b0463a00129a7bd07b2bf12983f",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "novel-iras-02",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "b3dd9990749c185981fce19fe78b1b2b49304e7fdee268725148437b86f2fc6a",
+          "answerSha256": "fba6856da528d165dd4f9a35d859c3bf715c3df0ecb2ae79e3520297c21bb18c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "novel-cpf-01",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "91085360c953422e773be197f70c5061a0f37cac3e938c163862ecccef80fa1e",
+          "answerSha256": "73e8b4c8388a76add26e4bb0d72120effe983f9e4164ce5b022255f3f465dada",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "novel-cpf-02",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "eed5b75646d330ec5682d1818b74b9508241f2b6edcaccda96cff6deb0019ba9",
+          "answerSha256": "73e8b4c8388a76add26e4bb0d72120effe983f9e4164ce5b022255f3f465dada",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "novel-mom-01",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "4c01f789a26e4e689e42d6ce0cfe60abf84b3fa461734162b834aa7eab5288f1",
+          "answerSha256": "17d37fa674e50a62a36b16d3857b126f854133531db63bbdba91748e1cb23fb7",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "novel-mom-02",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "62dc278e1d0373132cc13333fb14b3b694b7836ee19360fea88df81ba7db21c3",
+          "answerSha256": "59482f1ac5fd1a8271ffc4b4a032f036ba9f52e5b75b0fb69acd00369efd0cf1",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "novel-mas-01",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "ccb9386077fd3b33e5335c880a9a4c8820cd1cbdfec151a7b2c835b53d3b1f18",
+          "answerSha256": "5e81b90e35459294c2ee73ab4458be3d2269df312b758d3574c15a58d3c8f07b",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "novel-mas-02",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "df3b6d277e9774d0cd5bb7018cdb660ffa07f3d230145c88c93234c3d7effe1d",
+          "answerSha256": "9b1b6eaafc8ab4f8e50e5aa52a56c11a39116b1070075862b34501f4a7e83427",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        }
+      ],
+      "networkRequests": 0,
+      "modelRequests": 0
+    },
+    "fresh15": {
+      "counts": {
+        "CORRECT": 4,
+        "PARTIAL": 0,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 11
+      },
+      "perAuthority": {
+        "ACRA": {
+          "CORRECT": 1,
+          "PARTIAL": 0,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 4
+        },
+        "CPF": {
+          "CORRECT": 1,
+          "PARTIAL": 0,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 2
+        },
+        "MOM": {
+          "CORRECT": 1,
+          "PARTIAL": 0,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 1
+        },
+        "IRAS": {
+          "CORRECT": 0,
+          "PARTIAL": 0,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 3
+        },
+        "MAS": {
+          "CORRECT": 1,
+          "PARTIAL": 0,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 1
+        }
+      },
+      "grades": [
+        {
+          "id": "fresh31-acra-01",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "9720c5a1fea08bc5e99da807f2bcc38666742730f8c769ec946b2f773d61e3a1",
+          "answerSha256": "04bce4652f0042a0f4cc4f119e39636b95dcf1163eda0acde621d26084430e12",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh31-acra-02",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "a78b7389f1218fddfaa08cbbab1953729e5525a940e845c26b60984e3e72465d",
+          "answerSha256": "af03e76baefab23e4acf38d4bc418db31ce03994f7e6dcaf3bc1919dd971b50f",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh31-acra-03",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "06e094ac87c8c9f488ba9f334083b4f162e3bb231b34acb53d3554c3dfcdfffe",
+          "answerSha256": "9b559fa3276f9c463142755ef7f004ba6089dc2173cd4d787ccbbf5e4e4b9296",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh31-acra-04",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "569f18bd228479ea4711ddc4220ecae6b2c8fb3c422ab551d6cbc34765123bd6",
+          "answerSha256": "236111c2222e49a3edb3657206f2d56a2d076f664d1baf7c842c2a18480f6970",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh31-acra-05",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "e006d0f9ddbfb5eeb0bffc45eabf48c387c0a4825b12eb8ce317231d0faf19ac",
+          "answerSha256": "3c2e93ee75a3043b13d0b4bd9f07043f53a6a2e522db32583f84668f634a6e89",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh31-cpf-01",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "14bc33fd6640112d30e50b29554d0677074f86cb397f424f63917078e670e6c3",
+          "answerSha256": "eddec4557f67f99ce6698c638480eaefa3ce1d9252bc0806d1e167ed2a43b5ab",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh31-cpf-02",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "ec830b6a87d2afdc34f75cfeeb55975c82387273093fdaa7ae80fbdff16e15e1",
+          "answerSha256": "b77a8ed12d3326d26bc0e19955dfb5951347375be82f5467209afb0c01cb9526",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh31-cpf-03",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "a0be9243a64bd7ddbf238d16ac3fa0d2db363bda867e62935a53ef0ec269b12d",
+          "answerSha256": "e9e0cbcd032d48edf82e575481da4ed518b8fd20e1421487cf33acda5b3287d0",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh31-mom-01",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "34f3374754b28649a11ace5dab4e177c7deb8e9609a0e5792edd064ba931104d",
+          "answerSha256": "a73ee6746e71d43f80e7f29ef761ef5387c02c1d4307be524fab1794238a6b70",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh31-mom-02",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "2d625ddfec9aaa18309ff99fca59153a3bcdb6334b0ccbd57931b75267d394b4",
+          "answerSha256": "cdd85bec08d3c11f2c449d890786915ae53b13a792262d2772cb8df1ee41dbd7",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh31-iras-01",
+          "authority": "IRAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "84e710f361a555ccff74f4bd47334f659d8298cf84097bb9e7723c488715b0ec",
+          "answerSha256": "8c78ffdae232c84c688f23d7ccb404dfdadeea5bb4d29abab564d1bbc191b029",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh31-iras-02",
+          "authority": "IRAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "450b82e4cba439a0bf34dd4cf4f8bc2fd416da85c26174b4457f316d461d7f94",
+          "answerSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh31-iras-03",
+          "authority": "IRAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "6ed15561ce7885315d70eee3b4ca73c96ee41861b5f30dcf0f72b04d7942fb4b",
+          "answerSha256": "ea54fdcc10c930e27d4130e9a7fe08b5f3262c8c96e9e6ff7a3ebf8fd3e1e1cc",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh31-mas-01",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "f29eca952a1e7a7d6a83080a5759b6f1b5637766948aed928679614826b89ad6",
+          "answerSha256": "e71d2ac14fc78551531c4bcfff459afc39f90e9d7d66eb3cdd42637b27570e82",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "fresh31-mas-02",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "128df3228a50c342e0455709b3b2433c20d0a868bc6fcd70a825a2448a32b2fe",
+          "answerSha256": "e35c589a580e2c93ac688b8594960c864576323d71e910c01acd3b96c3b85d15",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        }
+      ],
+      "networkRequests": 0,
+      "modelRequests": 0
+    },
+    "fixed100-original": {
+      "counts": {
+        "CORRECT": 50,
+        "PARTIAL": 12,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 38
+      },
+      "perAuthority": {
+        "IRAS": {
+          "CORRECT": 9,
+          "PARTIAL": 6,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 5
+        },
+        "CPF": {
+          "CORRECT": 13,
+          "PARTIAL": 2,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 5
+        },
+        "MOM": {
+          "CORRECT": 11,
+          "PARTIAL": 2,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 7
+        },
+        "ACRA": {
+          "CORRECT": 7,
+          "PARTIAL": 0,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 13
+        },
+        "MAS": {
+          "CORRECT": 10,
+          "PARTIAL": 2,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 8
+        }
+      },
+      "grades": [
+        {
+          "id": "iras-input-tax-01",
+          "authority": "IRAS",
+          "grade": "PARTIAL",
+          "questionSha256": "333890d967927d98b290f8c639e5a678ec6ab848277409d77f95bd667027d916",
+          "answerSha256": "96ab147172ce0a476654167bd6567bba8ea05423eff8645d08aa02d167e5442f",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-input-tax-02",
+          "authority": "IRAS",
+          "grade": "PARTIAL",
+          "questionSha256": "5533c092b067d0126964fd42eb329d89768bc0e74bbe792821b458b804a03401",
+          "answerSha256": "b2445dfdb3a0c31897438a3b2486b0ee0df6fcecd3fc92ff047b031df719223b",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-input-tax-03",
+          "authority": "IRAS",
+          "grade": "PARTIAL",
+          "questionSha256": "28311ed64ad42b5287e3a6c2286f9b2c5008eee3f53f061fe07244e505a96a12",
+          "answerSha256": "1ccc2771aedf908d98a6cf17ae89c825f995e66af370d8cdc1a98211d6613f85",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-input-tax-04",
+          "authority": "IRAS",
+          "grade": "PARTIAL",
+          "questionSha256": "14387cd6d59d321c874f1350a17e2c316a2a95148218d0f898577c82972a4507",
+          "answerSha256": "9883c8e7601be42faf2da57df4fcb540325a9e709b63985c49a790fbeff03d90",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-input-tax-05",
+          "authority": "IRAS",
+          "grade": "PARTIAL",
+          "questionSha256": "b9fb868ef3a9c8e7136f37859ce14c684ae61985a08f8085bcef9ba605562a0e",
+          "answerSha256": "96ab147172ce0a476654167bd6567bba8ea05423eff8645d08aa02d167e5442f",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-gst-filing-01",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "e08af5cc5eba0e9cff315a158efbab87461efe49116b139e92f93559ad18df30",
+          "answerSha256": "2619e42f672c98203e22c0d07fc19257b17d30bc1b5c155d0df7f095911fa7ea",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-gst-filing-02",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "ebefa6ec8af883b2a5432e208eb685c36ed890f5c4ee832b800ca708480fe0b6",
+          "answerSha256": "a8dfece8d3b8be3323b93fbad0ca85d94605263bfa53d84b4345cb1253cc9c68",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-gst-filing-03",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "60e539d64a4ce9fd486f89b135dda3344353e8679bd011885945e866e9bbc872",
+          "answerSha256": "5b653d0f08b02b39f7595f29660feee4d8e6a79de4a5390041bd7e66fe704012",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-gst-filing-04",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "eb446d79dd6eefd73534dbabda935a449c52ac05f9184514b8bcf9fe1e136e53",
+          "answerSha256": "abb419f7d6ba3014484bec08b094d297042d35bdfe3b0e4ac073158578d96466",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-gst-filing-05",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "5b3db6d6304c8be581522cc01fe9252b9fd2d219255b5c81820c20b9ad78796c",
+          "answerSha256": "2619e42f672c98203e22c0d07fc19257b17d30bc1b5c155d0df7f095911fa7ea",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-eci-01",
+          "authority": "IRAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "73c623895eb6472bc6a7d46cb0ca86a5f13128f18f1caf48fd3cf42bf835a9d1",
+          "answerSha256": "dcf5103581006be9d7d018d8a18a4fdca149f1f5241189febc3e78ed930ddbb0",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-eci-02",
+          "authority": "IRAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "a97c3d512097e00f2faf78d2c88f123e3dc20d77fc435482fd9a2a91e1da8f4f",
+          "answerSha256": "dcf5103581006be9d7d018d8a18a4fdca149f1f5241189febc3e78ed930ddbb0",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-eci-03",
+          "authority": "IRAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "40ab9ad7fe0ebcc164690e13e562944cddb1d6c4fc597a7914932d5ad5880599",
+          "answerSha256": "d566f8d823b72665f564914426d38a8bfc47da6e44261af03a39b4475aa64b70",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-eci-04",
+          "authority": "IRAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "ab702c7cf687e23c723bdd1bd983400aeb480bd4b2e6e2a0a9a19c534550f6ee",
+          "answerSha256": "af181039ba72e8828dbfc73adc58d3860bc42e5cf11327742dd448a3b6ad87ad",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-eci-05",
+          "authority": "IRAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "730afd0cc59dc24ecb75beb9c372d9d810cfda948387bbd923bf3465975bad9a",
+          "answerSha256": "dcf5103581006be9d7d018d8a18a4fdca149f1f5241189febc3e78ed930ddbb0",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-withholding-tax-01",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "5019dfa4026f009c15f7bce8e29a2e882ca91a1bcc33b737149ee55afbff0571",
+          "answerSha256": "b9a801ba035d81fc21066a0b4f8cc17e6e38eec84e4e416c28d39d99db8f89ee",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-withholding-tax-02",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "0427a855ef3b89e5607e49602837cbd0e1485452478868404f18f100ef993835",
+          "answerSha256": "b9a801ba035d81fc21066a0b4f8cc17e6e38eec84e4e416c28d39d99db8f89ee",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-withholding-tax-03",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "df85338098656ad3be3d1e615f6a1c3a7d39bd8c4680566898a11e7fe729c282",
+          "answerSha256": "b9a801ba035d81fc21066a0b4f8cc17e6e38eec84e4e416c28d39d99db8f89ee",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-withholding-tax-04",
+          "authority": "IRAS",
+          "grade": "PARTIAL",
+          "questionSha256": "53f54e110cbd434a62c6b70193ed040a21d351dbb8378a09312091d3f21675c9",
+          "answerSha256": "158dc279e0bcbbb7799b816d3d3af04507d0975ccae86cc3677a63c6f678c692",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-withholding-tax-05",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "1d1ae4d2adede590105b6f697a7b008c02dd1853a07dcc264864ee47461d0dff",
+          "answerSha256": "b9a801ba035d81fc21066a0b4f8cc17e6e38eec84e4e416c28d39d99db8f89ee",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-additional-wages-definition-01",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "88fcae4719213124d32da13d32def353429d41563b72ef7a17e9a1ec2ce39fd1",
+          "answerSha256": "40668992ca56b0c7db2e5ce61cf3522a15b080ae2c5fbe7aeeeb10cb2ecfe06d",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-additional-wages-definition-02",
+          "authority": "CPF",
+          "grade": "PARTIAL",
+          "questionSha256": "8d7471c09f30ee9cc02ccda6a216b893a27733fb77cea2377a2fa38a0d820b8e",
+          "answerSha256": "16312d07d34344a61483e77833bc5897171399fb114633cf8fb053d3b985c0a9",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-additional-wages-definition-03",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "74300fdeff2728a6f8da97c38de5461244177ac776f7886d0ee4da7b6fbc17bf",
+          "answerSha256": "cd65160074af3fd9c7143b5fffff4cae5c823ded47606a728fb715a9540d1ff0",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-additional-wages-definition-04",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "4daf47ce10c3eb6053b0de09dd687780471da6eb197561cca771f1e9c668f478",
+          "answerSha256": "e059a6bacc2e4c7b062a5b69ec629e5c69752e058f0af2200f62583cb677afb8",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-due-date-01",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "acfb9dc27306b1b2d613de014148eab8ea3b477b36fda6e8bece5f0877a99397",
+          "answerSha256": "cc87ad1b116d143d1322fd59ff77e6dfa5c98d582de2ea0c51a9228bb6c2ef8e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-due-date-02",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "0ed2e5946cf1a6e66aeb8d8cd6669081c5686f23272b99d432f036ea12723e59",
+          "answerSha256": "cc87ad1b116d143d1322fd59ff77e6dfa5c98d582de2ea0c51a9228bb6c2ef8e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-due-date-03",
+          "authority": "CPF",
+          "grade": "PARTIAL",
+          "questionSha256": "56807e8ab3482004f73a42b5f098596dfa3659e45448aa7b037e0eeb7c2413a5",
+          "answerSha256": "cc87ad1b116d143d1322fd59ff77e6dfa5c98d582de2ea0c51a9228bb6c2ef8e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-due-date-04",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "168ea4d6c3f805dbffb389bacfe87ea0016124d5202034e17e45951b4f3301c7",
+          "answerSha256": "6515d6f54a4c3f2f24952ebc182e3c9f01f9e92c0c467b939256b711c858bc22",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-rate-factors-01",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "5908bb102663db17b30b986993825ec61b9ac0b09ec50b38d9fb136c8a6cedf2",
+          "answerSha256": "8f8284a7b817cc231f47070684f676eaf0718f644e467d8c6cc0e0ceb5cde12e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-rate-factors-02",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "32db7cac830eeb1e6016a7ff0cc3f4cd4fa2c7833c48d62fc5e57b68d46541e1",
+          "answerSha256": "89eaaa7b441464ccdc1f06faf75beb27b579fafb1de47f23eb58552d01083cb2",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-rate-factors-03",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "a776a5a236592d319bd064b58fc0138dedf4888f430a06062ae2bbd8e87c980c",
+          "answerSha256": "8f8284a7b817cc231f47070684f676eaf0718f644e467d8c6cc0e0ceb5cde12e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-rate-factors-04",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "fd93012a83a02c6d67b1735fbb3196567d4e101ae21889f70b3dcc299527d8ef",
+          "answerSha256": "c67c2d0ffc9224458cac20d05e8a522b4a8a74875c637f0d4f5c1eb1f6212f1e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-aw-ceiling-01",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "8120ed0392ce6f582a761fd1bea32bf357c98bf74169f5b5ce2e340757d1cd24",
+          "answerSha256": "39bb92611472173535368369a4e3d57422c06cccc64d1f52d2d9a1b4eb0476b9",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-aw-ceiling-02",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "2ae934d1eebdd27ed15919548ec830e098d885bdc408ab1cedd10bbe3e34d887",
+          "answerSha256": "0eeef37861b13b40d10bfb85926c11723f6c59a25d95db8d13edfe4d412d1b52",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-aw-ceiling-03",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "3d6a1c482836afbb2bfbbaf7563a54f32cbe16c8950d8f72e871c1633d5606de",
+          "answerSha256": "0eeef37861b13b40d10bfb85926c11723f6c59a25d95db8d13edfe4d412d1b52",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-aw-ceiling-04",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "d9435c9e20e3dca26b221d30e1e820e527c88f95f28679a179b92e5f7ef3efe6",
+          "answerSha256": "39bb92611472173535368369a4e3d57422c06cccc64d1f52d2d9a1b4eb0476b9",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-bonus-classification-01",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "6deb91272bfd86d1292b15a592d6c87b65e879654bba3b340ddf4b37cdf8d0fe",
+          "answerSha256": "95c9761acfe0b3704e727f3f568a6d70687307789175a4c702bd07caaf64c39a",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-bonus-classification-02",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "012ade6e6db99440edea1c94dc0af5992a9606727d7096eee9eba46ceba5f001",
+          "answerSha256": "30b1b9d313253530ac68a1b29e0331e0f3bfd612764c87ebfeead96b42e469b2",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-bonus-classification-03",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "abc3cdcc56aeb1e127b4b5e025c4a45770e15baf55da0a7cee99bef558bf0ce4",
+          "answerSha256": "2ea2cea856ac8703362cdc39fe283195eb284812e9e6d2c2809d5390af5f4b01",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-bonus-classification-04",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "c667309e6436025a528bd0f8af6a00d3e52ba0bcc9f2003f066c327982b0d8f5",
+          "answerSha256": "5d50002a142d5856e5433a9abbf8ed720b37f7eaf1edc1cdc0f82027ff2c1ed8",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-salary-timing-01",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "0c538df1bbbc11c06dd051ddfa75f3007199bf39ccc887a3c3abbabc5c729935",
+          "answerSha256": "d7f4e6172a2c82358ba88cd7e705b1ab7398f00b82ec1d2ba55ec7f7a3eb6bc8",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-salary-timing-02",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "c2c143b171010d03b7073d64ace14f2419602e444d0129374651514c126578e9",
+          "answerSha256": "c44f1ee845557015dd21724e858bc0211b2ba9608c67bfc1f834dcade1182bf7",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-salary-timing-03",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "fc644e301ddc596c6d0d5a5720ee30a5a8589261748e683e0ea57e89f2cc2782",
+          "answerSha256": "376c341b112b6dcea4dc20bfc6eef582eb9fff21d02fef329f1e6a7e434e0f94",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-salary-timing-04",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "2d9318588ad2921f7d599d5c87ddca172b6200be55ec805d78f8896e26bf7160",
+          "answerSha256": "02ff126ebfb2c4d185c738c45623739be03a99562d1632fa4fd9477608b0400b",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-final-salary-01",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "43ed93ca911f32ba59eddbddde3043998829317e2d19291021eeb9102d88a9c1",
+          "answerSha256": "c04fbeea25f70f0483defe0b9c676bf0fe96cbf22f4fd7e50063d2aba4020bee",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-final-salary-02",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "2a25272a550a8be8b909de6b8c9380b708b0774b0e4ea8e0384d481888517247",
+          "answerSha256": "ce8a2f130906bec84b9923c42d92073391d2e4a0470c7cfbd0e54e4d3fff2540",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-final-salary-03",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "37c8adbc942dbcc37a13083f052d8e6b3e798b3b07f8776fb05445782b3cebd6",
+          "answerSha256": "f6ec6fe507f983beb82e97aebcbc209b94eda542616f48dabe6ef5029372a99e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-final-salary-04",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "cef65fb7cc696c81446b529ad88b33edc7f1c4ccb19bab363a0e7e58a5cd4c4c",
+          "answerSha256": "d52d062bef542aa13e21832bff2c59323d392a0b69ca28ca34cf8c3c0104b67c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-annual-leave-01",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "9f66de4327ac62e396de0cf557252e1562f97c8a20c1fceb6fe7bf755f42b13e",
+          "answerSha256": "6ce04550008cf70acfb8064866f47b8130cb0f1989cd4d43f32a832695fb89f4",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-annual-leave-02",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "489cd68246722c17fbe367d0dc3d135f633e5497e39469f6ca3cefcb647b4622",
+          "answerSha256": "5a37399458289a51e3af95d24920912cb65388f87b6e65f7e10a25051c3fcbd5",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-annual-leave-03",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "8089dc4266cc77d8ed015b31150cf583d9c39bd49d0e0198dce49d35306b0bac",
+          "answerSha256": "f714402d85458f04f56a0e620048ce5a0b423e16ff4a752c31a33c45b89405ad",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-annual-leave-04",
+          "authority": "MOM",
+          "grade": "PARTIAL",
+          "questionSha256": "47bc4a0983406b7ca6942ea1e11d03f8e22dfddfab2f7d8efb3340f157c7c5e5",
+          "answerSha256": "de38c41e07f06cf4e13cad3a5b5b52a5b38503f1a6d1473107cb3e5723bfdcae",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-salary-deductions-01",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "102aff46cf0f88ae4ba8e3f50ce38ed28dbe4e21b97397fda5c982cbc69a36e0",
+          "answerSha256": "3d92e8da30943b519e670751086a25468ba8fed42c83aa902a9c716711ab5216",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-salary-deductions-02",
+          "authority": "MOM",
+          "grade": "PARTIAL",
+          "questionSha256": "af8666c0d2145981c20021de3d9b04686c46675b137897ecfcc42bcf467d749f",
+          "answerSha256": "27a70cebf055b37afdd5ab1b149df202ed555814b538579bf5838f8c723c946c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-salary-deductions-03",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "d5218bac598d96edc713fc14760a06fc11d46ecf389fe4bb3d8891180fff36fe",
+          "answerSha256": "8bccd1241cacf57b0ccb26934f9f81d0b77fd5ef9c9c1855ec5c4deef1da8cb5",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-salary-deductions-04",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "8d6da24de9e9bedfdae011027a10ece5d74228713389d4c566a19c0a313b3957",
+          "answerSha256": "cf313b2e262e18bf17addaf950287a7ba537e853bb852d20e57260a144a0098b",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-overtime-eligibility-01",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "5a6590db8eb6de8e9b51c53792b78b04cab28ee07d9fdd8638bc14428a1e4b3e",
+          "answerSha256": "912215da2d85a8d69e9c8efe06ab011fce4a90c1842e67d95b59638aa7c825d8",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-overtime-eligibility-02",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "cdc9c6eaff27c02adafbfc81b7db910a135b24354a2b36532069bc8fcfe3c58b",
+          "answerSha256": "21a809d91ca46649a8e769af1b496a16b8aa0b376739516c9b022ab20697cc2f",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-overtime-eligibility-03",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "f7bf35bd88582270b93037c06cfef9c8119af48a2d77e26e447125da7f916b15",
+          "answerSha256": "71e3ae440d9a7df6198040fea6be828a71f48b1d55c7612d8ba120290e2d6f3b",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-overtime-eligibility-04",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "3079e8cc50ff90f402852927ebcf2dbadfd8b51a53bfbdda2de6025615850e87",
+          "answerSha256": "5700356b1ee2c1fc86797d6138b7d06d40980a1a0d88fb5b2b39f3d5fab74a8c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-agm-deadlines-01",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "c5031686db81563b80fb9808e2f3bcded16cc6e9cabd843afdcb0f7d5e53744b",
+          "answerSha256": "170fb912c635da3d2d25b556a6c931a5ef58f7799805384367f12dca825908dc",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-agm-deadlines-02",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "15c1de51d6b393aadd3c471ef2106e92b63d14af9969f98f9344b7500fb2c6ba",
+          "answerSha256": "1419e869d21fda8946b64d90de23362512278e690e57508d4c72d2a76e84e17f",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-agm-deadlines-03",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "78778d9559a402fc245aa1342ab606c27eb8ed98cd244ce40e834c76cd88a05c",
+          "answerSha256": "5535fcf3ec227ee790073ddcd21ea7cb4eb5166c902bda68fad3df076c344802",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-agm-deadlines-04",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "06f96bcc0da3ea21d2751be006e3e8123102505df376e71bfd7e34898d3c9ed0",
+          "answerSha256": "50d66b154964bdf78f379d471563cc82f58a4f60e1692f7237fe7a2baa1ceaee",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-annual-returns-01",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "2b4145ea21cdc8bfdd36b2bc9cabbcd5e50432d25919b4049ee16636fe00e1b8",
+          "answerSha256": "8c3bdd3d0548273c2d26177a4cf1e9a8f75ea517a57a75310bd3ff6fd5b80ce0",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-annual-returns-02",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "603f9eb5c9c5b948440771265f1caf9b658f1a765a3ac3253805f6d85e1a18b3",
+          "answerSha256": "286f47f781944b66c5661ac1005ffcbdf9db1204d2802231b567cd3813e57a00",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-annual-returns-03",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "ced62b28d2b49f8ffc8ed0179018f7d115bfe9abc02b64c45c047ad2d4071593",
+          "answerSha256": "e111dd07147f13bb31d8d93faba9822e4bd45b2837e08c64d140789c10e42f9a",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-annual-returns-04",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "27c9fa6bec2ca7d884f43921204aec756b3c922c85d7ce6a08785ecd9e6feffe",
+          "answerSha256": "4b7d518450c546b2f454ef84fe89774f6a25e5b2accb3b5231ea549cf2d64a34",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-audit-exemption-01",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "51e3f1a4acebff189fa1a0b1f11d4aea71f83f240f2a1b5bb8b304dd81ec88c5",
+          "answerSha256": "7f614f64197481ef509c2a3f05dd9edd22072b200b03a87b09d17dc10c04d7a0",
+          "reviewMethod": "INDEPENDENT_FINAL_ANSWER_REVIEW"
+        },
+        {
+          "id": "acra-audit-exemption-02",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "b8bd2f496a5e439a5936751091f73b2150e1b8123ab205adc96fea2aa773a4c8",
+          "answerSha256": "3fe8b2ce3cc3eb06e6981a0f73b4917a0368f7c535f9a303e5c5ddfb769a80fc",
+          "reviewMethod": "INDEPENDENT_FINAL_ANSWER_REVIEW"
+        },
+        {
+          "id": "acra-audit-exemption-03",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "5e241a9c1ba46175a7d3c48a298584c45b16ed66340a653f3ed4c75515bb24f8",
+          "answerSha256": "f5f5f0a6189e779af94c383eddefd4782a4053cd7590bf6cd441f077fc1bc471",
+          "reviewMethod": "INDEPENDENT_FINAL_ANSWER_REVIEW"
+        },
+        {
+          "id": "acra-audit-exemption-04",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "6ad174c1fcb05610510943d584a0edff196b759ee52d41a2538e2a944cd0dc0d",
+          "answerSha256": "baa719c7d0f4907b676eaff2b3124fad3387d259f10d26e0eaf7673cb7c0e260",
+          "reviewMethod": "INDEPENDENT_FINAL_ANSWER_REVIEW"
+        },
+        {
+          "id": "acra-annual-return-officer-particulars-01",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "c1678685c053b2bd907909c47b3c23c3586d0f1f522e685b75b23625307044f7",
+          "answerSha256": "b22f5bb17a63755c44d230a3ce0eafc4b21d7b009980db0e48653784382013db",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-annual-return-officer-particulars-02",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "c8cf75e0bfecf38d68c8067a256fdd796cd5f6a9af90819ec18624500b826702",
+          "answerSha256": "ca2a2f5468d9c8978f5bbf6755c6c35149c5704381403d5d51cfcb8e5b524760",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-annual-return-officer-particulars-03",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "97e11374610ead454ea36e5e1400443791c9ed22cafa603af3496cecb989c2e3",
+          "answerSha256": "b22f5bb17a63755c44d230a3ce0eafc4b21d7b009980db0e48653784382013db",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-annual-return-officer-particulars-04",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "c569c08a2221533a38b25dccaa70b19871393816850793b8438a15f708796efd",
+          "answerSha256": "b22f5bb17a63755c44d230a3ce0eafc4b21d7b009980db0e48653784382013db",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-secretary-appointment-01",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "09dd79f56d785d43e07712d82fc84983971c27eea200e03156634ecb324a4d32",
+          "answerSha256": "bd92dc73c871c6c3cdccb8ea8ecc7f5afe2cb43a9bda4e3c6ba1f591f533fe29",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-secretary-appointment-02",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "463b63754e0cfa5efe1c708754ce5a305722bf798ba03a0406418abe0fa22df1",
+          "answerSha256": "e63582f03d6c02de0bcf5a3454c5ad1ba21a656216f699d8de0e2c55a381a005",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-secretary-appointment-03",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "2aab937d325b0cac62c4049fe3df308c21af8feadbcc0d2ba54f9e4fc800fd3b",
+          "answerSha256": "ec8c0c32817ec8e8f0b369ad9330885022a124e29db0b4f1e71d1c2a9f413306",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-secretary-appointment-04",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "7801477ae4e17b5e5babf229fc220098bffd241f0b248c69c75a89cff35bcba7",
+          "answerSha256": "bdad90d8477a3b3bf4b5e22d3f05b93aa157e8aee803673944a5c371e40ead8a",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-fund-management-licence-01",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "4a8e7de0bebba1a92dc7d611bb20fd9cb21bbaf2e63fd6771e7ea1f50a974dd6",
+          "answerSha256": "a23e87fde8b6ec0a9117b19a0b64654b45f29f3bac30cc0ef650ccb2ed61617c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-fund-management-licence-02",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "8a108e71878feb28ce984cbcae5cddab4d02e2ee3eb385c672e5d9800519ea16",
+          "answerSha256": "5bc82909a4eb7d1b24f9be70928b15ec3d3e744302f2d795680c1f84277237e1",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-fund-management-licence-03",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "d0ebaf08c63d2ec7316314d956227996fbee2ced4c8ff501b1e33c0c5059554a",
+          "answerSha256": "a23e87fde8b6ec0a9117b19a0b64654b45f29f3bac30cc0ef650ccb2ed61617c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-fund-management-licence-04",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "4013af1a3663af5eafc2cfe9e5bd4c95b18b4ce6d84e3b1af59ec5777243b422",
+          "answerSha256": "a23e87fde8b6ec0a9117b19a0b64654b45f29f3bac30cc0ef650ccb2ed61617c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-vcfm-01",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "02a1253d35e767869c8655631d19f99c34f76723736c113bd2494f70fe59ae63",
+          "answerSha256": "e0baaeb804028cec1994032629de387863797b8bf6c0fbd326a74ab11f591c49",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-vcfm-02",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "609e5b25b8817aae8783576c74708a838f11869549192bfde090f015a82d66f5",
+          "answerSha256": "a0720090e9ebafeda5786a848bd3743728a466a62b33447bc8faf392b39a6242",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-vcfm-03",
+          "authority": "MAS",
+          "grade": "PARTIAL",
+          "questionSha256": "55a7f88a0269b442af18b41ebc8cb6213ecdc1f6db073872b6f6852876b4300c",
+          "answerSha256": "31fafc368b0d5d249e8d8aba9efb2f1716ef711715740a62d75cf8b7f9ffc047",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-vcfm-04",
+          "authority": "MAS",
+          "grade": "PARTIAL",
+          "questionSha256": "f3430262438051db588dfa0991307a6a6d2007b3303aee59fab50f39d699c41d",
+          "answerSha256": "aadf09e6ae4d41af3349e6a0be6a7e892a94ff8b87e2842cee90a28ae005aaa7",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-class-exemptions-01",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "b6d8724cd5977daaebd601f6540d03fec0af0d1dcbc498868a5e422330146d5f",
+          "answerSha256": "9a86f50e9b19449447aa310185bbf5941fa6baedaaf5e83b466fa6cfde0235ed",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-class-exemptions-02",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "a89f1cd9f094695ba04b571c24f0fe317bae18d804028173ac4f6d818f02f7b4",
+          "answerSha256": "9a86f50e9b19449447aa310185bbf5941fa6baedaaf5e83b466fa6cfde0235ed",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-class-exemptions-03",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "1bd979ba1f8ec5c27d3a2e75af231fe49c24ce39bf60c6bfbe71b601f065b4aa",
+          "answerSha256": "bd4ca8bbf4fa6205a1117443dcc32b8570f2ed124a8f9e63a43c84db6a8ea67c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-class-exemptions-04",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "3eeaef4050f72dadaf32fae0a6233e54f60d738c0ea9835d4aa3703630a90064",
+          "answerSha256": "9a86f50e9b19449447aa310185bbf5941fa6baedaaf5e83b466fa6cfde0235ed",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-qdc-reporting-01",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "0f3d15bc410a7c1993544b44c49f7a5fc38e172b0c8fe5509132486fc333a8dc",
+          "answerSha256": "924266115d38245fdaf0df458725ca3a40ed37f63e29f8b4b12fef747efe095a",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-qdc-reporting-02",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "726be9ac8526e9ae69dff7f4f98acc63c05f186b6847362791fdb92b91dd3242",
+          "answerSha256": "924266115d38245fdaf0df458725ca3a40ed37f63e29f8b4b12fef747efe095a",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-qdc-reporting-03",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "993b13c5710227c6f93cff9bec202dc621990c68e743a3cb40b047f737132e23",
+          "answerSha256": "7476f54f439f21004f5c129a3fe5be8d6b26816be766ef789e2acdb80fd670c4",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-qdc-reporting-04",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "f5c8d125df83681f0d8f860902fcd3d3d2fff68df3db936889f417093772afdb",
+          "answerSha256": "1daead0381ff80994222896bcdd86bf9f3cb1822760e817ad13ae5125f172086",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-regulatory-notifications-01",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "7b72f97349e22bf5d93bdc5b2463ee12dd0e78fea744887308d35f2b8acc01f9",
+          "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-regulatory-notifications-02",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "3b35dd28183bef6a26384e75a7e0b25927731817acb18df1545523d85e2b7f4a",
+          "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-regulatory-notifications-03",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "dcbdea8b915cbafcf67ee03ca1f01f3e36f8561f6c2926e5c48ff64b24e28d7d",
+          "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-regulatory-notifications-04",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "b4831f1ea65cf6b7d7910e5289b37feec0623a0988be24bf36e109734b2b9c55",
+          "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        }
+      ],
+      "networkRequests": 0,
+      "modelRequests": 0
+    },
+    "fixed100-enriched": {
+      "counts": {
+        "CORRECT": 66,
+        "PARTIAL": 8,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 26
+      },
+      "perAuthority": {
+        "IRAS": {
+          "CORRECT": 15,
+          "PARTIAL": 3,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 2
+        },
+        "CPF": {
+          "CORRECT": 14,
+          "PARTIAL": 1,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 5
+        },
+        "MOM": {
+          "CORRECT": 12,
+          "PARTIAL": 2,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 6
+        },
+        "ACRA": {
+          "CORRECT": 15,
+          "PARTIAL": 0,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 5
+        },
+        "MAS": {
+          "CORRECT": 10,
+          "PARTIAL": 2,
+          "INCORRECT": 0,
+          "UNSUPPORTED": 8
+        }
+      },
+      "grades": [
+        {
+          "id": "iras-input-tax-01",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "333890d967927d98b290f8c639e5a678ec6ab848277409d77f95bd667027d916",
+          "answerSha256": "1b645f965a90a640dec71d7bfaff6cabfbcb43dfcbb048f902fc37d3fc225d70",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-input-tax-02",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "5533c092b067d0126964fd42eb329d89768bc0e74bbe792821b458b804a03401",
+          "answerSha256": "889ea7c0e21a68ae8714252edbf256e6c28b256f2fd338637063cff7635b7e02",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-input-tax-03",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "28311ed64ad42b5287e3a6c2286f9b2c5008eee3f53f061fe07244e505a96a12",
+          "answerSha256": "4f1e08c24d502e1a48bb1908c6e7085df233653e95cd84af4ba46e37ff8874d7",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-input-tax-04",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "14387cd6d59d321c874f1350a17e2c316a2a95148218d0f898577c82972a4507",
+          "answerSha256": "5b85c5ebd340d518f918308a222481f5b49a6eff4a2372cc9de58f581bf5bc83",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-input-tax-05",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "b9fb868ef3a9c8e7136f37859ce14c684ae61985a08f8085bcef9ba605562a0e",
+          "answerSha256": "1b645f965a90a640dec71d7bfaff6cabfbcb43dfcbb048f902fc37d3fc225d70",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-gst-filing-01",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "e08af5cc5eba0e9cff315a158efbab87461efe49116b139e92f93559ad18df30",
+          "answerSha256": "2619e42f672c98203e22c0d07fc19257b17d30bc1b5c155d0df7f095911fa7ea",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-gst-filing-02",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "ebefa6ec8af883b2a5432e208eb685c36ed890f5c4ee832b800ca708480fe0b6",
+          "answerSha256": "a8dfece8d3b8be3323b93fbad0ca85d94605263bfa53d84b4345cb1253cc9c68",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-gst-filing-03",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "60e539d64a4ce9fd486f89b135dda3344353e8679bd011885945e866e9bbc872",
+          "answerSha256": "5b653d0f08b02b39f7595f29660feee4d8e6a79de4a5390041bd7e66fe704012",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-gst-filing-04",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "eb446d79dd6eefd73534dbabda935a449c52ac05f9184514b8bcf9fe1e136e53",
+          "answerSha256": "abb419f7d6ba3014484bec08b094d297042d35bdfe3b0e4ac073158578d96466",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-gst-filing-05",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "5b3db6d6304c8be581522cc01fe9252b9fd2d219255b5c81820c20b9ad78796c",
+          "answerSha256": "2619e42f672c98203e22c0d07fc19257b17d30bc1b5c155d0df7f095911fa7ea",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-eci-01",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "73c623895eb6472bc6a7d46cb0ca86a5f13128f18f1caf48fd3cf42bf835a9d1",
+          "answerSha256": "712c605ab2578bcfbe51b62dd3e8f503f923fadc325419fedbbf15d8a6fe8619",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-eci-02",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "a97c3d512097e00f2faf78d2c88f123e3dc20d77fc435482fd9a2a91e1da8f4f",
+          "answerSha256": "712c605ab2578bcfbe51b62dd3e8f503f923fadc325419fedbbf15d8a6fe8619",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-eci-03",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "40ab9ad7fe0ebcc164690e13e562944cddb1d6c4fc597a7914932d5ad5880599",
+          "answerSha256": "0de88bfb520941c447e0424a440ef2571dfadb8cffef9564af4d79555cb35e2e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-eci-04",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "ab702c7cf687e23c723bdd1bd983400aeb480bd4b2e6e2a0a9a19c534550f6ee",
+          "answerSha256": "539cb51673a53aedba95b77d5772ab873d20305d573a8dc3676d9dcc981061ee",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-eci-05",
+          "authority": "IRAS",
+          "grade": "CORRECT",
+          "questionSha256": "730afd0cc59dc24ecb75beb9c372d9d810cfda948387bbd923bf3465975bad9a",
+          "answerSha256": "712c605ab2578bcfbe51b62dd3e8f503f923fadc325419fedbbf15d8a6fe8619",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-withholding-tax-01",
+          "authority": "IRAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "5019dfa4026f009c15f7bce8e29a2e882ca91a1bcc33b737149ee55afbff0571",
+          "answerSha256": "09cc28799c24142e5b46198c1b6da372d6aef9488aeeb25779af3ea736cdca60",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-withholding-tax-02",
+          "authority": "IRAS",
+          "grade": "PARTIAL",
+          "questionSha256": "0427a855ef3b89e5607e49602837cbd0e1485452478868404f18f100ef993835",
+          "answerSha256": "a53eb9bb9e1ddd325ea3f364de5a9fe025bd89bb865ab1b09e825199684b7ed8",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-withholding-tax-03",
+          "authority": "IRAS",
+          "grade": "PARTIAL",
+          "questionSha256": "df85338098656ad3be3d1e615f6a1c3a7d39bd8c4680566898a11e7fe729c282",
+          "answerSha256": "968e57fb310f1e79d641fb02b5bb7adc371287b0e388da01bd80a46b68e47c82",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-withholding-tax-04",
+          "authority": "IRAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "53f54e110cbd434a62c6b70193ed040a21d351dbb8378a09312091d3f21675c9",
+          "answerSha256": "e3f8f34cba91f95ebfdd875786c116c4b990d1f2ad63e21ad7cf256f85fb05f1",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "iras-withholding-tax-05",
+          "authority": "IRAS",
+          "grade": "PARTIAL",
+          "questionSha256": "1d1ae4d2adede590105b6f697a7b008c02dd1853a07dcc264864ee47461d0dff",
+          "answerSha256": "2e80335012b15b71e86b4aa6d09b25acf3132a3f73bc15784810a08e161403cf",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-additional-wages-definition-01",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "88fcae4719213124d32da13d32def353429d41563b72ef7a17e9a1ec2ce39fd1",
+          "answerSha256": "40668992ca56b0c7db2e5ce61cf3522a15b080ae2c5fbe7aeeeb10cb2ecfe06d",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-additional-wages-definition-02",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "8d7471c09f30ee9cc02ccda6a216b893a27733fb77cea2377a2fa38a0d820b8e",
+          "answerSha256": "f48fbac66185ecdc08fffb711722f90c2c4b42eb10b798d2be68f5e16548ff8d",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-additional-wages-definition-03",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "74300fdeff2728a6f8da97c38de5461244177ac776f7886d0ee4da7b6fbc17bf",
+          "answerSha256": "cd65160074af3fd9c7143b5fffff4cae5c823ded47606a728fb715a9540d1ff0",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-additional-wages-definition-04",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "4daf47ce10c3eb6053b0de09dd687780471da6eb197561cca771f1e9c668f478",
+          "answerSha256": "e059a6bacc2e4c7b062a5b69ec629e5c69752e058f0af2200f62583cb677afb8",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-due-date-01",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "acfb9dc27306b1b2d613de014148eab8ea3b477b36fda6e8bece5f0877a99397",
+          "answerSha256": "cc87ad1b116d143d1322fd59ff77e6dfa5c98d582de2ea0c51a9228bb6c2ef8e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-due-date-02",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "0ed2e5946cf1a6e66aeb8d8cd6669081c5686f23272b99d432f036ea12723e59",
+          "answerSha256": "cc87ad1b116d143d1322fd59ff77e6dfa5c98d582de2ea0c51a9228bb6c2ef8e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-due-date-03",
+          "authority": "CPF",
+          "grade": "PARTIAL",
+          "questionSha256": "56807e8ab3482004f73a42b5f098596dfa3659e45448aa7b037e0eeb7c2413a5",
+          "answerSha256": "cc87ad1b116d143d1322fd59ff77e6dfa5c98d582de2ea0c51a9228bb6c2ef8e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-due-date-04",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "168ea4d6c3f805dbffb389bacfe87ea0016124d5202034e17e45951b4f3301c7",
+          "answerSha256": "6515d6f54a4c3f2f24952ebc182e3c9f01f9e92c0c467b939256b711c858bc22",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-rate-factors-01",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "5908bb102663db17b30b986993825ec61b9ac0b09ec50b38d9fb136c8a6cedf2",
+          "answerSha256": "66430ee827a299296dfe7e32eae3692e47c74f297a6e1d9a4e5c3c31619b285d",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-rate-factors-02",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "32db7cac830eeb1e6016a7ff0cc3f4cd4fa2c7833c48d62fc5e57b68d46541e1",
+          "answerSha256": "89eaaa7b441464ccdc1f06faf75beb27b579fafb1de47f23eb58552d01083cb2",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-rate-factors-03",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "a776a5a236592d319bd064b58fc0138dedf4888f430a06062ae2bbd8e87c980c",
+          "answerSha256": "66430ee827a299296dfe7e32eae3692e47c74f297a6e1d9a4e5c3c31619b285d",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-rate-factors-04",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "fd93012a83a02c6d67b1735fbb3196567d4e101ae21889f70b3dcc299527d8ef",
+          "answerSha256": "f7b88b5ef59ded32455424c3be80ed33b8a10472d08a1aadf3fdbcb7dfca039c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-aw-ceiling-01",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "8120ed0392ce6f582a761fd1bea32bf357c98bf74169f5b5ce2e340757d1cd24",
+          "answerSha256": "2fa679a809b326d7067f1efc18f7172b7b79c94d1c068ef0a42ca784ab6b81b9",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-aw-ceiling-02",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "2ae934d1eebdd27ed15919548ec830e098d885bdc408ab1cedd10bbe3e34d887",
+          "answerSha256": "a56126a41991510390420ed775ac4ac1c163315b563527b803b41634ead339ef",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-aw-ceiling-03",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "3d6a1c482836afbb2bfbbaf7563a54f32cbe16c8950d8f72e871c1633d5606de",
+          "answerSha256": "a56126a41991510390420ed775ac4ac1c163315b563527b803b41634ead339ef",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-aw-ceiling-04",
+          "authority": "CPF",
+          "grade": "CORRECT",
+          "questionSha256": "d9435c9e20e3dca26b221d30e1e820e527c88f95f28679a179b92e5f7ef3efe6",
+          "answerSha256": "2fa679a809b326d7067f1efc18f7172b7b79c94d1c068ef0a42ca784ab6b81b9",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-bonus-classification-01",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "6deb91272bfd86d1292b15a592d6c87b65e879654bba3b340ddf4b37cdf8d0fe",
+          "answerSha256": "95c9761acfe0b3704e727f3f568a6d70687307789175a4c702bd07caaf64c39a",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-bonus-classification-02",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "012ade6e6db99440edea1c94dc0af5992a9606727d7096eee9eba46ceba5f001",
+          "answerSha256": "30b1b9d313253530ac68a1b29e0331e0f3bfd612764c87ebfeead96b42e469b2",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-bonus-classification-03",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "abc3cdcc56aeb1e127b4b5e025c4a45770e15baf55da0a7cee99bef558bf0ce4",
+          "answerSha256": "2ea2cea856ac8703362cdc39fe283195eb284812e9e6d2c2809d5390af5f4b01",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "cpf-cpf-bonus-classification-04",
+          "authority": "CPF",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "c667309e6436025a528bd0f8af6a00d3e52ba0bcc9f2003f066c327982b0d8f5",
+          "answerSha256": "5d50002a142d5856e5433a9abbf8ed720b37f7eaf1edc1cdc0f82027ff2c1ed8",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-salary-timing-01",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "0c538df1bbbc11c06dd051ddfa75f3007199bf39ccc887a3c3abbabc5c729935",
+          "answerSha256": "d7f4e6172a2c82358ba88cd7e705b1ab7398f00b82ec1d2ba55ec7f7a3eb6bc8",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-salary-timing-02",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "c2c143b171010d03b7073d64ace14f2419602e444d0129374651514c126578e9",
+          "answerSha256": "04a06b611881867bc31a57cf4729a5395c9eb67eab29d072c72d1388564d64e0",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-salary-timing-03",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "fc644e301ddc596c6d0d5a5720ee30a5a8589261748e683e0ea57e89f2cc2782",
+          "answerSha256": "b5291d86c0fa4277f2e8dfabad820dff62216db0844122385d89c3908b4e3781",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-salary-timing-04",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "2d9318588ad2921f7d599d5c87ddca172b6200be55ec805d78f8896e26bf7160",
+          "answerSha256": "02ff126ebfb2c4d185c738c45623739be03a99562d1632fa4fd9477608b0400b",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-final-salary-01",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "43ed93ca911f32ba59eddbddde3043998829317e2d19291021eeb9102d88a9c1",
+          "answerSha256": "fd865713bd68ec3b0ab8a71d43345bb3a120531cf7b00fe5efbbe43bcf3cbd08",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-final-salary-02",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "2a25272a550a8be8b909de6b8c9380b708b0774b0e4ea8e0384d481888517247",
+          "answerSha256": "5a5c30428bfb8bc9eea6bc8086fc97ea2f20b8437c02b5e3771b2b3fd496cfbe",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-final-salary-03",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "37c8adbc942dbcc37a13083f052d8e6b3e798b3b07f8776fb05445782b3cebd6",
+          "answerSha256": "c691eaea696ffca85cbc22e0111a7295046472855d76b77c9deb2e0aadf5d428",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-final-salary-04",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "cef65fb7cc696c81446b529ad88b33edc7f1c4ccb19bab363a0e7e58a5cd4c4c",
+          "answerSha256": "77b25540bc2a6456d9b12af1074a3d19d840fad8cb12a05de2e42c9ae358efc6",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-annual-leave-01",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "9f66de4327ac62e396de0cf557252e1562f97c8a20c1fceb6fe7bf755f42b13e",
+          "answerSha256": "77102ef09700de636edb62996f487c69769da00d10a75a459ab4068d30dfa2f6",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-annual-leave-02",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "489cd68246722c17fbe367d0dc3d135f633e5497e39469f6ca3cefcb647b4622",
+          "answerSha256": "ef20019c4e4af1b657237549168e96311a50e04bf7e0fb8f11b80965291fcba6",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-annual-leave-03",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "8089dc4266cc77d8ed015b31150cf583d9c39bd49d0e0198dce49d35306b0bac",
+          "answerSha256": "ed7c9c1df5910850301ab6ab860e5a5ea6805d76376f77c12312161475369623",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-annual-leave-04",
+          "authority": "MOM",
+          "grade": "PARTIAL",
+          "questionSha256": "47bc4a0983406b7ca6942ea1e11d03f8e22dfddfab2f7d8efb3340f157c7c5e5",
+          "answerSha256": "66d88486709b7e760262715296d857cfee6da9799ada8012fae5515a657a17f6",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-salary-deductions-01",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "102aff46cf0f88ae4ba8e3f50ce38ed28dbe4e21b97397fda5c982cbc69a36e0",
+          "answerSha256": "3d92e8da30943b519e670751086a25468ba8fed42c83aa902a9c716711ab5216",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-salary-deductions-02",
+          "authority": "MOM",
+          "grade": "PARTIAL",
+          "questionSha256": "af8666c0d2145981c20021de3d9b04686c46675b137897ecfcc42bcf467d749f",
+          "answerSha256": "27a70cebf055b37afdd5ab1b149df202ed555814b538579bf5838f8c723c946c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-salary-deductions-03",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "d5218bac598d96edc713fc14760a06fc11d46ecf389fe4bb3d8891180fff36fe",
+          "answerSha256": "8bccd1241cacf57b0ccb26934f9f81d0b77fd5ef9c9c1855ec5c4deef1da8cb5",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-salary-deductions-04",
+          "authority": "MOM",
+          "grade": "CORRECT",
+          "questionSha256": "8d6da24de9e9bedfdae011027a10ece5d74228713389d4c566a19c0a313b3957",
+          "answerSha256": "cf313b2e262e18bf17addaf950287a7ba537e853bb852d20e57260a144a0098b",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-overtime-eligibility-01",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "5a6590db8eb6de8e9b51c53792b78b04cab28ee07d9fdd8638bc14428a1e4b3e",
+          "answerSha256": "912215da2d85a8d69e9c8efe06ab011fce4a90c1842e67d95b59638aa7c825d8",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-overtime-eligibility-02",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "cdc9c6eaff27c02adafbfc81b7db910a135b24354a2b36532069bc8fcfe3c58b",
+          "answerSha256": "21a809d91ca46649a8e769af1b496a16b8aa0b376739516c9b022ab20697cc2f",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-overtime-eligibility-03",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "f7bf35bd88582270b93037c06cfef9c8119af48a2d77e26e447125da7f916b15",
+          "answerSha256": "71e3ae440d9a7df6198040fea6be828a71f48b1d55c7612d8ba120290e2d6f3b",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mom-overtime-eligibility-04",
+          "authority": "MOM",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "3079e8cc50ff90f402852927ebcf2dbadfd8b51a53bfbdda2de6025615850e87",
+          "answerSha256": "5700356b1ee2c1fc86797d6138b7d06d40980a1a0d88fb5b2b39f3d5fab74a8c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-agm-deadlines-01",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "c5031686db81563b80fb9808e2f3bcded16cc6e9cabd843afdcb0f7d5e53744b",
+          "answerSha256": "a0e47e49f05ce9325535679224a51173930d836d1328786d0b3d96cec6c7b62e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-agm-deadlines-02",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "15c1de51d6b393aadd3c471ef2106e92b63d14af9969f98f9344b7500fb2c6ba",
+          "answerSha256": "50f6dad5e5ece11abdc6678e42c146f8094a94fcdf8917bead9e72c4545d4ba5",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-agm-deadlines-03",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "78778d9559a402fc245aa1342ab606c27eb8ed98cd244ce40e834c76cd88a05c",
+          "answerSha256": "f4fa01448bada21780eb4428bb9a765b3a8004b3e969efae743f9aa7aff2243f",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-agm-deadlines-04",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "06f96bcc0da3ea21d2751be006e3e8123102505df376e71bfd7e34898d3c9ed0",
+          "answerSha256": "ea301a7581da2b384d75da4c3e74ee3e012f25deb5e144cfefe2b93a2d09f35d",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-annual-returns-01",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "2b4145ea21cdc8bfdd36b2bc9cabbcd5e50432d25919b4049ee16636fe00e1b8",
+          "answerSha256": "c0d83d94c55af1378ea8aa5a42c42ea78e7e6bdbd0979f0a0c60b59eab4cfeaf",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-annual-returns-02",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "603f9eb5c9c5b948440771265f1caf9b658f1a765a3ac3253805f6d85e1a18b3",
+          "answerSha256": "a064145cd0d76996655d3ab259bf9846cb647a3235c9be2b69142710ff81f80b",
+          "reviewMethod": "INDEPENDENT_FINAL_ANSWER_REVIEW"
+        },
+        {
+          "id": "acra-annual-returns-03",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "ced62b28d2b49f8ffc8ed0179018f7d115bfe9abc02b64c45c047ad2d4071593",
+          "answerSha256": "b2916d798f19afe161f749cbb4165df4c963bc28fce18c46605ac6f3419882c7",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-annual-returns-04",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "27c9fa6bec2ca7d884f43921204aec756b3c922c85d7ce6a08785ecd9e6feffe",
+          "answerSha256": "4b7d518450c546b2f454ef84fe89774f6a25e5b2accb3b5231ea549cf2d64a34",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-audit-exemption-01",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "51e3f1a4acebff189fa1a0b1f11d4aea71f83f240f2a1b5bb8b304dd81ec88c5",
+          "answerSha256": "4ccaf14834cd428a538285e87027a6bdfeb49a35609a13084a3b52dbc74c2cd4",
+          "reviewMethod": "INDEPENDENT_FINAL_ANSWER_REVIEW"
+        },
+        {
+          "id": "acra-audit-exemption-02",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "b8bd2f496a5e439a5936751091f73b2150e1b8123ab205adc96fea2aa773a4c8",
+          "answerSha256": "7fcc0eefa05e8042a43f11a2c5cdfa28e27a60fe08b21208d82944ae36423246",
+          "reviewMethod": "INDEPENDENT_FINAL_ANSWER_REVIEW"
+        },
+        {
+          "id": "acra-audit-exemption-03",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "5e241a9c1ba46175a7d3c48a298584c45b16ed66340a653f3ed4c75515bb24f8",
+          "answerSha256": "4c03e7839bfa5ee7a16b4494202c94c7d41243c3776510312bc9ae90a374588b",
+          "reviewMethod": "INDEPENDENT_FINAL_ANSWER_REVIEW"
+        },
+        {
+          "id": "acra-audit-exemption-04",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "6ad174c1fcb05610510943d584a0edff196b759ee52d41a2538e2a944cd0dc0d",
+          "answerSha256": "acb4e20e2d52b4bde1a03073fd032015a08708a107ad89add4e42079636adeb2",
+          "reviewMethod": "INDEPENDENT_FINAL_ANSWER_REVIEW"
+        },
+        {
+          "id": "acra-annual-return-officer-particulars-01",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "c1678685c053b2bd907909c47b3c23c3586d0f1f522e685b75b23625307044f7",
+          "answerSha256": "08f54fd2ddab77ca0daa317c76dda655c60fdd2a8135da2f5e61f7aea7c88c54",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-annual-return-officer-particulars-02",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "c8cf75e0bfecf38d68c8067a256fdd796cd5f6a9af90819ec18624500b826702",
+          "answerSha256": "ca2a2f5468d9c8978f5bbf6755c6c35149c5704381403d5d51cfcb8e5b524760",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-annual-return-officer-particulars-03",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "97e11374610ead454ea36e5e1400443791c9ed22cafa603af3496cecb989c2e3",
+          "answerSha256": "b22f5bb17a63755c44d230a3ce0eafc4b21d7b009980db0e48653784382013db",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-annual-return-officer-particulars-04",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "c569c08a2221533a38b25dccaa70b19871393816850793b8438a15f708796efd",
+          "answerSha256": "b22f5bb17a63755c44d230a3ce0eafc4b21d7b009980db0e48653784382013db",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-secretary-appointment-01",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "09dd79f56d785d43e07712d82fc84983971c27eea200e03156634ecb324a4d32",
+          "answerSha256": "c870c570fecf8e72cccacbe094adfa88ed6749cece55736064614dc886d210f6",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-secretary-appointment-02",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "463b63754e0cfa5efe1c708754ce5a305722bf798ba03a0406418abe0fa22df1",
+          "answerSha256": "92607eea5f73fd76adff5e98d90a9a54f783265d67104cda533390dc1e9622bb",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-secretary-appointment-03",
+          "authority": "ACRA",
+          "grade": "CORRECT",
+          "questionSha256": "2aab937d325b0cac62c4049fe3df308c21af8feadbcc0d2ba54f9e4fc800fd3b",
+          "answerSha256": "44f88569920ff4d39741ad3aa7a71e46ce9229be34217e28b1390e3245c71c5e",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "acra-secretary-appointment-04",
+          "authority": "ACRA",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "7801477ae4e17b5e5babf229fc220098bffd241f0b248c69c75a89cff35bcba7",
+          "answerSha256": "bdad90d8477a3b3bf4b5e22d3f05b93aa157e8aee803673944a5c371e40ead8a",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-fund-management-licence-01",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "4a8e7de0bebba1a92dc7d611bb20fd9cb21bbaf2e63fd6771e7ea1f50a974dd6",
+          "answerSha256": "a23e87fde8b6ec0a9117b19a0b64654b45f29f3bac30cc0ef650ccb2ed61617c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-fund-management-licence-02",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "8a108e71878feb28ce984cbcae5cddab4d02e2ee3eb385c672e5d9800519ea16",
+          "answerSha256": "5bc82909a4eb7d1b24f9be70928b15ec3d3e744302f2d795680c1f84277237e1",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-fund-management-licence-03",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "d0ebaf08c63d2ec7316314d956227996fbee2ced4c8ff501b1e33c0c5059554a",
+          "answerSha256": "a23e87fde8b6ec0a9117b19a0b64654b45f29f3bac30cc0ef650ccb2ed61617c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-fund-management-licence-04",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "4013af1a3663af5eafc2cfe9e5bd4c95b18b4ce6d84e3b1af59ec5777243b422",
+          "answerSha256": "a23e87fde8b6ec0a9117b19a0b64654b45f29f3bac30cc0ef650ccb2ed61617c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-vcfm-01",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "02a1253d35e767869c8655631d19f99c34f76723736c113bd2494f70fe59ae63",
+          "answerSha256": "e0baaeb804028cec1994032629de387863797b8bf6c0fbd326a74ab11f591c49",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-vcfm-02",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "609e5b25b8817aae8783576c74708a838f11869549192bfde090f015a82d66f5",
+          "answerSha256": "a0720090e9ebafeda5786a848bd3743728a466a62b33447bc8faf392b39a6242",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-vcfm-03",
+          "authority": "MAS",
+          "grade": "PARTIAL",
+          "questionSha256": "55a7f88a0269b442af18b41ebc8cb6213ecdc1f6db073872b6f6852876b4300c",
+          "answerSha256": "31fafc368b0d5d249e8d8aba9efb2f1716ef711715740a62d75cf8b7f9ffc047",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-vcfm-04",
+          "authority": "MAS",
+          "grade": "PARTIAL",
+          "questionSha256": "f3430262438051db588dfa0991307a6a6d2007b3303aee59fab50f39d699c41d",
+          "answerSha256": "aadf09e6ae4d41af3349e6a0be6a7e892a94ff8b87e2842cee90a28ae005aaa7",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-class-exemptions-01",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "b6d8724cd5977daaebd601f6540d03fec0af0d1dcbc498868a5e422330146d5f",
+          "answerSha256": "9a86f50e9b19449447aa310185bbf5941fa6baedaaf5e83b466fa6cfde0235ed",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-class-exemptions-02",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "a89f1cd9f094695ba04b571c24f0fe317bae18d804028173ac4f6d818f02f7b4",
+          "answerSha256": "9a86f50e9b19449447aa310185bbf5941fa6baedaaf5e83b466fa6cfde0235ed",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-class-exemptions-03",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "1bd979ba1f8ec5c27d3a2e75af231fe49c24ce39bf60c6bfbe71b601f065b4aa",
+          "answerSha256": "bd4ca8bbf4fa6205a1117443dcc32b8570f2ed124a8f9e63a43c84db6a8ea67c",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-class-exemptions-04",
+          "authority": "MAS",
+          "grade": "CORRECT",
+          "questionSha256": "3eeaef4050f72dadaf32fae0a6233e54f60d738c0ea9835d4aa3703630a90064",
+          "answerSha256": "9a86f50e9b19449447aa310185bbf5941fa6baedaaf5e83b466fa6cfde0235ed",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-qdc-reporting-01",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "0f3d15bc410a7c1993544b44c49f7a5fc38e172b0c8fe5509132486fc333a8dc",
+          "answerSha256": "924266115d38245fdaf0df458725ca3a40ed37f63e29f8b4b12fef747efe095a",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-qdc-reporting-02",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "726be9ac8526e9ae69dff7f4f98acc63c05f186b6847362791fdb92b91dd3242",
+          "answerSha256": "924266115d38245fdaf0df458725ca3a40ed37f63e29f8b4b12fef747efe095a",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-qdc-reporting-03",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "993b13c5710227c6f93cff9bec202dc621990c68e743a3cb40b047f737132e23",
+          "answerSha256": "7476f54f439f21004f5c129a3fe5be8d6b26816be766ef789e2acdb80fd670c4",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-qdc-reporting-04",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "f5c8d125df83681f0d8f860902fcd3d3d2fff68df3db936889f417093772afdb",
+          "answerSha256": "1daead0381ff80994222896bcdd86bf9f3cb1822760e817ad13ae5125f172086",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-regulatory-notifications-01",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "7b72f97349e22bf5d93bdc5b2463ee12dd0e78fea744887308d35f2b8acc01f9",
+          "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-regulatory-notifications-02",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "3b35dd28183bef6a26384e75a7e0b25927731817acb18df1545523d85e2b7f4a",
+          "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-regulatory-notifications-03",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "dcbdea8b915cbafcf67ee03ca1f01f3e36f8561f6c2926e5c48ff64b24e28d7d",
+          "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        },
+        {
+          "id": "mas-regulatory-notifications-04",
+          "authority": "MAS",
+          "grade": "UNSUPPORTED",
+          "questionSha256": "b4831f1ea65cf6b7d7910e5289b37feec0623a0988be24bf36e109734b2b9c55",
+          "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+          "reviewMethod": "BYTE_IDENTICAL_TO_REVIEWED_CAPTURE"
+        }
+      ],
+      "networkRequests": 0,
+      "modelRequests": 0
+    }
+  },
+  "priorCorrectPreservation": {
+    "Frozen75": "22/22",
+    "Earlier60": "59/59",
+    "Fixed100Original": "50/50",
+    "Fixed100Enriched": "62/62",
+    "losses": []
+  },
+  "gains": {
+    "Frozen75": {
+      "beforeCorrect": 22,
+      "afterCorrect": 30,
+      "byAuthority": {
+        "IRAS": 1,
+        "CPF": 1,
+        "MOM": 3,
+        "ACRA": 2,
+        "MAS": 1
+      }
+    },
+    "Fixed100Original": {
+      "beforeCorrect": 50,
+      "afterCorrect": 50
+    },
+    "Fixed100Enriched": {
+      "beforeCorrect": 62,
+      "afterCorrect": 66,
+      "byAuthority": {
+        "ACRA": 4
+      }
+    }
+  },
+  "sourceIntegrity": {
+    "frozenInputsUnchanged": 66,
+    "newOfficialSourceCaptures": 9,
+    "allNewSourceHashesAndByteLengthsMatch": true
+  },
+  "validation": [
+    {
+      "check": "root-lint",
+      "exitCode": 1,
+      "startedUTC": "2026-10-31T03:53:28.8692190Z",
+      "completedUTC": "2026-10-31T03:53:31.4770854Z"
+    },
+    {
+      "check": "maintained-lint",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T03:53:31.5031441Z",
+      "completedUTC": "2026-10-31T03:53:31.6688585Z"
+    },
+    {
+      "check": "typecheck",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T03:53:31.6714688Z",
+      "completedUTC": "2026-10-31T03:53:41.2699848Z"
+    },
+    {
+      "check": "vite-build",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T03:53:41.2741212Z",
+      "completedUTC": "2026-10-31T03:53:58.9544468Z"
+    },
+    {
+      "check": "worker-build",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T03:53:58.9561422Z",
+      "completedUTC": "2026-10-31T03:53:59.9237676Z"
+    },
+    {
+      "check": "smoke",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T03:53:59.9252599Z",
+      "completedUTC": "2026-10-31T03:57:45.9865923Z"
+    },
+    {
+      "check": "full",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T03:57:45.9877983Z",
+      "completedUTC": "2026-10-31T04:01:40.9679828Z"
+    }
+  ],
+  "knownLintException": "Root oxlint still fails parsing the pre-existing untracked artifacts/fresh-acceptance-2026-10-24/prepare.mjs archive. Maintained src/scripts/tests lint is checked separately.",
+  "scopeLimitations": [
+    "Fixed100 uses guided issue/source replay; Frozen75/Earlier60/fresh15 use no-hint application-entry rules-only understanding.",
+    "Whole-answer grades are distinct from source/evidence-path status.",
+    "No network/model requests during corpus captures; no live-model/browser, CI or production acceptance.",
+    "Remaining unsupported and partial cases are explicitly retained; reaching30 does not imply general coverage."
+  ],
+  "publication": "All batch changes and prior corrections remain uncommitted/unpushed; no PR/merge/deployment/source activation."
+}

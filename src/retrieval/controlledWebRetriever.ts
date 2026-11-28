@@ -19,6 +19,7 @@ export type ControlledFetchStatus =
 
 export interface ControlledFetchOptions {
   timeoutMs?: number;
+  signal?: AbortSignal;
   useCache?: boolean;
   ttlMs?: number;
   expectedHash?: string;
@@ -158,6 +159,11 @@ export class ControlledWebRetriever {
     url: string,
     options: ControlledFetchOptions = {}
   ): Promise<ControlledFetchResult> {
+    if (options.signal?.aborted) {
+      const error = new Error('Official source retrieval was canceled.');
+      error.name = 'AbortError';
+      throw error;
+    }
     const {
       timeoutMs = 3000,
       useCache = true,
@@ -211,6 +217,7 @@ export class ControlledWebRetriever {
             status: 'SUCCESS',
             httpStatus: cached.httpStatus,
             content: cached.rawContent,
+            contentType: cached.contentType,
             contentHash: cached.contentHash,
             cached: true,
             retrievedAt: cached.retrievedAt,
@@ -243,6 +250,8 @@ export class ControlledWebRetriever {
     const timeoutId = setTimeout(() => {
       controller.abort();
     }, timeoutMs);
+    const onExternalAbort = () => controller.abort();
+    options.signal?.addEventListener('abort', onExternalAbort, { once: true });
 
     try {
       const headers: Record<string, string> = {
@@ -250,6 +259,11 @@ export class ControlledWebRetriever {
           ? 'application/pdf, text/html, application/xhtml+xml, text/plain;q=0.9, */*;q=0.1'
           : 'text/plain, application/json, text/html, */*'
       };
+      // MAS serves a maintenance shell to its nonbrowser client profile.
+      const needsServerCompatibility = ['mas.gov.sg', 'www.mas.gov.sg'].includes(new URL(url).hostname);
+      if (typeof window === 'undefined' && needsServerCompatibility) {
+        headers['User-Agent'] = 'Mozilla/5.0 (compatible; AccountingEvidenceRetriever/1.0)';
+      }
       if (responseMode === 'DOCUMENT') headers['x-official-source-response-mode'] = 'document';
       if (useCache && cached) {
         const condHeaders = this.cache.getConditionalHeaders(url);
@@ -262,8 +276,6 @@ export class ControlledWebRetriever {
         redirect: 'manual', // Intercept redirects for security validation
         headers
       });
-
-      clearTimeout(timeoutId);
 
       const transportFailure = (response as OfficialSourceResponse).__officialSourceTransportFailure;
       if (transportFailure) {
@@ -306,6 +318,7 @@ export class ControlledWebRetriever {
           status: 'SUCCESS',
           httpStatus: 304,
           content: cached.rawContent,
+          contentType: cached.contentType,
           contentHash: cached.contentHash,
           cached: true,
           retrievedAt,
@@ -526,7 +539,7 @@ export class ControlledWebRetriever {
         lastModified
       };
     } catch (err: any) {
-      clearTimeout(timeoutId);
+      if (options.signal?.aborted) throw err;
 
       if (err.name === 'AbortError' || controller.signal.aborted) {
         return {
@@ -554,6 +567,9 @@ export class ControlledWebRetriever {
         retrievedAt,
         sourceUrl: url
       };
+    } finally {
+      clearTimeout(timeoutId);
+      options.signal?.removeEventListener('abort', onExternalAbort);
     }
   }
 

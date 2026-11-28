@@ -1,0 +1,136 @@
+{
+  "status": "LOCAL_FIXES_REVIEWED_AND_VALIDATED_UNCOMMITTED",
+  "branch": "codex/statutory-knowledge-expansion-20261030",
+  "baseHead": "7206fc15439e221de19c1fedd7b4f00e086b6e31",
+  "changes": [
+    "Preserve explicit IR8A/IR8S/AIS and employment-income reporting issues alongside CPF bonus questions.",
+    "Withhold a single OW base when employee or month ownership is ambiguous.",
+    "Normalize employee/staff/worker identifiers and preserve PR grant-date ownership.",
+    "Admit derived 2027/2028 PR-year boundaries from a 2026 grant while excluding future payroll and rate requests."
+  ],
+  "files": [
+    {
+      "path": "src/retrieval/cpfPayrollKnowledge20261027b.ts",
+      "sha256": "b5f81ffb5543a5a52104749fb2a39b6c8e86e5701e3fc38a1c0a48aa1bed350b"
+    },
+    {
+      "path": "src/retrieval/targetDateResolver.ts",
+      "sha256": "03e8326bc6a03cbcbec778c19eb4f8c965886f5114d123327d5a58ab124272fa"
+    },
+    {
+      "path": "src/services/semanticQuestionUnderstanding.ts",
+      "sha256": "ac1dac8e3bb0c6a4972342e7a0db07aa597117968fb2f6096a1533121ace06bc"
+    },
+    {
+      "path": "tests/regression/test_cpf_payroll_knowledge_20261027b.mjs",
+      "sha256": "b1fee5660f41b4eee4c84d6b6e8c09ec09a6133912877795d4c75d53314ce713"
+    },
+    {
+      "path": "tests/regression/test_statutory_cpf_expansion_20261101.mjs",
+      "sha256": "2b3df9d24b0f3947428723c181d25bba2e72c2561fe95cd9d0e372736e0aa2cc"
+    },
+    {
+      "path": "tests/regression/test_statutory_multipart_issue_refinements_20261030.mjs",
+      "sha256": "44bdfecb2bb8a8f70f8172e8653afc214492a9651484507de02018ec21e9cd9f"
+    }
+  ],
+  "checks": [
+    {
+      "check": "root-lint",
+      "exitCode": 1,
+      "startedUTC": "2026-11-01T09:42:15.6998739Z",
+      "completedUTC": "2026-11-01T09:42:16.2614463Z"
+    },
+    {
+      "check": "maintained-lint",
+      "exitCode": 0,
+      "startedUTC": "2026-11-01T09:42:16.2801159Z",
+      "completedUTC": "2026-11-01T09:42:16.4133739Z"
+    },
+    {
+      "check": "typecheck",
+      "exitCode": 0,
+      "startedUTC": "2026-11-01T09:42:16.4157372Z",
+      "completedUTC": "2026-11-01T09:42:22.0076954Z"
+    },
+    {
+      "check": "vite-build",
+      "exitCode": 0,
+      "startedUTC": "2026-11-01T09:42:22.0117121Z",
+      "completedUTC": "2026-11-01T09:42:28.8483022Z"
+    },
+    {
+      "check": "worker-build",
+      "exitCode": 0,
+      "startedUTC": "2026-11-01T09:42:28.8496949Z",
+      "completedUTC": "2026-11-01T09:42:29.6976789Z"
+    },
+    {
+      "check": "smoke",
+      "exitCode": 0,
+      "startedUTC": "2026-11-01T09:42:29.6991768Z",
+      "completedUTC": "2026-11-01T09:46:24.8848597Z"
+    },
+    {
+      "check": "full",
+      "exitCode": 0,
+      "startedUTC": "2026-11-01T09:46:24.8860077Z",
+      "completedUTC": "2026-11-01T09:50:37.0332750Z"
+    }
+  ],
+  "suiteCounts": {
+    "smoke": {
+      "passed": 161,
+      "failed": 0
+    },
+    "full": {
+      "passed": 184,
+      "failed": 0
+    }
+  },
+  "rootLintException": "34 errors in pre-existing untracked artifacts/fresh-acceptance-2026-10-24/prepare.mjs; maintained-code lint passed separately.",
+  "environment": "Canonical Node 22.23.3, retained userInfo compatibility preload and offline external-fetch guard; normal Windows process access for isolated decoder checks.",
+  "independentReview": {
+    "reviewTarget": "Uncommitted working-tree changes against 7206fc15439e221de19c1fedd7b4f00e086b6e31",
+    "reviewerRole": "Independent reviewer agent, read-only",
+    "initialFindings": [
+      {
+        "severity": "P2",
+        "finding": "A long future-payroll clause bypassed the 32-character anniversary date guard.",
+        "resolution": "Replaced proximity checks with one clause-scoped predicate shared by evidence-date resolution and CPF source admission; added the exact negative regression."
+      },
+      {
+        "severity": "P2",
+        "finding": "Verb-led bonus employment-income reporting requests still lost the IRAS issue.",
+        "resolution": "Added reporting-action and employment-income context recognition, with planning and application regressions."
+      }
+    ],
+    "finalResult": "No remaining material findings in the final delta; both initial reviewer reproductions fixed.",
+    "independentProbes": {
+      "sourceAndDateCasesPassed": 5,
+      "routingCasesPassed": 3,
+      "controls": [
+        "Long future-payroll wording rejected",
+        "2029 boundary rejected",
+        "2027 and 2028 derived boundaries supported",
+        "Current-year wages plus derived boundary supported",
+        "IR8A and verb-led employment-income reporting retain IRAS and CPF",
+        "CPF-only bonus question suppresses incidental IRAS"
+      ]
+    },
+    "limits": "Reviewer did not run broad suites, live-source acceptance, CI, or model requests. Supervisor validation is recorded separately."
+  },
+  "preservation": {
+    "answers": 350,
+    "unchanged": 350,
+    "priorCorrectPreserved": 213,
+    "inputDrift": []
+  },
+  "limitations": [
+    "The exact multi-employee OW application composite remains incomplete; the selected AW helper now safely withholds a borrowed amount.",
+    "Retained IRAS and CPF issues do not establish complete answerability or evidence admission for the mixed reporting question.",
+    "Expanded fixture-based PR checks do not activate sources in the intended live runtime.",
+    "No CI dispatch, live integration/browser/model acceptance, source activation, commit, push, merge or deployment occurred."
+  ],
+  "interruptedValidation": "An earlier run was stopped after static checks when review found two issues. Its actual results are retained in interrupted-pre-review-validation-results.json; final checks above ran after corrections."
+}

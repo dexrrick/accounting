@@ -15,6 +15,7 @@ import { CitationVerifier } from '../../src/verification/citationVerifier.ts';
 import { verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
 
 const CAPTURE_DAY = '2026-10-16';
+const POST_CAPTURE_DAY = '2026-10-17';
 const CONTEXT_ROOT = new URL('../fixtures/mas-reviewed/transport-investigation-20261016-context-live/', import.meta.url);
 const RECAPTURE_ROOT = new URL('../fixtures/mas-reviewed/transport-investigation-20261016-genuine-recapture/', import.meta.url);
 const acceptanceReport = JSON.parse(await readFile(new URL('../fixtures/mas-reviewed/transport-investigation-20261016-acceptance.json', import.meta.url), 'utf8'));
@@ -50,6 +51,12 @@ const pdfBytes = await readCapture(CONTEXT_ROOT, pdfDoc);
 
 assert.equal(htmlDoc.fetch.contentType, 'text/html; charset=utf-8');
 assert.equal(pdfDoc.fetch.contentType, 'application/pdf');
+  assert.equal(getSingaporeDateString(htmlDoc.fetch.retrievedAt), CAPTURE_DAY,
+    'the immutable HTML retrieval timestamp remains on its declared capture day');
+  assert.equal(getSingaporeDateString(pdfDoc.fetch.retrievedAt), CAPTURE_DAY,
+    'the immutable PDF retrieval timestamp remains on its declared capture day');
+  assert.equal(getSingaporeDateString(htmlReplacementDoc.fetch.retrievedAt), CAPTURE_DAY,
+    'the immutable replacement retrieval timestamp remains on its declared capture day');
 assert.equal(pdfDoc.fetch.lastModified, 'Thu, 26 Jun 2025 09:14:46 GMT');
 assert.equal(pdfDoc.fetch.etag, null);
 assert.equal(htmlDoc.fetch.etag, null);
@@ -329,12 +336,16 @@ try {
     'an explicit capture-day reference date admits the undated HTML capture');
   assert.equal(answerRetriever.getSourceById(HTML_ID, { targetDate: '2026-10-15' }), undefined,
     'an undated HTML capture is rejected before its capture day');
-  assert.equal(answerRetriever.getSourceById(HTML_ID, { targetDate: '2026-10-17' }), undefined,
-    'an undated HTML capture is rejected after its capture day');
+  assert.equal(answerRetriever.getSourceById(HTML_ID, { targetDate: POST_CAPTURE_DAY }), undefined,
+    'the active HTML source remains capture-day-only and is refused on the later current-day replay date');
+  assert.equal(answerRetriever.getSourceById(PDF_ID, { targetDate: '2026-10-15' }), undefined,
+    'an undated PDF capture is rejected before its capture day');
+  assert.equal(answerRetriever.getSourceById(PDF_ID, { targetDate: POST_CAPTURE_DAY }), undefined,
+    'the active PDF source remains capture-day-only and is refused on the later current-day replay date');
   assert.equal(answerRetriever.getSourceById(HTML_ID, { targetDate: 'not-a-date' }), undefined,
     'an invalid target date is rejected');
   assert.equal(answerRetriever.getSourceById(HTML_ID, {
-    targetDate: CAPTURE_DAY, referenceDate: '2026-10-17'
+    targetDate: CAPTURE_DAY, referenceDate: POST_CAPTURE_DAY
   })?.id, HTML_ID, 'targetDate takes precedence over a later referenceDate');
   assert.equal(answerRetriever.getSourceById(HTML_ID)?.id,
     getSingaporeDateString() === CAPTURE_DAY ? HTML_ID : undefined,

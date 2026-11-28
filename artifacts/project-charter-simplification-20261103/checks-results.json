@@ -1,0 +1,55 @@
+[
+  {
+    "name": "root-lint",
+    "exitCode": 1,
+    "startedUTC": "2026-11-03T15:07:07.6964896Z",
+    "elapsedSeconds": 0.57,
+    "arguments": [
+      "node_modules/oxlint/bin/oxlint"
+    ]
+  },
+  {
+    "name": "maintained-lint",
+    "exitCode": 0,
+    "startedUTC": "2026-11-03T15:07:08.3152971Z",
+    "elapsedSeconds": 0.14,
+    "arguments": [
+      "node_modules/oxlint/bin/oxlint",
+      "src",
+      "scripts",
+      "tests",
+      "vite.config.ts",
+      "tailwind.config.js",
+      "postcss.config.js"
+    ]
+  },
+  {
+    "name": "typecheck",
+    "exitCode": 0,
+    "startedUTC": "2026-11-03T15:07:08.4619092Z",
+    "elapsedSeconds": 5.2,
+    "arguments": [
+      "node_modules/typescript/bin/tsc",
+      "-b"
+    ]
+  },
+  {
+    "name": "vite-build",
+    "exitCode": 0,
+    "startedUTC": "2026-11-03T15:07:13.6652300Z",
+    "elapsedSeconds": 3.36,
+    "arguments": [
+      "node_modules/vite/bin/vite.js",
+      "build"
+    ]
+  },
+  {
+    "name": "worker-build",
+    "exitCode": 0,
+    "startedUTC": "2026-11-03T15:07:17.0227069Z",
+    "elapsedSeconds": 0.83,
+    "arguments": [
+      "scripts/build_cloudflare_worker.mjs"
+    ]
+  }
+]

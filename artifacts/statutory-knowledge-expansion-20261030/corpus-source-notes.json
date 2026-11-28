@@ -1,0 +1,174 @@
+{
+  "checkedOn": "30/10/2026",
+  "purpose": "First-party source notes for the independently frozen 75-question evaluation set. Notes identify the official evidence behind expectations, conditions and temporal limits; they do not certify an application answer.",
+  "authorities": {
+    "IRAS": {
+      "candidateExpansion": "Corporate ECI waiver needs the joint revenue and nil-ECI tests; company revenue definition differs for investment holding companies. Also evaluate medical input tax and non-car motor vehicles independently in mixed requests.",
+      "sources": [
+        {
+          "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-%28eci%29-filing",
+          "sourcePassage": "ECI within 3 months of FYE. Waiver only when annual revenue <= S$5m and ECI nil before exempt amount; investment holding company revenue is investment income including dividends/interest. Current page also says late filing remains possible if no NOA issued.",
+          "conditions": "Self-assess for each YA; specific entities can be separately exempt. Revenue and ECI facts/FYE are needed.",
+          "effectiveDate": "Current IRAS page accessed 30/10/2026; do not apply current thresholds retrospectively without historical-version evidence."
+        },
+        {
+          "url": "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/claiming-gst-%28input-tax%29/conditions-for-claiming-input-tax",
+          "sourcePassage": "All ordinary claim conditions apply. Regulation 26 generally blocks staff medical expenses, subject to WICA/qualifying collective agreement or specified work-related health-risk treatment for expenses incurred on/after 1 Oct 2021 under written law or the narrowly stated COVID-19 advisory limb.",
+          "conditions": "GST registration, claimant/importer, business use, attributable supplies, records and missing-trader safeguards apply. The post-2021 condition is date-specific and does not make all staff care claimable."
+        },
+        {
+          "url": "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/claiming-gst-%28input-tax%29/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+          "sourcePassage": "Input tax on other motor vehicles such as lorries, vans and motorcycles may be claimed subject to claim conditions; the motor-car restriction is distinct.",
+          "conditions": "Identify legal vehicle category (including statutory exclusions), ownership/use, tax invoice and claimant. Do not assume a vehicle called a delivery van qualifies without the relevant facts."
+        },
+        {
+          "url": "https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date",
+          "sourcePassage": "WHT filing and payment by 15th of second month after payment to non-resident; filing is required even when DTA/ARI results in zero tax. For non-director payments, date of payment is earliest due/payable under contract or invoice date when no contract (ignoring credit terms), credit to recipient-designated account, or actual payment. The current page gives invoice-date and royalty-accrual examples.",
+          "conditions": "First establish payment type, payer/payee residence, source/performance facts, treaty entitlement and required records. Rate is not established by the due-date page."
+        },
+        {
+          "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-%28a-f%29/",
+          "sourcePassage": "Approved qualifying donations to an IPC or Government for local-community benefit get 2.5-times deduction for donations from 1 Jan 2016 to 31 Dec 2029; company should supply UEN to IPC. Budget 2026 extension is stated on current page.",
+          "conditions": "Donee and donation must be approved/qualifying; this is income-tax treatment and not GST input tax. Current end date should not be assumed after 2029."
+        },
+        {
+          "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/record-keeping-requirements",
+          "sourcePassage": "Keep source documents, accounting records/schedules, bank statements and business-connected records at least five years from relevant YA; page examples include YA 2023 through 31 Dec 2027.",
+          "conditions": "Relevant YA and financial year facts matter. Dissolution can invoke separate responsibility/time rules. Submission of return does not itself end retention."
+        }
+      ]
+    },
+    "CPF": {
+      "candidateExpansion": "OW/AW due-date classification and year-of-payment ceiling; transition of contribution rates on age/SPR anniversaries; distinguish AW ceiling refund from CPF Annual Limit refund.",
+      "sources": [
+        {
+          "url": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+          "sourcePassage": "OW relates to employment in the month and is payable by the 14th of following month; otherwise wage is AW. 2026 OW ceiling S$8,000; AW ceiling S$102,000 less year-to-date OW subject to CPF, per employee/employer/calendar year. AW is determined using due-and-payable year.",
+          "conditions": "Rates/status/age and actual date payable affect contributions; confirm current-year limits and historical year table. Annual maximum is not a flat AW contribution amount."
+        },
+        {
+          "url": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+          "sourcePassage": "Rates vary by citizenship/SPR year, age and wages; 2026 tables apply, and rate changes for age 55/60/65/70 begin the first of the month after birthday month. Wages above S$50 up to S$500 require employer share but no employee share; round combined CPF to nearest dollar and employee share down.",
+          "conditions": "Specific rate needs age/month, citizenship/SPR year, pay and wage caps; page notes increase in rates from 1 Jan 2027, so 2026 rate must not be extended into 2027."
+        },
+        {
+          "url": "https://www.cpf.gov.sg/service/article/do-i-need-to-pay-cpf-contributions-for-my-foreign-employee-who-has-recently-obtained-singapore-permanent-residence-status",
+          "sourcePassage": "CPF payable once SPR status obtained; first year runs from SPR grant date through the last day of the month of first anniversary (15 March 2026 therefore through 31 March 2027); second year starts in month following first anniversary; OW pro-rated from PR grant date; AW CPF depends on when payable (not if before PR, due if on/after PR).",
+          "conditions": "Applicable graduated rates can be changed by an approved employer-employee joint election. Use actual conversion, date payable and wage details."
+        },
+        {
+          "url": "https://www.cpf.gov.sg/employer/compliance-and-rectifications/applying-for-refund-of-cpf-contributions",
+          "sourcePassage": "Conditional wages refund: one-year period from date wages are supposed to be repaid under employment terms or mutual agreement. Ordinary refund: one year from contribution payment, identified by PAYMENTS RECEIVED ON. AW ceiling excess must be applied for promptly; annual-limit excess paid since 2023 is automatically refunded from Feb 2024.",
+          "conditions": "Return employee's share before applying where applicable; refund subject to funds in member account(s). Deadline and category must be supported by exact payment/due date."
+        },
+        {
+          "url": "https://www.cpf.gov.sg/service/article/why-does-the-excess-cpf-from-the-additional-wage-ceiling-calculator-differ-from-the-automatic-refund-and-how-do-i-calculate-my-employee-s-share",
+          "sourcePassage": "AW ceiling excess differs from excess CPF Annual Limit automatic refund; lower rates can leave AW excess below Annual Limit.",
+          "conditions": "Use exact wage/rate history; calculator scope excludes some categories such as first/second-year SPR in its default applicability."
+        },
+        {
+          "url": "https://www.cpf.gov.sg/employer/employer-obligations/declaring-accurate-wage-information",
+          "sourcePassage": "Employer should declare actual wage amounts and inform CPF Board if declared wage is incorrect; subsequent submission should show updated actual wage.",
+          "conditions": "Identify applicable amendment route and do not conflate wage correction with monetary refund."
+        }
+      ]
+    },
+    "MOM": {
+      "candidateExpansion": "Practical leave qualification/pro-ration and payroll deadline combinations; employee/employer coverage and missing service/leave facts. Useful held-out cases also distinguish salary and overtime timing, final pay, payslip delivery and migration deduction limits.",
+      "sources": [
+        {
+          "url": "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+          "sourcePassage": "Salary at least monthly; within 7 days after salary period; overtime within 14 days. Final-pay timing differs by served resignation notice, unserved notice, misconduct dismissal and employer termination. Records/payslips are required for covered EA employees.",
+          "conditions": "Coverage and termination type matter. For foreign employee cessation, separate IRAS tax-clearance withholding can affect monies withheld."
+        },
+        {
+          "url": "https://www.mom.gov.sg/employment-practices/salary/itemised-payslips",
+          "sourcePassage": "For Employment Act-covered employees, give a payslip with payment or within three working days if not possible; for termination/dismissal, give it with outstanding salary. Soft or hard copy is allowed. Keep payslip records: current employees latest two years; ex-employees last two years, for one year after leaving.",
+          "conditions": "Apply only to employees covered by Employment Act. Count working days for issue timing. Distinguish record-retention period for ex-employees from active employees."
+        },
+        {
+          "url": "https://www.mom.gov.sg/employment-practices/leave/sick-leave/eligibility-and-entitlement",
+          "sourcePassage": "Paid outpatient/hospitalisation entitlement rises with completed service months; at four months 8 outpatient and 30 hospitalisation days; full 14/60 after six months; hospitalisation count includes outpatient leave.",
+          "conditions": "Statutory coverage, medical certification, service, leave already taken and hospitalisation definition matter. Exact balance needs leave history."
+        },
+        {
+          "url": "https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement",
+          "sourcePassage": "Annual-leave eligibility after three months, including probation; pro-rating by completed service months and approved unpaid leave affects computation.",
+          "conditions": "Coverage, contract entitlement, complete dates and leave already taken are required for exact remaining balance."
+        },
+        {
+          "url": "https://www.mom.gov.sg/employment-practices/public-holidays-entitlement-and-pay",
+          "sourcePassage": "Holiday on non-working day: another day off or one extra gross-rate day; working on a public holiday generally adds basic-rate day, gross-rate holiday pay, plus overtime if beyond normal hours.",
+          "conditions": "Distinguish non-working from rest day and assess Part IV/alternative arrangements and absence/leave facts."
+        },
+        {
+          "url": "https://www.mom.gov.sg/employment-practices/salary/salary-deductions",
+          "sourcePassage": "Deductions only for specified reasons; 50% cap generally applies with enumerated exclusions; migrant worker salary reduction/new deductions needs written consent and prescribed MOM notification; employer employment costs including levy cannot be passed to foreign worker.",
+          "conditions": "Coverage, reason, deduction type and current law matter. Consent alone does not make a prohibited purpose allowable."
+        },
+        {
+          "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employers/understanding-the-tax-treatment/other-payments",
+          "sourcePassage": "Employer may have to withhold monies for tax clearance when a foreign employee leaves; up to 30 days per IRAS clearance procedure.",
+          "conditions": "Determine employee citizenship/cessation/departure and IR21 filing/clearance facts; the 30-day figure is not a general salary deadline."
+        }
+      ]
+    },
+    "ACRA": {
+      "candidateExpansion": "Current annual return particulars after commencement on 20 Oct 2026; dormancy/audit exemption vs financial-statement/XBRL filing distinctions; secretary eligibility and appointment deadline.",
+      "sources": [
+        {
+          "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/steps-to-file/",
+          "sourcePassage": "AR preparation: latest company/officer/share particulars; AGM declaration even if dispensed/exempt; full XBRL submission needs no duplicate PDF; one director signs if sole director, at least two if multiple; can apply for up to 60 extra days for AR.",
+          "conditions": "Company type/filing category and AGM status matter; an AR extension does not itself alter AGM obligation."
+        },
+        {
+          "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/",
+          "sourcePassage": "Page updated 20 October 2026: Singapore companies prepare statements except qualifying dormant relevant companies, and file unless exempt. Full XBRL submissions require no duplicate PDF; smaller non-publicly accountable filings use Simplified XBRL plus director-authorised PDF. Taxonomy 2026 requirements apply from 19 October 2026.",
+          "conditions": "Audit exemption differs from exemption from preparing/filing FS; entity type, size, public accountability and dormant-relevant-company statutory tests matter. Taxonomy change is temporal."
+        },
+        {
+          "url": "https://www.acra.gov.sg/resources/guides-forms/updating-entitys-information/",
+          "sourcePassage": "All registered entities notify ACRA of changes within 14 days from date of change; foreign companies have 30 days. Detail category determines the update process.",
+          "conditions": "Entity class and exact date/change matter; do not let annual return stand in for separate update filing."
+        },
+        {
+          "url": "https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026/",
+          "sourcePassage": "Amendments commencing 20 Oct 2026 require AR filer confirmation of latest particulars for directors, CEO, secretary, auditor and relevant members; added question whether individuals perform CEO role.",
+          "conditions": "Commencement is explicit; do not apply to earlier filings absent separate evidence."
+        },
+        {
+          "url": "https://www.acra.gov.sg/how-to-guides/setting-up-a-local-company/company-officers/appointing-a-company-secretary",
+          "sourcePassage": "Local company appoints secretary within six months of incorporation; secretary is natural person ordinarily resident in Singapore and sole director may not be secretary.",
+          "conditions": "Verify local company, incorporation date, residency and director count."
+        },
+        {
+          "url": "https://www.acra.gov.sg/manage/companies/annual-filing/annual-returns",
+          "sourcePassage": "Annual return deadline varies by company type; local company deadlines commonly private 7 months and listed public 5 months after FYE.",
+          "conditions": "Check actual listing status, AGM deadlines and valid extension; do not interchange AGM and annual return dates."
+        }
+      ]
+    },
+    "MAS": {
+      "candidateExpansion": "VCFM event-based compliance beyond the already covered Form 25A and nil return: Form 23A (change in particulars) and Form 7 cessation/non-commencement. Keep QDC explicit unsupported until an official source establishes exact form, applicability, reporting scope and deadline.",
+      "sources": [
+        {
+          "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf",
+          "title": "MAS Compliance Toolkit for Venture Capital Fund Managers, Version 1.1 (last revised 29 May 2026)",
+          "sourcePassage": "Toolkit pp.1–2 says applies to VCFMs, covers SFA and stated instruments, and is not exhaustive; excludes outside-SFA reporting and fund-level requirements. Table: row 11 Form 23A changes in VCFM particulars/officers/shareholders within 14 days; row 6 Form 7 cessation within 14 days plus audit certification of discharged customer obligations; non-commencement at 6 months triggers notification immediately after period. Row 16 Form 25A within one month of FYE; row 18 conditional nil misconduct return within 14 days after calendar year end only if no report submitted preceding calendar year.",
+          "conditions": "Toolkit revised 29 May 2026; it is guidance, not an exhaustive list or proof of fund-level requirements. The text says Form 25A within one month after FYE but does not itself specify calendar-day counting; consult MAS-Tx displayed due date. Exact event, role, trigger and licence facts must match row. Form 25A and conditional nil return are independent deadlines; check current source again before future filing."
+        },
+        {
+          "url": "https://www.mas.gov.sg/statistics/survey-submissions",
+          "sourcePassage": "Public survey submissions directory checked; it does not establish a specific VCFM QDC requirement or exemption.",
+          "conditions": "Absence of QDC from a general public directory is not proof of no duty. No exact first-party QDC form/scope/deadline accepted as verified in this batch; keep unsupported."
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "The cited sources are current public pages/PDFs as viewed on 30/10/2026; this evaluation does not establish historical law before each explicit effective/commencement date.",
+    "Candidate descriptions identify what is source-backed, not a claim that the existing application lacks the rule; baseline replay must confirm actual behavior before code changes.",
+    "Case expectations are answer criteria and require independent case-by-case grading. Source status or a matching phrase is not proof of complete/correct answer.",
+    "MAS QDC remains unsupported; absence from a source directory or toolkit is not an exemption."
+  ]
+}

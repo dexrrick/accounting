@@ -1,0 +1,236 @@
+{
+  "reviewedBase": "83376b3ed21360ad528328ec24bacfdcb1ca4352",
+  "checks": [
+    {
+      "exitCode": 0,
+      "startedUTC": "2026-10-28T13:02:59.4374055Z",
+      "check": "preflight",
+      "completedUTC": "2026-10-28T13:02:59.5319845Z"
+    },
+    {
+      "exitCode": 0,
+      "startedUTC": "2026-10-28T13:02:59.5515924Z",
+      "check": "lint",
+      "completedUTC": "2026-10-28T13:03:00.6553539Z"
+    },
+    {
+      "exitCode": 0,
+      "startedUTC": "2026-10-28T13:03:00.6599426Z",
+      "check": "typecheck",
+      "completedUTC": "2026-10-28T13:03:09.4716176Z"
+    },
+    {
+      "exitCode": 0,
+      "startedUTC": "2026-10-28T13:03:09.4735278Z",
+      "check": "vite-build",
+      "completedUTC": "2026-10-28T13:03:26.6490077Z"
+    },
+    {
+      "exitCode": 0,
+      "startedUTC": "2026-10-28T13:03:26.651404Z",
+      "check": "worker-build",
+      "completedUTC": "2026-10-28T13:03:27.428134Z"
+    },
+    {
+      "exitCode": 0,
+      "startedUTC": "2026-10-28T13:03:27.4303547Z",
+      "check": "focused-acra-mom",
+      "completedUTC": "2026-10-28T13:03:27.8570388Z"
+    },
+    {
+      "exitCode": 0,
+      "startedUTC": "2026-10-28T13:03:27.8589719Z",
+      "check": "focused-iras-mas",
+      "completedUTC": "2026-10-28T13:03:29.4978859Z"
+    },
+    {
+      "exitCode": 0,
+      "startedUTC": "2026-10-28T13:03:29.4995744Z",
+      "check": "focused-cpf",
+      "completedUTC": "2026-10-28T13:03:30.913379Z"
+    },
+    {
+      "exitCode": 0,
+      "startedUTC": "2026-10-28T13:03:30.9156082Z",
+      "check": "focused-production",
+      "completedUTC": "2026-10-28T13:03:35.7486535Z"
+    },
+    {
+      "completedUTC": "2026-10-28T13:15:59.4232888Z",
+      "exitCode": 0,
+      "startedUTC": "2026-10-28T13:12:44.7276945Z",
+      "check": "smoke"
+    },
+    {
+      "completedUTC": "2026-10-28T13:19:14.9970029Z",
+      "exitCode": 0,
+      "startedUTC": "2026-10-28T13:15:59.4439969Z",
+      "check": "full"
+    },
+    {
+      "completedUTC": "2026-10-28T13:19:18.3306338Z",
+      "exitCode": 0,
+      "startedUTC": "2026-10-28T13:19:15.0007871Z",
+      "check": "fixed100-original-final"
+    },
+    {
+      "completedUTC": "2026-10-28T13:19:29.1938307Z",
+      "exitCode": 0,
+      "startedUTC": "2026-10-28T13:19:18.3324002Z",
+      "check": "fixed100-enriched-final"
+    },
+    {
+      "completedUTC": "2026-10-28T13:19:32.9994566Z",
+      "exitCode": 0,
+      "startedUTC": "2026-10-28T13:19:29.1953103Z",
+      "check": "natural30-original-final"
+    },
+    {
+      "completedUTC": "2026-10-28T13:19:36.8651721Z",
+      "exitCode": 0,
+      "startedUTC": "2026-10-28T13:19:33.0010332Z",
+      "check": "natural30-enriched-final"
+    },
+    {
+      "completedUTC": "2026-10-28T13:19:37.3179464Z",
+      "exitCode": 0,
+      "startedUTC": "2026-10-28T13:19:36.8667088Z",
+      "check": "preservation-audit"
+    }
+  ],
+  "fixed100": {
+    "originalBase": {
+      "ACRA": 6,
+      "IRAS": 10,
+      "CPF": 14,
+      "MAS": 12,
+      "MOM": 12
+    },
+    "sameSourcesBase": {
+      "ACRA": 8,
+      "IRAS": 15,
+      "CPF": 14,
+      "MAS": 12,
+      "MOM": 13
+    },
+    "finalOriginalSources": {
+      "ACRA": 6,
+      "IRAS": 10,
+      "CPF": 14,
+      "MAS": 12,
+      "MOM": 12
+    },
+    "finalEnrichedSources": {
+      "ACRA": 10,
+      "IRAS": 19,
+      "CPF": 15,
+      "MAS": 12,
+      "MOM": 13
+    },
+    "verifiedStatusRegressions": [],
+    "enrichedVerifiedStatusRegressions": [],
+    "evidenceGains": [
+      {
+        "id": "iras-input-tax-01",
+        "authority": "IRAS",
+        "question": "When can a Singapore business recover input GST on purchases?"
+      },
+      {
+        "id": "iras-input-tax-02",
+        "authority": "IRAS",
+        "question": "What conditions must a GST-registered business satisfy before claiming GST input tax?"
+      },
+      {
+        "id": "iras-input-tax-03",
+        "authority": "IRAS",
+        "question": "Can a GST-registered company claim input tax on business purchases, and what records are needed?"
+      },
+      {
+        "id": "iras-input-tax-04",
+        "authority": "IRAS",
+        "question": "Explain when a business may recover GST input tax on purchases used to make taxable supplies."
+      },
+      {
+        "id": "iras-input-tax-05",
+        "authority": "IRAS",
+        "question": "What checks should accounts perform before posting an input GST claim?"
+      },
+      {
+        "id": "iras-eci-01",
+        "authority": "IRAS",
+        "question": "When should a company file its Estimated Chargeable Income?"
+      },
+      {
+        "id": "iras-eci-02",
+        "authority": "IRAS",
+        "question": "What is the ECI filing deadline after financial year end?"
+      },
+      {
+        "id": "iras-eci-04",
+        "authority": "IRAS",
+        "question": "Our company had no accounting profit this year. Can it skip ECI, or what facts determine whether the filing waiver applies?"
+      },
+      {
+        "id": "iras-eci-05",
+        "authority": "IRAS",
+        "question": "By when must a Singapore company submit its ECI?"
+      },
+      {
+        "id": "cpf-cpf-rate-factors-04",
+        "authority": "CPF",
+        "question": "Our employee earns S$4,000 a month. Can you calculate the CPF contributions, and what other payroll facts do you need?"
+      },
+      {
+        "id": "mom-salary-timing-02",
+        "authority": "MOM",
+        "question": "What is the usual deadline for monthly salary after the salary period?"
+      },
+      {
+        "id": "acra-annual-returns-01",
+        "authority": "ACRA",
+        "question": "How does a Singapore private company file its annual return with ACRA?"
+      },
+      {
+        "id": "acra-annual-return-officer-particulars-01",
+        "authority": "ACRA",
+        "question": "From 20 October 2026, what officer particulars must a local company confirm when it files its annual return?"
+      },
+      {
+        "id": "acra-secretary-appointment-01",
+        "authority": "ACRA",
+        "question": "By when must a new local company appoint its company secretary?"
+      },
+      {
+        "id": "acra-secretary-appointment-02",
+        "authority": "ACRA",
+        "question": "What are the basic company secretary appointment requirements?"
+      }
+    ],
+    "independentWhole100Correctness": "NOT_REASSESSED",
+    "changedPreviouslyVerifiedAnswers": [
+      "mom-final-salary-01",
+      "mom-final-salary-03",
+      "mom-final-salary-04"
+    ]
+  },
+  "natural30": {
+    "originalChangedAnswers": [
+      "natural-iras-02",
+      "natural-iras-03",
+      "natural-cpf-06"
+    ],
+    "originalExplanationRegressions": [],
+    "enrichedExplanationRegressions": [],
+    "baselineExplanations": 25,
+    "finalOriginalExplanations": 25,
+    "finalEnrichedExplanations": 25
+  },
+  "corpusSha256": "1e7afa7ec324cbf734c90efae3727a797f68e37ca6407360efbc3e9050edbd71",
+  "codeFreezeStable": true,
+  "sourceIntegrityAllMatch": true,
+  "liveModelAndBrowserAcceptance": "NOT_RUN",
+  "historicalAcraReleaseAcceptance": "SEPARATE_AND_HELD",
+  "ci": "Not run by this task; local validation is not CI acceptance",
+  "merge": "NOT_RUN",
+  "deployment": "NOT_RUN"
+}

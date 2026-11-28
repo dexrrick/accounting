@@ -1,0 +1,50 @@
+[
+  {
+    "check": "preflight",
+    "exitCode": 0,
+    "startedUTC": "2026-11-02T15:35:37.1379994Z",
+    "completedUTC": "2026-11-02T15:35:37.2246531Z"
+  },
+  {
+    "check": "maintained-lint",
+    "exitCode": 0,
+    "startedUTC": "2026-11-02T15:35:37.2405839Z",
+    "completedUTC": "2026-11-02T15:35:37.4506426Z"
+  },
+  {
+    "check": "typecheck",
+    "exitCode": 0,
+    "startedUTC": "2026-11-02T15:35:37.4528590Z",
+    "completedUTC": "2026-11-02T15:35:42.2865426Z"
+  },
+  {
+    "check": "iras-mas-source-regression",
+    "exitCode": 0,
+    "startedUTC": "2026-11-02T15:35:42.2889640Z",
+    "completedUTC": "2026-11-02T15:35:43.6901772Z"
+  },
+  {
+    "check": "wht-production-regression",
+    "exitCode": 0,
+    "startedUTC": "2026-11-02T15:35:43.6930415Z",
+    "completedUTC": "2026-11-02T15:35:47.0751242Z"
+  },
+  {
+    "check": "cpf-application-regression",
+    "exitCode": 0,
+    "startedUTC": "2026-11-02T15:35:47.0769123Z",
+    "completedUTC": "2026-11-02T15:36:08.1483684Z"
+  },
+  {
+    "check": "vite-build",
+    "exitCode": 0,
+    "startedUTC": "2026-11-02T15:36:08.1499377Z",
+    "completedUTC": "2026-11-02T15:36:10.7875526Z"
+  },
+  {
+    "check": "worker-build",
+    "exitCode": 0,
+    "startedUTC": "2026-11-02T15:36:10.7890713Z",
+    "completedUTC": "2026-11-02T15:36:11.5800486Z"
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "cases": [
+    {"id":"balanced-acra-1","authority":"ACRA","question":"We incorporated a Singapore private company on 15 March 2026 and have one resident director. By when must we appoint a company secretary, and may the sole director fill that role?"},
+    {"id":"balanced-acra-2","authority":"ACRA","question":"Our Singapore private company was registered on 10 October 2026 with a sole director. What is the six-month deadline to appoint a company secretary, and can that sole director also be secretary?"},
+    {"id":"balanced-cpf-1","authority":"CPF","question":"Our Singapore citizen employee earns total wages of S$400 in the month. Is there an employee CPF share, and must the employer still contribute?"},
+    {"id":"balanced-cpf-2","authority":"CPF","question":"For a Singapore citizen worker whose total monthly wages are S$250, does CPF require a deduction from the employee's wages as well as an employer contribution?"},
+    {"id":"balanced-mom-1","authority":"MOM","question":"For an Employment Act-covered employee, the salary period ended on 31 May 2026. We paid ordinary salary and overtime wages on 10 June 2026. Were both paid within the usual deadlines?"},
+    {"id":"balanced-mom-2","authority":"MOM","question":"Under the current Employment Act rules, our employee's salary period ends on 31 October 2026. When must ordinary salary and overtime pay each be paid?"},
+    {"id":"balanced-iras-1","authority":"IRAS","question":"A GST-registered employer paid an employee's annual health screening bill. The examination was not legally required and was not linked to a work-related health risk. Can we claim the input tax?"},
+    {"id":"balanced-iras-2","authority":"IRAS","question":"Our GST-registered company pays for voluntary routine health check-ups for employees. There is no WICA obligation, collective agreement, legal mandate or work-related health risk. Is input GST on these medical examinations recoverable?"},
+    {"id":"balanced-mas-1","authority":"MAS","question":"Our VCFM opened a branch overseas. Does it need prior approval and what form is specified in the current MAS toolkit?"},
+    {"id":"balanced-mas-2","authority":"MAS","question":"Before our VCFM establishes a new branch in Singapore, what approval and prescribed form does the current MAS compliance toolkit require?"}
+  ]
+}

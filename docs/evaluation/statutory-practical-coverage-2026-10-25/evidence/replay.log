@@ -1,0 +1,21 @@
+{
+  "outputPath": "D:\\Accounting\\artifacts\\statutory-coverage-replay-2026-10-25.json",
+  "corpusSize": 100,
+  "routedByAuthority": {
+    "IRAS": "20/20",
+    "CPF": "20/20",
+    "MOM": "20/20",
+    "ACRA": "20/20",
+    "MAS": "20/20"
+  },
+  "verifiedByAuthority": {
+    "IRAS": 5,
+    "CPF": 8,
+    "MOM": 6,
+    "ACRA": 5,
+    "MAS": 4
+  },
+  "networkRequests": 0,
+  "modelRequests": 0,
+  "liveAcceptance": "NOT_RUN"
+}

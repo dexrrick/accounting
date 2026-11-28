@@ -28,6 +28,28 @@ assert.equal(recovered.assessmentStatus, 'PASSED');
 assert.deepEqual(recovered.failureChain, [], 'A recovered transient failure is not a terminal failure.');
 assert.deepEqual(recovered.providerAttempts.map(attempt => attempt.httpStatus), [503, 200],
   'The complete retry chronology remains available alongside the successful outcome.');
+const observedOkDeadline = diagnoseGeminiCaseFailure({
+  failure: { code: 'V4_SEMANTIC_DEADLINE_EXCEEDED' },
+  providerResponsePartial: { kind: 'GEMINI_HTTP_ENVELOPE', status: 200,
+    failureCode: 'V4_SEMANTIC_DEADLINE_EXCEEDED' },
+  stageVerdicts: stages
+});
+assert.equal(observedOkDeadline.providerOutcome, 'TIMEOUT');
+assert.equal(observedOkDeadline.providerStatus, 200, 'the actual observed status remains available on timeout');
+assert.equal(observedOkDeadline.assessmentStatus, 'NOT_ASSESSED',
+  'a retained provider envelope does not count as a semantic response');
+assert.deepEqual(observedOkDeadline.failureChain, [{ stage: 'PROVIDER', outcome: 'TIMEOUT',
+  httpStatus: 200, code: 'V4_SEMANTIC_DEADLINE_EXCEEDED' }]);
+const noHeadersDeadline = diagnoseGeminiCaseFailure({ failure: { code: 'V4_SEMANTIC_DEADLINE_EXCEEDED' }, stageVerdicts: stages });
+assert.equal(noHeadersDeadline.providerOutcome, 'TIMEOUT');
+assert.equal(noHeadersDeadline.providerStatus, undefined);
+assert.equal(noHeadersDeadline.assessmentStatus, 'NOT_ASSESSED');
+const providerHttpFailure = diagnoseGeminiCaseFailure({
+  failure: { code: 'V4_PROVIDER_HTTP_429' },
+  providerResponsePartial: { kind: 'GEMINI_HTTP_ENVELOPE', status: 429, failureCode: 'V4_PROVIDER_HTTP_429' }
+});
+assert.equal(providerHttpFailure.providerOutcome, 'HTTP_ERROR', 'provider HTTP failures remain authoritative');
+assert.equal(providerHttpFailure.providerStatus, 429);
 const invalid = diagnoseGeminiCaseFailure({ semanticUnderstanding: { mode: 'DETERMINISTIC_FALLBACK', failure: 'INVALID_RESPONSE', failureReason: 'MALFORMED_JSON' } });
 assert.equal(invalid.assessmentStatus, 'FAILED');
 assert.equal(invalid.failureChain.at(-1).stage, 'INTERPRETATION');

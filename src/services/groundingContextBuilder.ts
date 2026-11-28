@@ -13,10 +13,11 @@ import { classifyQuestion } from '../classification/questionClassifier';
 import type { ProviderSettings } from '../types/provider';
 import { defaultTransactionUnderstandingService, type TransactionUnderstanding } from './transactionUnderstandingService';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
-import { getCoverageTopicsByIds, type SingaporeCoverageTopic } from '../standards/coverageRegistry';
+import { getCoverageTopicsByIds, SINGAPORE_COVERAGE_REGISTRY, SINGAPORE_DOMAIN_TAXONOMY, type SingaporeCoverageTopic } from '../standards/coverageRegistry';
 import type { ISourceRetriever, SourceRetrievalQuery } from '../retrieval/sourceRetriever';
 import { defaultAdvancedSourceRetriever } from '../retrieval/advancedSourceRetriever';
-import { defaultControlledWebRetriever, type ControlledFetchOptions, type ControlledWebRetriever } from '../retrieval/controlledWebRetriever';
+import { defaultControlledWebRetriever, type ControlledFetchOptions, type ControlledFetchResult, type ControlledWebRetriever } from '../retrieval/controlledWebRetriever';
+import { getRequestTimeoutMs, throwIfRequestAborted } from './requestDeadline';
 import { defaultCitationVerifier } from '../verification/citationVerifier';
 import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { formatSingaporeDate } from '../utils/dateUtils';
@@ -28,16 +29,51 @@ import {
   getOfficialSourceDiscoveryProviderConfig,
   isOfficialSourceCandidateMateriallyRelevant,
   isIrasSourceUrlAreaCompatible,
+  isAcraCompanySourceUrlCompatible,
   OfficialDomainSearchAdapter as DefaultOfficialDomainSearchAdapter,
   OfficialSitemapDiscoveryAdapter
 } from '../retrieval/officialSitemapDiscovery';
 import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targetDateResolver';
-import { defaultExternalSourceValidator, matchesTopicContentTerm } from '../retrieval/externalSourceValidator';
+import { defaultExternalSourceValidator, extractCompleteHtmlBodyContext, matchesTopicContentTerm } from '../retrieval/externalSourceValidator';
+import { isAcraAuditExemptionContextRequest } from '../retrieval/acraMomKnowledge20261027b';
+import { supportsAcraSmallCompanyAuditFacts } from '../retrieval/momAcraMasCoverageRules';
+import { cleanHtmlText } from '../retrieval/sourceAdapters';
 import { evaluateEvidenceQuality, type EvidenceQualityAssessment } from '../retrieval/evidenceQualityGate';
 import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
+import { provesMomSalaryPaymentSource, selectMomSalaryPaymentRuleQuote } from '../retrieval/momSalaryPaymentRule';
+import { provesIrasAcraPracticalRuleSource } from '../retrieval/irasAcraPracticalRules';
+import { provesCpfMasPracticalRuleSource } from '../retrieval/cpfMasPracticalRules';
+import { supportIrasCpfCoverageRule } from '../retrieval/irasCpfCoverageRules';
+import { supportMomAcraMasCoverageRule } from '../retrieval/momAcraMasCoverageRules';
+import { hasPracticalExpansionContradiction, selectPracticalExpansionQuotes, supportPracticalExpansionRule,
+  practicalExpansionPointers, practicalExpansionDiscoveryPointers } from '../retrieval/practicalStatutoryExpansion';
+import { IRAS_CPF_MAS_PRACTICAL_RULES_20261027 } from '../retrieval/irasCpfMasPracticalRules20261027';
+import { STATUTORY_KNOWLEDGE_POINTERS_20261027B, knowledgePointerCoversDate,
+  supportStatutoryKnowledgeRule } from '../retrieval/statutoryKnowledge20261027b';
+import { MAS_VCFM_TOOLKIT_URL, supportMomAcraMasExpansionRule } from '../retrieval/momAcraMasExpansionRules';
+import { isVcfmBranchApprovalQuestion, selectStatutoryWorkflowQuotes,
+  STATUTORY_WORKFLOW_RULES_20261029, supportStatutoryWorkflowRule } from '../retrieval/statutoryWorkflows20261029';
+import { extractOfficialDocumentFromRetrieved } from '../retrieval/officialDocumentExtractor';
+import { extractPdfDocumentText } from '../retrieval/pdfDocumentTextExtractor';
+import {
+  completeIrasCpfCashTopUpEligibilityQuote,
+  completeIrasCpfCashTopUpLimitQuotes,
+  completeIrasEciFilingDeadlineQuote
+} from '../verification/claimEvidenceVerifier';
+import {
+  isBoundedStatutoryAdvisoryRequest,
+  selectBoundedStatutoryAdvisoryPassage,
+  supportBoundedStatutoryAdvisory
+} from '../retrieval/statutoryAdvisorySupport';
+import {
+  getAcraAnnualReturnDeadlineTablePassage,
+  isAcraAnnualReturnDeadlineQuestion,
+  supportsAcraAnnualReturnDeadlineEvidence,
+  supportsAcraAnnualReturnFilingRule
+} from '../retrieval/acraAnnualReturnFilingRule';
 import { formatIrasEvidencePrompt, renderIrasEvidenceResponse, usesIrasEvidencePolicy } from './irasEvidencePolicy';
 import { computeVerifiedStandardGst } from '../engine/verifiedGstCalculation';
-import type { AuthorityEvidenceScope } from '../types/authorityEvidence';
+import type { AuthorityAdmittedDocumentContext, AuthorityEvidenceScope } from '../types/authorityEvidence';
 import {
   buildSemanticDiscoveryQuery,
   getRequestedQuestionConcepts,
@@ -45,6 +81,7 @@ import {
   interpretSemanticQuestion,
   isShortSemanticFollowUp,
   reconcileQuestionUnderstanding,
+  type ReconciledSemanticQuestionIssue,
   type RequestedQuestionConcept,
   type SemanticQuestionUnderstanding
 } from './semanticQuestionUnderstanding';
@@ -54,9 +91,154 @@ import {
   readRequestCompletenessObservation,
   type RequestCompletenessContext
 } from './requestCompleteness';
+import { completeVisibleEvidenceListSpan, splitEvidenceTextBlocks, visibleEvidenceListSpan } from '../utils/evidenceTextBoundaries';
+import { hasExplicitPriorFactReference, startsNewAccountingScenario } from './conversationBoundary';
 
 const APPROVED_ACCOUNTING_DISCOVERY_HOSTS = ['ifrs.org', 'www.ifrs.org', 'asc.acra.gov.sg', 'acra.gov.sg', 'www.acra.gov.sg'] as const;
 const APPROVED_IRAS_DISCOVERY_HOSTS = ['www.iras.gov.sg', 'iras.gov.sg', 'sso.agc.gov.sg'] as const;
+const IRAS_GST_BASICS_EXEMPT_RULE = IRAS_CPF_MAS_PRACTICAL_RULES_20261027.find(rule => rule.id === 'IRAS_GST_EXEMPT');
+
+async function selectNativeVcfmBranchApprovalQuote(
+  document: ControlledFetchResult,
+  documentHash: string,
+  query: string,
+  subject: string,
+  officialUrl: string
+): Promise<{ quote: string; pageNumber: number; pageCount: number; tableStructure: 'PRESERVED' | 'AMBIGUOUS' | 'NONE' } | undefined> {
+  if (document.status !== 'SUCCESS' || !document.contentBytes || !document.contentHash ||
+      document.contentHash !== documentHash || document.finalUrl !== officialUrl ||
+      officialUrl !== MAS_VCFM_TOOLKIT_URL ||
+      document.contentType?.split(';', 1)[0]?.trim().toLowerCase() !== 'application/pdf' ||
+      !isVcfmBranchApprovalQuestion(query)) return undefined;
+
+  try {
+    const extracted = await extractPdfDocumentText(new Uint8Array(document.contentBytes));
+    if (extracted.pageCount < 1 || extracted.pageCount > 150 || !extracted.text.trim()) return undefined;
+    const rowStartPattern = /^\s*2\s*\|\s*To seek MAS[’'] approval to acquire or hold,/i;
+    const rowEndPattern = /^\s*3\s*\|\s*To seek MAS[’'] approval to reduce\b/i;
+    const rowStarts = extracted.lines.filter(line => rowStartPattern.test(line.text));
+    const rowEnds = extracted.lines.filter(line => rowEndPattern.test(line.text));
+    if (rowStarts.length !== 1 || rowEnds.length !== 1 ||
+        rowStarts[0].pageNumber !== rowEnds[0].pageNumber) {
+      console.log('VCFM row boundary failed', { starts: rowStarts.length, ends: rowEnds.length });
+      return undefined;
+    }
+    const pageLines = extracted.lines.filter(line => line.pageNumber === rowStarts[0].pageNumber);
+    const startIndex = pageLines.indexOf(rowStarts[0]);
+    const endIndex = pageLines.indexOf(rowEnds[0]);
+    if (startIndex < 0 || endIndex <= startIndex) return undefined;
+    const rowLines = pageLines.slice(startIndex, endIndex);
+    const rowNumber = rowStarts[0].cells.length === rowStarts[0].cellStarts.length
+      ? rowStarts[0].cells[0]?.trim() : undefined;
+    if (rowNumber !== '2' || rowLines.some(line => line.cells.length !== line.cellStarts.length)) return undefined;
+    const columnStarts = [...new Set(rowLines.flatMap((line, lineIndex) => line.cellStarts.filter((_, cellIndex) =>
+      !(lineIndex === 0 && cellIndex === 0))))].sort((left, right) => left - right);
+    if (columnStarts.length !== 3) {
+      console.log('VCFM column starts failed', columnStarts);
+      return undefined;
+    }
+    const [activityStart, timingStart, categoryStart] = columnStarts;
+    const columns = { activity: [] as string[], form: [] as string[], timing: [] as string[],
+      condition: [] as string[], route: [] as string[], category: [] as string[] };
+    const foundAnchors = new Set<string>();
+    const markers = [
+      { name: 'activity', column: 'activity' as const, pattern: /To seek MAS[’'] approval to acquire or hold,/i },
+      { name: 'form', column: 'form' as const, pattern: /No prescribed form/i },
+      { name: 'timing', column: 'timing' as const, pattern: /Prior to the acquisition/i },
+      { name: 'condition', column: 'condition' as const, pattern: /Licence condition or/i },
+      { name: 'route', column: 'route' as const, pattern: /MAS-Tx/i },
+      { name: 'category', column: 'category' as const, pattern: /Entity Activities &/i }
+    ];
+    for (const line of rowLines) {
+      for (const [cellIndex, rawCell] of line.cells.entries()) {
+        const cell = rawCell.trim();
+        if (!cell) continue;
+        const x = line.cellStarts[cellIndex];
+        if (line === rowStarts[0] && cellIndex === 0) continue;
+        const anchorMatches = markers.flatMap(marker => {
+          const match = marker.pattern.exec(cell);
+          return match ? [{ ...marker, start: match.index, end: match.index + match[0].length }] : [];
+        }).sort((left, right) => left.start - right.start);
+        if (anchorMatches.length) {
+          if (cell.slice(0, anchorMatches[0].start).trim() ||
+              anchorMatches.some((match, index) => index > 0 && match.start < anchorMatches[index - 1].end)) return undefined;
+          for (const [index, match] of anchorMatches.entries()) {
+            if (foundAnchors.has(match.name)) return undefined;
+            foundAnchors.add(match.name);
+            const text = cell.slice(match.start, anchorMatches[index + 1]?.start ?? cell.length).trim();
+            columns[match.column].push(text);
+          }
+          continue;
+        }
+        if (Math.abs(x - activityStart) < 1) {
+          columns.activity.push(cell);
+        } else if (Math.abs(x - timingStart) < 1) {
+          const condition = /\bregistration condition\b/i.exec(cell);
+          if (condition) {
+            columns.timing.push(cell.slice(0, condition.index).trim());
+            columns.condition.push(cell.slice(condition.index).trim());
+          } else columns.timing.push(cell);
+        } else if (Math.abs(x - categoryStart) < 1) {
+          columns.category.push(cell);
+        } else return undefined;
+      }
+    }
+    if (['activity', 'form', 'timing', 'condition', 'route', 'category'].some(anchor => !foundAnchors.has(anchor)) ||
+        columns.activity.length === 0 || columns.form.length === 0 || columns.timing.length === 0 ||
+        columns.condition.length === 0 || columns.route.length === 0 || columns.category.length === 0) return undefined;
+    const columnBoundedRow = [
+      rowNumber,
+      ...Object.values(columns).map(values => values.join(' ').replace(/\s+/g, ' ').trim())
+    ].join(' | ');
+    const boundedRowAndBoundary = `${columnBoundedRow}\n${rowEnds[0].text}`;
+    if (boundedRowAndBoundary.length > 5_000) return undefined;
+    const request = { authority: 'MAS', topicId: 'mas-vcfm-branch-approval', query, subject,
+      sourceText: boundedRowAndBoundary, officialUrl };
+    const supported = supportStatutoryWorkflowRule(request);
+    const quotes = selectStatutoryWorkflowQuotes(request);
+    if (supported !== true || quotes.length !== 1 ||
+        supportStatutoryWorkflowRule({ ...request, sourceText: quotes[0] }) !== true) return undefined;
+    return { quote: quotes[0], pageNumber: rowStarts[0].pageNumber,
+      pageCount: extracted.pageCount, tableStructure: extracted.tableStructure };
+  } catch {
+    return undefined;
+  }
+}
+
+const PRACTICAL_COVERAGE_CONTENT_ANCHORS: Readonly<Record<string, readonly string[]>> = {
+  'MAS:mas-lfmc': ['not exhaustive', 'outside the SFA', 'fund-level requirements'],
+  'IRAS:iras-gst-filing-deadlines': ['Your GST return and payment are due'],
+  'ACRA:acra-annual-return-officer-particulars': ['Companies filing annual returns will need to confirm'],
+  'IRAS:iras-wht-filing-payment-due-date': ['file and pay WHT', '15th of the second month'],
+  'IRAS:iras-wht-deemed-payment-date': ['The date of payment is defined as the earliest'],
+  'IRAS:iras-gst-motor-vehicles': ['Regulation 27', 'purchase and running expenses of motor cars'],
+  'CPF:cpf-bonus-backpay': ['wages are defined as remuneration in money', 'cpf contribution is not required on the aw if it is payable while the employee was a foreigner'],
+  'CPF:cpf-additional-wages': ['wages are defined as remuneration in money', 'for additional wages (aw), cpf contributions are required depending on when the aw is payable to your employee'],
+  'CPF:cpf-employee-coverage': ['person who is employed in Singapore', 'Singapore Permanent Residents earning total wages', 'cpf contributions are payable once your foreign employee obtains his singapore permanent resident'],
+  'CPF:cpf-contribution-computation': ['CPF contribution rates vary based on', 'pay the employer', 'round off the Total CPF contributions'],
+  'CPF:cpf-pr-contribution-rates': ['Your CPF contribution rates as an SPR depend', 'Second-year rate: Applies from the month following', 'first-year rate: applies from the day your employee obtains his spr status', 'second-year rate: applies from the month following his first anniversary'],
+  'CPF:cpf-ordinary-wages': ['wages are defined as remuneration in money', 'maximum amount of OW that attracts CPF contributions', 'for ordinary wages (ow), you will need to pay cpf contributions on the pro-rated ow'],
+  'CPF:cpf-additional-wage-ceiling': ['the aw ceiling is computed on a per employer, per year basis', '$102,000 - total ordinary wages (ow) subject to cpf for the year', 'the applicable aw ceiling depends on the due and payable date of the aw'],
+  'CPF:cpf_wage_ceiling': ['maximum amount of OW that attracts CPF contributions'],
+  'MAS:mas-regulatory-reporting': ['To submit quarterly financial returns', 'To submit audited annual financial returns', 'To notify MAS of a change of name', 'CMS licence', 'misconduct', 'representatives'],
+  'MAS:mas-fund-management-exemptions': ['existing class exemption']
+};
+
+function currentOwnedPracticalCoverageRequest(authority: string, topicId: string, query: string, subject: string): boolean {
+  if (/\b(?:19|20)\d{2}\b|\b(?:historical|historic|previous|prior|former|old|superseded)\b/i.test(query) ||
+      /\b(?:calculate|compute|estimate|how much|my company|our company|specific employee)\b/i.test(query)) return false;
+  if (authority === 'IRAS' && topicId === 'iras-gst-filing-deadlines') {
+    return /\b(?:gst|goods and services tax)\b/i.test(query) &&
+      /\b(?:fil(?:e|ing)|return|nil|due|deadline|extension|extend|accounting period|quarter|f5)\b/i.test(query) &&
+      /\b(?:gst|goods and services tax)\b/i.test(subject);
+  }
+  if (authority === 'MAS' && topicId === 'mas-fund-management-exemptions') {
+    return /\b(?:class exemptions?|exemptions?|exempt(?:ed|ion)?|operate without)\b/i.test(query) &&
+      /\b(?:fund|manager|management|managing|licen[cs]e)\b/i.test(query) &&
+      /\b(?:exempt|licen[cs]e|fund)\b/i.test(subject);
+  }
+  return false;
+}
 
 /**
  * Provider-neutral structured reasoning context.
@@ -71,10 +253,18 @@ export interface GroundedReasoningContext {
   primaryEvidence: AuthoritativeSourceRecord[];
   officialGuidance: AuthoritativeSourceRecord[];
   curatedSummaries: AuthoritativeSourceRecord[];
+  /** Complete fetched HTML bodies, consumed only after same-record source admission. */
+  documentContexts?: AuthorityAdmittedDocumentContext[];
   applicationRules: string[];
   currentInformationRequired: boolean;
   semanticUnderstanding?: TransactionUnderstanding;
   questionUnderstanding?: SemanticQuestionUnderstanding;
+  /** Validated issue-local IRAS rule intent; does not change whole-question completeness. */
+  authorityIssue?: {
+    authority: 'IRAS';
+    issue: ReconciledSemanticQuestionIssue;
+    requestedConcepts: RequestedQuestionConcept[];
+  };
   /** Immutable exact-query representation diagnostics, separate from evidence scope. */
   requestCompletenessContext?: RequestCompletenessContext;
   sourceMapFallbackTrace?: SourceMapFallbackTrace;
@@ -215,7 +405,7 @@ export interface OfficialSourceDiscoveryRequest {
 
 /** Trusted official-domain search adapter. Candidate URLs are always fetched and validated before use. */
 export interface OfficialSourceDiscoveryAdapter {
-  discoverOfficialSourceCandidates(request: OfficialSourceDiscoveryRequest): Promise<string[]>;
+  discoverOfficialSourceCandidates(request: OfficialSourceDiscoveryRequest, signal?: AbortSignal): Promise<string[]>;
   getCandidateTitle?(url: string): string | undefined;
   /** Status-only transport trace for sitemap/robots fetches; never evidence. */
   getLastFetchTrace?(): Array<{ topicId: string; status: string }>;
@@ -223,7 +413,7 @@ export interface OfficialSourceDiscoveryAdapter {
 
 /** Search returns candidate URLs only; every candidate is independently fetched and validated. */
 export interface OfficialDomainSearchAdapter {
-  searchOfficialDomainCandidates(request: OfficialSourceDiscoveryRequest): Promise<string[]>;
+  searchOfficialDomainCandidates(request: OfficialSourceDiscoveryRequest, signal?: AbortSignal): Promise<string[]>;
   getCandidateTitle?(url: string): string | undefined;
   getCandidateQueryVariant?(url: string): 'FULL_QUERY' | 'TOPIC_HINT_1' | 'TOPIC_HINT_2' | 'TOPIC_HINT_3' | undefined;
   getLastSearchTrace?(): Array<{ variant: 'FULL_QUERY' | 'TOPIC_HINT_1' | 'TOPIC_HINT_2' | 'TOPIC_HINT_3'; candidateUrls: string[]; status: 'RESULTS' | 'NO_CANDIDATES'; reason?: string }>;
@@ -236,6 +426,8 @@ export interface MappedFallbackOptions {
   officialDomainSearchAdapter?: OfficialDomainSearchAdapter;
   /** Permit a transient authority-level query scope when no reviewed topic matches. */
   authorityLevelDiscovery?: boolean;
+  /** Permit supplementary issue-scoped discovery only after same-request semantic validation. */
+  allowTransientAuthorityIssueDiscovery?: boolean;
   /** Restrict this pass to reviewed local records; do not fetch mapped sources. */
   localOnly?: boolean;
   /** Stable date input used by target-date and freshness checks. */
@@ -250,6 +442,9 @@ export interface MappedFallbackOptions {
   semanticDiscoveryQuery?: string;
   /** Internal per-issue scope. Omitted callers retain the existing full-query behavior. */
   evidenceScope?: AuthorityEvidenceScope;
+  /** Validated issue-local IRAS rule intent; the original user query remains unchanged. */
+  authorityIssue?: GroundedReasoningContext['authorityIssue'];
+  signal?: AbortSignal;
 }
 
 function topicMatchesEvidenceScope(topic: SingaporeCoverageTopic, scope?: AuthorityEvidenceScope): boolean {
@@ -319,6 +514,47 @@ function provisionalIrasDiscoveryTopic(query: string, semanticContext?: ReturnTy
     shortDescription: `Transient ${populationContext} routing context derived from the complete user query and validated intent labels; not reviewed knowledge.`
   } as unknown as MappedCoverageTopic;
   return topic;
+}
+
+/** Transient retrieval target for a validated, governed issue without a useful registry topic. */
+export function provisionalAuthorityIssueTopic(scope: AuthorityEvidenceScope): MappedCoverageTopic | undefined {
+  if (scope.authority === 'IRAS') return undefined;
+  const sourceDomainByAuthority = {
+    CPF: { topicDomain: 'CPF_CONTRIBUTIONS', sourceDomain: 'CPF_BOARD', authorityLabel: 'CPF Board' },
+    MOM: { topicDomain: 'MOM_EMPLOYMENT', sourceDomain: 'MOM_EMPLOYMENT', authorityLabel: 'Ministry of Manpower' },
+    ACRA: { topicDomain: 'ACRA_COMPANIES', sourceDomain: 'ACRA_CORP', authorityLabel: 'ACRA' },
+    MAS: { topicDomain: 'MAS_FUND_MANAGEMENT', sourceDomain: 'MAS_FUNDS', authorityLabel: 'MAS' }
+  } as const;
+  const metadata = sourceDomainByAuthority[scope.authority];
+  if (!metadata) return undefined;
+  const concepts = scope.requestedConcepts;
+  const phrases = [...new Set([
+    scope.context.primarySubject,
+    ...scope.context.concepts,
+    ...concepts.flatMap(concept => [concept.label, ...concept.terms])
+  ].map(value => value.trim()).filter(value => value && normalizeEvidenceText(value).split(' ').length >= 2))].slice(0, 16);
+  const issueTerms = phrases.flatMap(phrase => normalizeEvidenceText(phrase).split(' ')
+    .filter(term => term.length >= 4 && !AUTHORITY_QUERY_STOPWORDS.has(term)));
+  const discoveryTerms = [...new Set([...phrases, ...issueTerms])].slice(0, 32);
+  const slug = normalizeEvidenceText(scope.context.primarySubject).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 54);
+  return {
+    id: 'iras-authority-query-issue-' + scope.authority.toLowerCase() + '-' + (slug || 'request'),
+    title: metadata.authorityLabel + ': ' + scope.context.primarySubject.slice(0, 140),
+    domainId: metadata.topicDomain,
+    priority: 'P1',
+    status: 'MISSING',
+    authorities: [scope.authority],
+    legacyDomains: [metadata.sourceDomain],
+    sourceRecordIds: [],
+    requiredChecks: ['SOURCE_PROVENANCE', 'RETRIEVAL_EVALUATION', 'TEMPORAL_VALIDITY'],
+    keywords: discoveryTerms,
+    exclusionKeywords: [],
+    aliases: phrases,
+    actOrStandard: metadata.authorityLabel + ' official guidance',
+    shortDescription: 'Transient issue-scoped retrieval terms from a validated interpretation; not reviewed knowledge.',
+    requestedConcepts: concepts,
+    mappedTopicIds: scope.topicIds
+  } as unknown as MappedCoverageTopic;
 }
 
 function provisionalIrasConceptTopics(
@@ -760,21 +996,42 @@ function getTopicStandardIdentifiers(topic: MappedCoverageTopic, pointer?: Sourc
 // These aliases rank discovery metadata and identify page titles; fetched text must still contain
 // the original topic's specific content terms before it can become evidence.
 const CPF_DISCOVERY_TITLE_HINTS: Readonly<Record<string, readonly string[]>> = {
-  'cpf-ordinary-wages': ['What constitutes wages for CPF contributions'],
-  'cpf-additional-wages': ['What constitutes wages for CPF contributions'],
-  'cpf-bonus-backpay': ['What constitutes wages for CPF contributions'],
+  'cpf-ordinary-wages': ['What constitutes wages for CPF contributions', 'Do I need to pay CPF contributions for my foreign employee who has recently obtained Singapore Permanent Residence status?'],
+  'cpf-additional-wages': ['What constitutes wages for CPF contributions', 'Do I need to pay CPF contributions for my foreign employee who has recently obtained Singapore Permanent Residence status?'],
+  'cpf-bonus-backpay': ['What constitutes wages for CPF contributions', 'Do I need to pay CPF contributions for my foreign employee who has recently obtained Singapore Permanent Residence status?'],
+  'cpf-employee-coverage': ['Who should receive CPF contributions', 'Do I need to pay CPF contributions for my foreign employee who has recently obtained Singapore Permanent Residence status?'],
   'cpf-notice-pay-leave-encashment': ['What constitutes wages for CPF contributions'],
   'cpf-allowances': ['What constitutes wages for CPF contributions'],
   'cpf_wage_ceiling': ['How much CPF contributions to pay'],
   'cpf_contribution_rates': ['How much CPF contributions to pay'],
-  'cpf-pr-contribution-rates': ['How much CPF contributions to pay'],
-  'cpf-additional-wage-ceiling': ['How much CPF contributions to pay'],
+  'cpf-pr-contribution-rates': ['How much CPF contributions to pay', 'Do I need to pay CPF contributions for my foreign employee who has recently obtained Singapore Permanent Residence status?'],
+  'cpf-additional-wage-ceiling': ['How much CPF contributions to pay', 'Examples for computation of Additional Wage (AW) Ceiling'],
   'cpf-contribution-due-dates': ['Enforcement and penalties for non-compliance'],
   'cpf-cash-top-up-tax-relief': ['Top up to enjoy higher retirement payouts', 'Top up your MediSave savings']
 };
 
+const ACRA_DISCOVERY_TITLE_HINTS: Readonly<Record<string, readonly string[]>> = {
+  'acra_annual-returns': ['Filing annual returns', 'Deadline & requirements for annual returns'],
+  acra_financial_statements: ['Preparing financial statements', 'Financial reporting duties for directors'],
+  acra_xbrl: ['Filing financial statements in XBRL format', 'Financial statements: Filing requirements & exemptions'],
+  acra_small_company: ['Audit exemptions: Small company concept'],
+  'acra_audit-requirements': ['Audit exemptions: Small company concept'],
+  acra_directors: ['Company directors’ duties & key obligations'],
+  'acra_share-allotments': ['Allotment of shares', 'Filing a return of allotment of shares'],
+  'acra_company-secretary': ['Choosing company directors & other key officers'],
+  acra_rorc: ['Register of registrable controllers'],
+  'acra_nominee-arrangements': ['Registers of nominee directors and nominee shareholders'],
+  'acra_accounting-records': ['Company directors’ duties & key obligations'],
+  acra_record_retention: ['Company directors’ duties & key obligations']
+};
+
+const MOM_DISCOVERY_TITLE_HINTS: Readonly<Record<string, readonly string[]>> = {
+  'mom-salary-payment': ['Paying salary']
+};
+
 function getTopicDiscoveryHints(topic: MappedCoverageTopic): string[] {
-  return [...(topic.aliases || []), ...topic.keywords, ...(CPF_DISCOVERY_TITLE_HINTS[topic.id] || [])];
+  return [...(topic.aliases || []), ...topic.keywords, ...(CPF_DISCOVERY_TITLE_HINTS[topic.id] || []),
+    ...(ACRA_DISCOVERY_TITLE_HINTS[topic.id] || []), ...(MOM_DISCOVERY_TITLE_HINTS[topic.id] || [])];
 }
 
 function getTopicContentTerms(topic: MappedCoverageTopic): string[] {
@@ -786,6 +1043,10 @@ function getTopicContentTerms(topic: MappedCoverageTopic): string[] {
     ...(topic.id === 'cpf-contribution-due-dates' ? ['due date for CPF contributions', 'late payment interest'] : []),
     // The member retirement article calls these cash top-ups without a CPF prefix.
     ...(topic.id === 'cpf-cash-top-up-tax-relief' ? ['cash top-up', 'cash top-ups'] : []),
+    ...(topic.id === 'acra_annual-returns' ? ['annual returns', 'annual return'] : []),
+    ...(topic.id === 'acra_xbrl' ? ['XBRL financial statements', 'Full XBRL', 'Simplified XBRL'] : []),
+    ...(topic.id === 'acra_directors' ? ['directors duties', 'duties and obligations', 'company directors'] : []),
+    ...(topic.id === 'acra_share-allotments' ? ['return of share allotment', 'return of allotment'] : []),
     ...(topic.requiredContentTerms || []),
     ...(topic.paragraphHints || []),
     ...(topic.sectionHints || [])
@@ -827,7 +1088,8 @@ function rankRelevantOfficialPageLinks(
     let candidate: URL;
     try { candidate = new URL(link.href, parent); } catch { continue; }
     if (candidate.protocol !== 'https:' || candidate.username || candidate.password ||
-        !approvedHosts.includes(candidate.hostname.toLowerCase())) continue;
+        !approvedHosts.includes(candidate.hostname.toLowerCase()) ||
+        !isAcraCompanySourceUrlCompatible(topic.domainId, candidate.toString())) continue;
     candidate.hash = '';
     if (candidate.toString() === parent.toString()) continue;
     const searchable = normalizeEvidenceText(`${candidate.pathname} ${link.text}`);
@@ -883,83 +1145,404 @@ function completeScopedRulePassage(
     }) === true);
 }
 
+const IRAS_CONCEPT_PASSAGE_LIMIT_CHARS = 12_000;
+const IRAS_CONCEPT_PASSAGE_MAX_BLOCKS = 256;
+const IRAS_CONCEPT_PASSAGE_MAX_ANCHORS_PER_CONCEPT = 8;
+const IRAS_CONCEPT_PASSAGE_MAX_WINDOW_CHECKS = 160;
+
+function findExactSourceBlockSpan(sourceText: string, quote: string): { start: number; end: number } | undefined {
+  const normalizeBlock = (value: string): string => value.normalize('NFC').replace(/\u00a0/g, ' ').trim();
+  const sourceBlocks: Array<{ text: string; start: number; end: number }> = [];
+  let searchFrom = 0;
+  for (const rawBlock of sourceText.split(/\r?\n[\t ]*\r?\n+/)) {
+    const text = rawBlock.trim();
+    if (!text) continue;
+    const start = sourceText.indexOf(text, searchFrom);
+    if (start < 0) continue;
+    sourceBlocks.push({ text: normalizeBlock(text), start, end: start + text.length });
+    searchFrom = start + text.length;
+  }
+  const quoteBlocks = quote.split(/\r?\n[\t ]*\r?\n+/).map(normalizeBlock).filter(Boolean);
+  if (quoteBlocks.length === 0) return undefined;
+  const matches: Array<{ start: number; end: number }> = [];
+  for (let start = 0; start + quoteBlocks.length <= sourceBlocks.length; start += 1) {
+    if (quoteBlocks.every((block, offset) => sourceBlocks[start + offset].text === block)) {
+      matches.push({ start: sourceBlocks[start].start, end: sourceBlocks[start + quoteBlocks.length - 1].end });
+    }
+  }
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+const IRAS_CONCEPT_PASSAGE_PROFILES = new Map<string, {
+  domainId: string;
+  population: string;
+  conceptIds: ReadonlySet<string>;
+  anchorPhrases: ReadonlyMap<string, readonly string[]>;
+}>([
+  ['iras-corporate-tax-residency', {
+    domainId: 'IRAS_CORPORATE_TAX', population: 'COMPANY',
+    conceptIds: new Set(['company_tax_residency_rule', 'company_tax_residency_incorporation']),
+    anchorPhrases: new Map([
+      ['company_tax_residency_rule', ['control and management']],
+      ['company_tax_residency_incorporation', ['place of incorporation']]
+    ])
+  }],
+  ['iras-individual-cpf-cash-top-up-relief', {
+    domainId: 'IRAS_INDIVIDUAL_TAX', population: 'INDIVIDUAL',
+    conceptIds: new Set(['cpf_cash_top_up_relief', 'cpf_cash_top_up_relief_eligibility', 'cpf_cash_top_up_relief_limits']),
+    anchorPhrases: new Map([
+      ['cpf_cash_top_up_relief', ['cpf cash top-up relief is given to encourage']],
+      ['cpf_cash_top_up_relief_eligibility', ['to qualify for the tax relief']],
+      ['cpf_cash_top_up_relief_limits', ['individuals may continue to enjoy tax relief']]
+    ])
+  }],
+  ['iras-gst-blocked-input-tax', {
+    domainId: 'IRAS_GST', population: 'COMPANY',
+    conceptIds: new Set(['gst_blocked_motor_car_input_tax', 'gst_motor_car_input_tax_exceptions']),
+    anchorPhrases: new Map([
+      ['gst_blocked_motor_car_input_tax', ['generally cannot claim']],
+      ['gst_motor_car_input_tax_exceptions', ['motor car used by a third party']]
+    ])
+  }],
+  ['iras-gst-motor-vehicles', {
+    domainId: 'IRAS_GST', population: 'COMPANY',
+    conceptIds: new Set(['gst_blocked_motor_car_input_tax', 'gst_motor_car_input_tax_exceptions']),
+    anchorPhrases: new Map([
+      ['gst_blocked_motor_car_input_tax', ['generally cannot claim']],
+      ['gst_motor_car_input_tax_exceptions', ['motor car used by a third party']]
+    ])
+  }]
+]);
+
+/** Retain one exact contiguous source span that supports every requested concept in a known profile. */
+export function completeScopedIrasConceptPassage(
+  pageText: string,
+  topic: MappedCoverageTopic,
+  subject: string | undefined,
+  population: string | undefined,
+  concepts: RequestedQuestionConcept[],
+  maxChars = IRAS_CONCEPT_PASSAGE_LIMIT_CHARS
+): string | undefined {
+  if (topic.id === 'iras-cit-eci') {
+    if (topic.domainId !== 'IRAS_CORPORATE_TAX' || !subject || population !== 'COMPANY' ||
+        !/\b(?:eci|estimated chargeable income)\b/i.test(subject) ||
+        !/\b(?:filing|file|deadline|due|period)\b/i.test(subject)) return undefined;
+    const filingDeadlineQuote = completeIrasEciFilingDeadlineQuote(pageText);
+    return filingDeadlineQuote && filingDeadlineQuote.length <= maxChars ? filingDeadlineQuote : undefined;
+  }
+  const profile = IRAS_CONCEPT_PASSAGE_PROFILES.get(topic.id);
+  if (!profile || topic.domainId !== profile.domainId || !subject || population !== profile.population) return undefined;
+  const scopedConcepts = concepts.filter(item => item.topicIds.includes(topic.id));
+  if (scopedConcepts.length === 0 || scopedConcepts.some(item => !profile.conceptIds.has(item.id))) return undefined;
+  const requiredConcepts = scopedConcepts;
+
+  const blocks: Array<{ start: number; end: number }> = [];
+  let searchFrom = 0;
+  for (const block of pageText.split(/\r?\n[\t ]*\r?\n+/)) {
+    const text = block.trim();
+    if (!text) continue;
+    const start = pageText.indexOf(text, searchFrom);
+    if (start < 0) continue;
+    const end = start + text.length;
+    blocks.push({ start, end });
+    searchFrom = end;
+  }
+  if (blocks.length > IRAS_CONCEPT_PASSAGE_MAX_BLOCKS) return undefined;
+
+  if (!requiredConcepts.every(concept => supportGeneralIrasRuleConcept({
+    sourceText: pageText,
+    domainId: topic.domainId,
+    topicIds: [topic.id],
+    subject,
+    population,
+    concepts: [concept]
+  }) === true)) return undefined;
+
+  if (topic.id === 'iras-individual-cpf-cash-top-up-relief') {
+    const exactSupportingQuotes = [
+      completeIrasCpfCashTopUpEligibilityQuote(pageText),
+      ...completeIrasCpfCashTopUpLimitQuotes(pageText)
+    ];
+    if (exactSupportingQuotes.length !== 3 || exactSupportingQuotes.some(quote => !quote)) return undefined;
+    const spans = exactSupportingQuotes.map(quote => findExactSourceBlockSpan(pageText, quote!));
+    if (spans.some(span => !span)) return undefined;
+    const tableQuoteSpan = spans[2]!;
+    const markerMatches = [...pageText.matchAll(/\bto check your top[ -]?up limit\b/gi)];
+    if (markerMatches.length !== 1) return undefined;
+    const marker = markerMatches[0];
+    const markerStart = marker.index;
+    const markerEnd = markerStart + marker[0].length;
+    const markerBlockIndex = blocks.findIndex(block => block.start <= markerStart && markerEnd <= block.end);
+    if (markerBlockIndex < 0) return undefined;
+    const markerBlock = blocks[markerBlockIndex];
+
+    if (markerBlock.start >= tableQuoteSpan.end &&
+        /^\s*to check your top[ -]?up limit\b/i.test(pageText.slice(markerBlock.start, markerBlock.end))) {
+      // The page extractor may preserve the table end instruction as its own
+      // paragraph. Keep that paragraph in the contiguous preferred passage.
+      spans[2] = { ...tableQuoteSpan, end: markerBlock.end };
+    } else {
+      const tableBlocks = blocks
+        .map((block, index) => ({ block, index }))
+        .filter(({ block }) => block.start >= tableQuoteSpan.start && block.end <= tableQuoteSpan.end);
+      const finalTableBlock = tableBlocks.at(-1);
+      // Some extractors append the instruction to the final table row. Accept
+      // it only when that exact quoted row is the final table block.
+      if (markerStart < tableQuoteSpan.start || markerEnd > tableQuoteSpan.end ||
+          finalTableBlock?.index !== markerBlockIndex) return undefined;
+      // Validate the source as it existed at the boundary. This prevents a
+      // marker in an otherwise complete final block from preceding conditions
+      // or qualifications that occur later in that same block.
+      if (completeIrasCpfCashTopUpLimitQuotes(pageText.slice(0, markerEnd)).length !== 2) return undefined;
+    }
+    const start = Math.min(...spans.map(span => span!.start));
+    const end = Math.max(...spans.map(span => span!.end));
+    if (end - start > maxChars) return undefined;
+    const completePassage = pageText.slice(start, end);
+    return requiredConcepts.every(concept => supportGeneralIrasRuleConcept({
+      sourceText: completePassage,
+      domainId: topic.domainId,
+      topicIds: [topic.id],
+      subject,
+      population,
+      concepts: [concept]
+    }) === true) ? completePassage : undefined;
+  }
+
+  const conceptSpans: Array<{ start: number; end: number }> = [];
+  let windowChecks = 0;
+  for (const concept of requiredConcepts) {
+    let bestSpan: { start: number; end: number } | undefined;
+    let bestLength = Infinity;
+    const anchors = profile.anchorPhrases.get(concept.id) || [];
+    const matchingBlocks = blocks.map((block, index) => ({ block, index }))
+      .filter(({ block }) => anchors.some(anchor => pageText.slice(block.start, block.end).toLowerCase().includes(anchor)));
+    if (matchingBlocks.length === 0 || matchingBlocks.length > IRAS_CONCEPT_PASSAGE_MAX_ANCHORS_PER_CONCEPT) return undefined;
+    for (const { index: anchorIndex } of matchingBlocks) {
+      for (const start of [...new Set([Math.max(0, anchorIndex - 1), anchorIndex])]) {
+        for (let end = start; end < blocks.length; end += 1) {
+        const candidate = pageText.slice(blocks[start].start, blocks[end].end);
+          if (candidate.length > maxChars || candidate.length >= bestLength) break;
+          windowChecks += 1;
+          if (windowChecks > IRAS_CONCEPT_PASSAGE_MAX_WINDOW_CHECKS) return undefined;
+        if (supportGeneralIrasRuleConcept({
+          sourceText: candidate,
+          domainId: topic.domainId,
+          topicIds: [topic.id],
+          subject,
+          population,
+          concepts: [concept]
+        }) === true) {
+            bestLength = candidate.length;
+            bestSpan = { start: blocks[start].start, end: blocks[end].end };
+          break;
+        }
+      }
+      }
+    }
+    if (!bestSpan) return undefined;
+    conceptSpans.push(bestSpan);
+  }
+  const start = Math.min(...conceptSpans.map(span => span.start));
+  const end = Math.max(...conceptSpans.map(span => span.end));
+  if (end - start > maxChars) return undefined;
+  const completePassage = pageText.slice(start, end);
+  return requiredConcepts.every(concept => supportGeneralIrasRuleConcept({
+    sourceText: completePassage,
+    domainId: topic.domainId,
+    topicIds: [topic.id],
+    subject,
+    population,
+    concepts: [concept]
+  }) === true) ? completePassage : undefined;
+}
+
 export function selectRelevantFetchedText(pageText: string, terms: string[], maxChars = 5_000, query = '', preferredPassages: string[] = []): string {
   const text = pageText.trim();
   if (text.length <= maxChars) return text;
-  const completePageBlocks = new Set(text.split(/\r?\n[\t ]*\r?\n+/).map(block => block.trim()));
-  const preferred = preferredPassages.find(passage => passage.trim().length > 0 && passage.trim().length <= maxChars &&
-    completePageBlocks.has(passage.trim()))?.trim() || '';
-  const prefixLength = preferred ? preferred.length + 2 : 0;
-  const sentences: Array<{ text: string; paragraphIndex: number }> = [];
-  let paragraphIndex = 0;
-  for (const part of text.split(/((?<=[.!?])\s+|\n+)/)) {
-    if (!part) continue;
-    if (/^\s+$/.test(part)) {
-      if (/\n/.test(part)) paragraphIndex++;
+  const pageBlocks = splitEvidenceTextBlocks(text);
+  const visibleLists: Array<{
+    start: number;
+    end: number;
+    contextStart?: number;
+    complete: ReturnType<typeof completeVisibleEvidenceListSpan>;
+    quote: string;
+    contextQuote?: string;
+  }> = [];
+  for (let index = 0; index < pageBlocks.length;) {
+    const span = visibleEvidenceListSpan(pageBlocks, index);
+    if (!span) {
+      index += 1;
       continue;
     }
-    const sentence = part.trim();
-    if (sentence) sentences.push({ text: sentence, paragraphIndex });
+    visibleLists.push({
+      start: span.startIndex,
+      end: span.endIndex,
+      contextStart: span.contextStartIndex,
+      complete: completeVisibleEvidenceListSpan(pageBlocks, index),
+      quote: span.quote,
+      contextQuote: span.contextQuote
+    });
+    // Nested list introductions can also look like list items to an enclosing
+    // bullet list. Keep only the maximal source span so its children cannot be
+    // selected separately if the complete parent does not fit.
+    index = span.endIndex + 1;
   }
+  let preferred = '';
+  let preferredStart = -1;
+  let preferredEnd = -1;
+  for (const passage of preferredPassages) {
+    const candidate = passage.trim();
+    if (!candidate || candidate.length > maxChars) continue;
+    const blocks = splitEvidenceTextBlocks(candidate);
+    const start = pageBlocks.findIndex((_, index) =>
+      pageBlocks.slice(index, index + blocks.length).join('\n\n') === blocks.join('\n\n'));
+    if (start < 0) continue;
+    const end = start + blocks.length - 1;
+    const overlapsList = visibleLists.some(list => start <= list.end && end >= list.start);
+    const preservesLists = visibleLists.every(list => start > list.end || end < list.start ||
+      Boolean(list.complete && start <= (list.contextStart ?? list.start) && end >= list.end));
+    if (overlapsList && !preservesLists) continue;
+    preferred = candidate;
+    preferredStart = start;
+    preferredEnd = end;
+    break;
+  }
+
+  const sentences: Array<{ text: string; paragraphIndex: number }> = [];
+  for (let index = 0; index < pageBlocks.length; index += 1) {
+    const block = pageBlocks[index];
+    for (const part of block.split(/((?<=[.!?])\s+|\n+)/)) {
+      const sentence = part.trim();
+      if (sentence) sentences.push({ text: sentence, paragraphIndex: index });
+    }
+  }
+  const sentenceRanges = new Map<number, { start: number; end: number }>();
+  sentences.forEach((sentence, index) => {
+    const range = sentenceRanges.get(sentence.paragraphIndex);
+    if (range) range.end = index;
+    else sentenceRanges.set(sentence.paragraphIndex, { start: index, end: index });
+  });
+  type SelectionUnit = {
+    id: number;
+    startIndex: number;
+    endIndex: number;
+    startParagraph: number;
+    endParagraph: number;
+    text: string;
+    atomic: boolean;
+    contextParagraph?: number;
+    topicMatches: number;
+    queryMatches: number;
+  };
   const normalizedTerms = terms.map(normalizeTopicTerm).filter(term => term.length > 2);
   const genericTerms = new Set(['the', 'and', 'for', 'can', 'with', 'from', 'what', 'which', 'under', 'this', 'that', 'are', 'our', 'claim', 'claimed', 'tax', 'gst', 'input', 'company', 'singapore']);
   const queryTerms = [...new Set(normalizeTopicTerm(query).split(/\s+/).filter(term => term.length >= 3 && !genericTerms.has(term)))];
-  const matches = sentences
-    .map(({ text: sentence, paragraphIndex }, index) => ({ sentence, paragraphIndex, index,
-      topicMatches: normalizedTerms.reduce((score, term) => score + (containsTopicTerm(sentence, term) ? 1 : 0), 0),
-      queryMatches: queryTerms.reduce((score, term) => score + (containsTopicTerm(sentence, term) ? 1 : 0), 0)
-    }))
-    .filter(item => item.topicMatches > 0 || item.queryMatches > 0)
+  const units: SelectionUnit[] = [];
+  const consumedParagraphs = new Set<number>();
+  for (const list of visibleLists) {
+    for (let paragraph = list.start; paragraph <= list.end; paragraph += 1) consumedParagraphs.add(paragraph);
+    if (!list.complete) continue;
+    const textStart = list.contextStart ?? list.start;
+    const first = sentenceRanges.get(textStart);
+    const last = sentenceRanges.get(list.end);
+    if (!first || !last) continue;
+    const listText = list.contextQuote || list.quote;
+    units.push({
+      id: units.length,
+      startIndex: first.start,
+      endIndex: last.end,
+      startParagraph: textStart,
+      endParagraph: list.end,
+      text: listText,
+      atomic: true,
+      contextParagraph: list.contextStart,
+      topicMatches: normalizedTerms.reduce((score, term) => score + (containsTopicTerm(listText, term) ? 1 : 0), 0),
+      queryMatches: queryTerms.reduce((score, term) => score + (containsTopicTerm(listText, term) ? 1 : 0), 0)
+    });
+  }
+  sentences.forEach((sentence, index) => {
+    if (consumedParagraphs.has(sentence.paragraphIndex)) return;
+    units.push({
+      id: units.length,
+      startIndex: index,
+      endIndex: index,
+      startParagraph: sentence.paragraphIndex,
+      endParagraph: sentence.paragraphIndex,
+      text: sentence.text,
+      atomic: false,
+      topicMatches: normalizedTerms.reduce((score, term) => score + (containsTopicTerm(sentence.text, term) ? 1 : 0), 0),
+      queryMatches: queryTerms.reduce((score, term) => score + (containsTopicTerm(sentence.text, term) ? 1 : 0), 0)
+    });
+  });
+  units.sort((a, b) => a.startIndex - b.startIndex);
+  units.forEach((unit, index) => { unit.id = index; });
+  const matches = units.filter(item => item.topicMatches > 0 || item.queryMatches > 0)
     // Keep at least one exact topic phrase in the excerpt even when generic
     // query terms occur more often elsewhere on a long page.
-    .sort((a, b) => b.topicMatches - a.topicMatches || b.queryMatches - a.queryMatches || a.index - b.index);
-  if (matches.length === 0) return preferred;
-
-  const chosen = new Map<number, { text: string; paragraphIndex: number }>();
-  const renderChosen = (segments: Map<number, { text: string; paragraphIndex: number }>): string => {
+    .sort((a, b) => b.topicMatches - a.topicMatches || b.queryMatches - a.queryMatches || a.startIndex - b.startIndex);
+  const prefixLength = preferred ? preferred.length + 2 : 0;
+  const chosen = new Map<number, SelectionUnit>();
+  const isCoveredByPreferred = (unit: SelectionUnit): boolean => Boolean(unit.atomic && preferred &&
+    preferredStart <= unit.startParagraph && preferredEnd >= unit.endParagraph);
+  const renderChosen = (segments: Map<number, SelectionUnit>): string => {
     let output = '';
-    let previousIndex: number | undefined;
-    let previousParagraph: number | undefined;
-    for (const [index, segment] of [...segments.entries()].sort((a, b) => a[0] - b[0])) {
-      const separator = output
-        ? index === previousIndex! + 1 && segment.paragraphIndex === previousParagraph ? ' ' : '\n\n'
-        : '';
-      output += `${separator}${segment.text}`;
-      previousIndex = index;
-      previousParagraph = segment.paragraphIndex;
+    let previous: SelectionUnit | undefined;
+    const atomicContextParagraphs = new Set([...segments.values()]
+      .filter(unit => unit.atomic && unit.contextParagraph !== undefined)
+      .map(unit => unit.contextParagraph));
+    for (const unit of [...segments.values()]
+      .filter(unit => unit.atomic || !atomicContextParagraphs.has(unit.startParagraph))
+      .sort((a, b) => a.startIndex - b.startIndex)) {
+      const separator = !output ? '' : previous && !unit.atomic && !previous.atomic &&
+        unit.startIndex === previous.endIndex + 1 && unit.startParagraph === previous.endParagraph ? ' ' : '\n\n';
+      output += separator + unit.text;
+      previous = unit;
     }
     return output;
   };
-
   for (const match of matches) {
-    // Try the matched sentence first. Context is added only when it fits, so
-    // high-volume surrounding prose cannot crowd a topic phrase out.
-    const window = [match.index, match.index - 1, match.index + 1];
-    for (const index of window) {
-      const sentence = sentences[index];
-      if (!sentence || chosen.has(index)) continue;
+    const matchIndex = units.findIndex(unit => unit.id === match.id);
+    for (const index of [matchIndex, matchIndex - 1, matchIndex + 1]) {
+      const unit = units[index];
+      if (!unit || chosen.has(unit.id) || isCoveredByPreferred(unit)) continue;
       const proposed = new Map(chosen);
-      proposed.set(index, sentence);
-      if (prefixLength + renderChosen(proposed).length <= maxChars) chosen.set(index, sentence);
+      proposed.set(unit.id, unit);
+      if (prefixLength + renderChosen(proposed).length <= maxChars) chosen.set(unit.id, unit);
     }
   }
   const relevant = renderChosen(chosen);
-  return preferred ? `${preferred}${relevant ? `\n\n${relevant}` : ''}` : relevant;
+  return preferred ? preferred + (relevant ? '\n\n' + relevant : '') : relevant;
 }
-
 function approvedHostsForTopic(topic: MappedCoverageTopic): string[] {
   if (topic.domainId === 'ACCOUNTING_SFRS') return [...APPROVED_ACCOUNTING_DISCOVERY_HOSTS];
   if (topic.domainId.startsWith('IRAS_')) return [...APPROVED_IRAS_DISCOVERY_HOSTS];
-  // All configured statutory authorities share the same approved-host boundary.
-  // IRAS retains its reviewed SSO legislation host and accounting standards retain IFRS/ASC.
-  const provider = getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
+  // Keep discovery scoped: ACRA routes only company guidance, while its accounting and VCC topics retain their own sources.
+  const provider = discoveryProviderForTopic(topic);
   return provider ? [...provider.approvedHosts] : [];
 }
 
+function discoveryProviderForTopic(topic: MappedCoverageTopic) {
+  // ACRA also publishes accounting standards; preserve their existing ASC/IFRS routes.
+  if (topic.authorities[0] === 'ACRA' && topic.domainId !== 'ACRA_COMPANIES') return undefined;
+  return getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
+}
+
 function discoveryHostsForTopic(topic: MappedCoverageTopic): string[] {
-  const providerConfig = getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
+  const providerConfig = discoveryProviderForTopic(topic);
   if (providerConfig) return [...providerConfig.approvedHosts];
   return approvedHostsForTopic(topic);
+}
+
+function isExactMomPayingSalaryUrl(value: string | undefined): boolean {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname === 'www.mom.gov.sg' && !url.username && !url.password && !url.port &&
+      !url.search && !url.hash && url.pathname.replace(/\/$/, '') === '/employment-practices/salary/paying-salary';
+  } catch {
+    return false;
+  }
 }
 
 function isApprovedDiscoveryCandidateUrl(candidateUrl: string, approvedHosts: readonly string[]): boolean {
@@ -1049,17 +1632,24 @@ function hasVerifiedHistoricalStatutoryScope(
   targetIsHistorical: boolean,
   query: string
 ): boolean {
-  if (!getOfficialSourceDiscoveryProviderConfig(topic.authorities[0])) return true;
+  if (!discoveryProviderForTopic(topic)) return true;
   if (isUndatedHistoricalStatutoryRequest(topic, query)) return false;
   if (!targetIsHistorical || !targetDate) return true;
   return Boolean(pointer?.validFrom && pointer.validTo && targetDate >= pointer.validFrom && targetDate <= pointer.validTo);
 }
 
 function isUndatedHistoricalStatutoryRequest(topic: MappedCoverageTopic, query: string): boolean {
+  // A current nil-return rule refers to the preceding reporting year as a
+  // condition. That period is not itself a request for superseded guidance.
+  if (topic.id === 'mas-regulatory-reporting' && topic.domainId.startsWith('MAS_') &&
+      /\b(?:vcfm|venture capital fund manager)\b/i.test(query) && /\bnil return\b/i.test(query) &&
+      /\b(?:if|where)\b[^?]{0,140}\b(?:no misconduct|not submitted any misconduct)\b[^?]{0,100}\b(?:preceding|previous|last) calendar year\b/i.test(query) &&
+      !/\b(?:19|20)\d{2}\b|\b(?:historical|historic|former|superseded|as of|before|old rules?)\b|\bwhat (?:was|were)\b/i.test(query)) return false;
   const momOrMasHistoricalRule = (topic.domainId.startsWith('MOM_') || topic.domainId.startsWith('MAS_')) &&
     isUndatedHistoricalMomMasRuleRequest(topic, query);
   if (!UNRESOLVED_RELATIVE_HISTORICAL_PERIOD.test(query) &&
       !(topic.domainId.startsWith('CPF_') && /\b(?:historical|historic|old|previous|former|superseded)\s+(?:cpf\s+)?(?:contribution\s+|wage\s+)?(?:rates?|ceilings?|rules?)\b/i.test(query)) &&
+      !(topic.domainId === 'ACRA_COMPANIES' && /\b(?:historical|historic|old|older|previous|former|superseded)\b(?:[\s-]+[a-z]+){0,6}[\s-]+(?:rules?|requirements?|deadlines?|exemptions?|filings?|obligations?)\b/i.test(query)) &&
       !momOrMasHistoricalRule) return false;
   // “Prior-year losses” identifies the vintage of a loss balance, not a
   // request for a superseded rule. Current carry-forward guidance may be
@@ -1160,7 +1750,8 @@ export async function resolveMappedOfficialSourceFallback(
   query: string,
   retriever: ISourceRetriever,
   options: MappedFallbackOptions = {}
-): Promise<{ records: AuthoritativeSourceRecord[]; trace: SourceMapFallbackTrace; provisionalTopics: MappedCoverageTopic[] }> {
+): Promise<{ records: AuthoritativeSourceRecord[]; trace: SourceMapFallbackTrace; provisionalTopics: MappedCoverageTopic[]; documentContexts?: AuthorityAdmittedDocumentContext[] }> {
+  throwIfRequestAborted(options.signal);
   const webRetriever = options.webRetriever || defaultControlledWebRetriever;
   const discoveryAdapter = options.discoveryAdapter || getDefaultDiscoveryAdapter(webRetriever, options.fetchOptions);
   const scopedTopicIds = options.evidenceScope
@@ -1200,8 +1791,11 @@ export async function resolveMappedOfficialSourceFallback(
   }
 
   const referenceDate = options.referenceDate || TargetDateResolver.CURRENT_SYSTEM_DATE;
-  const targetDateResolution = defaultTargetDateResolver.resolveTargetDate(query, referenceDate);
+  const targetDateResolution = defaultTargetDateResolver.resolveAuthorityEvidenceDate(query, referenceDate);
   const targetDate = targetDateResolution.targetDate;
+  // For an undated request, bind supplemental same-document context to the
+  // request's evidence-as-of date without inventing a transaction/effective date.
+  const documentContextDate = targetDate || referenceDate;
   const currentSingaporeYear = referenceDate.slice(0, 4);
   const currentYearYaProxy = targetDateResolution.source === 'INFERRED' &&
     /\b(?:ya|year of assessment)\s*20\d{2}\b/i.test(targetDateResolution.rawMatchedText || '') &&
@@ -1210,13 +1804,16 @@ export async function resolveMappedOfficialSourceFallback(
   const registeredIrasTopics = [...expandedTopics.values()].filter(topic => topic.domainId.startsWith('IRAS_'));
   const historicalIrasScopeRequested = targetIsHistorical || registeredIrasTopics.some(topic =>
     topic.status === 'HISTORICAL' || isUndatedHistoricalStatutoryRequest(topic, query)
-  ) || (registeredIrasTopics.length === 0 && UNRESOLVED_RELATIVE_HISTORICAL_PERIOD.test(query));
+  ) || (registeredIrasTopics.length === 0 && targetDateResolution.dateRole !== 'CURRENT_WORKFLOW_FACT' &&
+    UNRESOLVED_RELATIVE_HISTORICAL_PERIOD.test(query));
 
   // Determine historical scope before constructing a provisional topic. An
   // unmatched historical question cannot use a query-only context to bypass
   // the period-vetted source-map requirement.
   const authorityFallbackPermitted = options.authorityLevelDiscovery === true &&
     !options.localEvidenceAdequate && !historicalIrasScopeRequested;
+  const scopedAuthorityTopic = authorityFallbackPermitted && options.allowTransientAuthorityIssueDiscovery === true && options.evidenceScope
+    ? provisionalAuthorityIssueTopic(options.evidenceScope) : undefined;
   const topicsRequiringFallback = [...expandedTopics.values()].filter(topic => topic.status !== 'HISTORICAL');
   const semanticIrasContext = options.evidenceScope ? {
     domainId: options.evidenceScope.context.domainId,
@@ -1237,12 +1834,18 @@ export async function resolveMappedOfficialSourceFallback(
   };
   const requestedConcepts = options.evidenceScope?.requestedConcepts ||
     semanticIrasContext?.requestedConcepts || getRequestedQuestionConcepts(query, options.questionUnderstanding);
-  const authorityDiscoveryTopics = authorityFallbackPermitted
+  const scopedDiscoveryQuery = options.evidenceScope && options.evidenceScope.authority !== 'IRAS'
+    ? [options.evidenceScope.context.primarySubject, ...options.evidenceScope.context.concepts,
+      ...options.evidenceScope.requestedConcepts.flatMap(concept => [concept.label, ...concept.terms]),
+      options.evidenceScope.context.population].filter(Boolean).join(' ')
+    : options.semanticDiscoveryQuery || query;
+  const authorityDiscoveryTopics = authorityFallbackPermitted &&
+      (!options.evidenceScope || options.evidenceScope.authority === 'IRAS')
     ? provisionalIrasConceptTopics(query, semanticIrasContext, requestedConcepts)
     : [];
   const provisionalTopics: MappedCoverageTopic[] = [...authorityDiscoveryTopics];
 
-  if (topicsRequiringFallback.length === 0 && authorityDiscoveryTopics.length === 0) {
+  if (topicsRequiringFallback.length === 0 && authorityDiscoveryTopics.length === 0 && !scopedAuthorityTopic) {
     const historicalBlocked = options.authorityLevelDiscovery === true && !options.localEvidenceAdequate && historicalIrasScopeRequested;
     if (historicalBlocked) {
       return { records: [], provisionalTopics: [], trace: {
@@ -1275,6 +1878,26 @@ export async function resolveMappedOfficialSourceFallback(
   const discoveredEvidenceIds = new Set<string>();
   const sitemapLinkedCandidates = new Map<string, LinkedOfficialCandidate[]>();
   const successfulPageFetches = new Map<string, Awaited<ReturnType<ControlledWebRetriever['fetchOfficialSource']>>>();
+  const extractedDocuments = new Map<string, AuthoritativeSourceRecord>();
+  const fetchedHtmlContexts = new Map<string, { documentHash: string; canonicalUrl: string; sourceText: string }>();
+  const admittedDocumentContexts = new Map<string, AuthorityAdmittedDocumentContext>();
+  const retainFetchedHtmlContext = (candidateUrl: string, fetched: ControlledFetchResult): void => {
+    fetchedHtmlContexts.delete(candidateUrl);
+    const mediaType = fetched.contentType?.split(';', 1)[0]?.trim().toLowerCase();
+    if (fetched.status !== 'SUCCESS' || !fetched.content || !fetched.contentHash || !fetched.finalUrl ||
+        !['text/html', 'application/xhtml+xml'].includes(mediaType || '')) return;
+    try {
+      if (new URL(fetched.finalUrl).hostname.toLowerCase() === 'sso.agc.gov.sg') return;
+    } catch {
+      return;
+    }
+    const sourceText = extractCompleteHtmlBodyContext(fetched.content);
+    if (sourceText) fetchedHtmlContexts.set(candidateUrl, {
+      documentHash: fetched.contentHash,
+      canonicalUrl: fetched.finalUrl,
+      sourceText
+    });
+  };
   let mappedStageAttempted = false;
   let sitemapStageAttempted = false;
   let onlineSearchStageAttempted = false;
@@ -1285,35 +1908,241 @@ export async function resolveMappedOfficialSourceFallback(
     pointer?: SourceMapPointer,
     discoveryStage: SourceMapFallbackAttempt['discoveryStage'] = 'SITEMAP_DISCOVERY',
     discoveredPageTitle?: string,
-    discoverySourceUrl?: string
+    discoverySourceUrl?: string,
+    discoveryMetadata?: ReturnType<typeof practicalExpansionDiscoveryPointers>[number]
   ): Promise<AuthoritativeSourceRecord | undefined> => {
+    throwIfRequestAborted(options.signal);
+    const trustedDiscoveryMetadata = discoveryMetadata &&
+      practicalExpansionDiscoveryPointers().some(pointer => pointer === discoveryMetadata &&
+        pointer.url === candidateUrl && pointer.authority === topic.authorities[0])
+      ? discoveryMetadata : undefined;
     const irasDiscovery = topic.domainId.startsWith('IRAS_') && !pointer;
     const cpfDiscovery = topic.domainId.startsWith('CPF_') && !pointer;
+    const acraDiscovery = topic.domainId === 'ACRA_COMPANIES' && !pointer;
     const momDiscovery = topic.domainId.startsWith('MOM_') && !pointer;
     const masDiscovery = topic.domainId.startsWith('MAS_') && !pointer;
-    const focusedStatutoryTitles = irasDiscovery || cpfDiscovery || momDiscovery || masDiscovery
-      ? [topic.title, ...(topic.aliases || []), ...topic.keywords, ...(cpfDiscovery ? CPF_DISCOVERY_TITLE_HINTS[topic.id] || [] : [])]
+    const focusedStatutoryTitles = irasDiscovery || cpfDiscovery || acraDiscovery || momDiscovery || masDiscovery
+      ? [topic.title, ...getTopicDiscoveryHints(topic)]
         .filter(value => normalizeEvidenceText(value).split(' ').filter(Boolean).length >= 2)
       : [];
+    const statutoryIdentifiers = irasDiscovery ? ['IRAS', 'Singapore Statutes Online']
+      : cpfDiscovery ? ['CPF', 'Central Provident Fund']
+        : acraDiscovery ? ['ACRA', 'Accounting and Corporate Regulatory Authority']
+          : momDiscovery ? ['Ministry of Manpower', 'MOM']
+            : masDiscovery ? ['Monetary Authority of Singapore', 'MAS'] : [];
+    const boundedAdvisoryRequest = {
+      authority: topic.authorities[0],
+      topicId: topic.id,
+      subject: topic.title,
+      originalQuery: query
+    };
+    const cpfOrdinaryWageDefinitionRequest = topic.domainId.startsWith('CPF_') &&
+      topic.id === 'cpf-ordinary-wages' && isBoundedStatutoryAdvisoryRequest(boundedAdvisoryRequest)
+      ? boundedAdvisoryRequest
+      : undefined;
+    const cpfAdditionalWageDefinitionRequest = topic.domainId.startsWith('CPF_') &&
+      topic.id === 'cpf-additional-wages' && isBoundedStatutoryAdvisoryRequest(boundedAdvisoryRequest)
+      ? boundedAdvisoryRequest
+      : undefined;
+    const scopedCoverageSubject = options.evidenceScope?.context.primarySubject ||
+      semanticIrasContext?.primarySubject || topic.title;
+    const acraAuditContextCandidate = {
+      authority: topic.authorities[0] || '', topicId: topic.id, query,
+      subject: scopedCoverageSubject, officialUrl: candidateUrl
+    };
+    const acraAuditExemptionContextRequest = isAcraAuditExemptionContextRequest(acraAuditContextCandidate)
+      ? acraAuditContextCandidate : undefined;
+    const expansionRequest = { authority: topic.authorities[0] || '', topicId: topic.id,
+      query, subject: scopedCoverageSubject, sourceText: '', officialUrl: candidateUrl };
+    const expansionOwned = (supportPracticalExpansionRule(expansionRequest)) !== undefined;
+    const coverageContentAnchors = (expansionOwned || currentOwnedPracticalCoverageRequest(
+      topic.authorities[0] || '', topic.id, query, scopedCoverageSubject
+    )) ? PRACTICAL_COVERAGE_CONTENT_ANCHORS[`${topic.authorities[0]}:${topic.id}`] || [] : [];
     const expectation = {
-      standardIdentifiers: [...getTopicStandardIdentifiers(topic, pointer),
-        ...(irasDiscovery ? ['IRAS', 'Singapore Statutes Online'] : cpfDiscovery ? ['CPF', 'Central Provident Fund'] :
-          momDiscovery ? ['Ministry of Manpower', 'MOM'] : masDiscovery ? ['Monetary Authority of Singapore', 'MAS'] : [])],
+      preferMainContent: topic.domainId === 'ACRA_COMPANIES',
+      standardIdentifiers: [...getTopicStandardIdentifiers(topic, pointer), ...statutoryIdentifiers],
       expectedTitles: [pointer?.documentTitle, topic.pageTitle, ...(topic.actOrStandard || '').split(';').map(s => s.trim()), ...focusedStatutoryTitles,
-        discoveredPageTitle, ...candidateTitlePhrases(discoveredPageTitle)]
+        ...(trustedDiscoveryMetadata?.expectedTitles || []), discoveredPageTitle, ...candidateTitlePhrases(discoveredPageTitle)]
         .filter((value): value is string => Boolean(value)),
-      topicTerms: getTopicContentTerms(topic),
-      minimumTopicTermMatches: (topic.id.startsWith('iras-authority-query-') && !topic.requestedConcepts?.length) ||
+      topicTerms: [...getTopicContentTerms(topic), ...coverageContentAnchors, ...(trustedDiscoveryMetadata?.contentTerms || []),
+        ...(topic.id === 'mas-regulatory-reporting' && candidateUrl === MAS_VCFM_TOOLKIT_URL
+          ? ['annual declaration', 'Form 25A', 'misconduct'] : [])],
+      minimumTopicTermMatches: topic.id.startsWith('iras-authority-query-issue-') ||
+        topic.id.startsWith('iras-authority-query-') && !topic.requestedConcepts?.length ||
         topic.id === 'iras-individual-foreign-tax-credit' ? 2 : 1,
       allowIrasTopicTokenEquivalence: topic.domainId.startsWith('IRAS_'),
-      requireSubstantiveBody: topic.domainId.startsWith('MOM_') || topic.domainId.startsWith('MAS_')
+      requireAcraAnnualReturnDeadlineTable: topic.id === 'acra_annual-returns' && isAcraAnnualReturnDeadlineQuestion(query),
+      requireSubstantiveBody: topic.domainId.startsWith('CPF_') || topic.domainId === 'ACRA_COMPANIES' ||
+        topic.domainId.startsWith('MOM_') || topic.domainId.startsWith('MAS_'),
+      cpfOrdinaryWageDefinitionRequest,
+      cpfAdditionalWageDefinitionRequest,
+      preserveNativeDisclosureProse: trustedDiscoveryMetadata?.preserveNativeDisclosureProse === true,
+      acraAuditExemptionContextRequest
     };
     let result = successfulPageFetches.get(candidateUrl);
     if (!result) {
-      result = await webRetriever.fetchOfficialSource(candidateUrl, {
-        ...options.fetchOptions,
-        topicValidation: expectation
-      });
+      // These native pages place required premises in table/card labels that
+      // generic paragraph extraction omits. The existing complete-rule proof
+      // selects exact visible passages before ordinary identity validation.
+      const nativeWorkflow = STATUTORY_WORKFLOW_RULES_20261029.find(rule =>
+        ['IRAS_COMPANY_APPROVED_DONATIONS', 'CPF_CONTRIBUTION_RECORD_RECTIFICATIONS', 'ACRA_REGISTERED_OFFICE_REQUIREMENTS'].includes(rule.id)
+        && rule.officialUrl === candidateUrl && rule.topicIds.includes(topic.id)
+        && rule.queryPattern.test(query) && rule.subjectPattern.test(scopedCoverageSubject));
+      const lfmcToolkitUrl = 'https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf';
+      const knowledgePdf = STATUTORY_KNOWLEDGE_POINTERS_20261027B.find(item => item.authority === topic.authorities[0]
+        && item.topicIds.includes(topic.id) && item.url === candidateUrl && item.documentKind === 'PDF');
+      if ((topic.id === 'mas-regulatory-reporting' && [MAS_VCFM_TOOLKIT_URL, lfmcToolkitUrl].includes(candidateUrl)) || knowledgePdf) {
+        const isLfmc = candidateUrl === lfmcToolkitUrl;
+        const document = await webRetriever.fetchOfficialDocument(candidateUrl, options.fetchOptions);
+        throwIfRequestAborted(options.signal);
+        retainFetchedHtmlContext(candidateUrl, document);
+        if (document.status === 'SUCCESS') {
+          const extraction = await extractOfficialDocumentFromRetrieved({
+            url: candidateUrl, authority: knowledgePdf?.authority || 'MAS', domain: topic.legacyDomains[0] || 'MAS_FUNDS', documentKind: 'PDF',
+            standardOrActCode: knowledgePdf?.authority || 'MAS', legalOrStandardInstrument: knowledgePdf?.title || (isLfmc ? 'LFMC Compliance Toolkit' : 'VCFM Compliance Toolkit'),
+            expectedTopic: {
+              standardIdentifiers: knowledgePdf?.standardIdentifiers || ['MAS'],
+              expectedTitles: knowledgePdf ? knowledgePdf.expectedTitles : isLfmc ? ['Compliance Toolkit for Licensed Fund Management Companies', 'Licensed Fund Management Companies']
+                : ['Compliance Toolkit for Venture Capital Fund Managers', 'Venture Capital Fund Managers'],
+              topicTerms: knowledgePdf ? knowledgePdf.contentTerms || getTopicContentTerms(topic) : isLfmc ? ['quarterly financial returns', 'principal place of business'] : ['annual declaration', 'Form 25A'], minimumTopicTermMatches: 1
+            }
+          }, document);
+          throwIfRequestAborted(options.signal);
+          if (extraction.status === 'SUCCESS') {
+            const vcfmBranchApprovalTopic = topic.id === 'mas-vcfm-branch-approval' && candidateUrl === MAS_VCFM_TOOLKIT_URL;
+            const vcfmBranchApprovalQuote = vcfmBranchApprovalTopic && scopedCoverageSubject && extraction.record.documentHash
+              ? await selectNativeVcfmBranchApprovalQuote(document, extraction.record.documentHash,
+                query, scopedCoverageSubject, candidateUrl)
+              : undefined;
+            throwIfRequestAborted(options.signal);
+            if (vcfmBranchApprovalTopic && !vcfmBranchApprovalQuote) {
+              result = { ...document, status: 'TOPIC_MISMATCH', topicMatched: false, titleMatched: false,
+                contentMatched: false, error: 'The retained VCFM PDF did not yield complete, exact row 2 branch-approval evidence.' };
+            } else {
+              expectation.expectedTitles.push(extraction.record.documentTitle);
+              const escapeDocumentText = (value: string): string => value
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              // Keep the verified document title and use the exact complete
+              // row only for the VCFM branch topic; its source hash remains
+              // the hash of the fetched PDF bytes.
+              const validatedSourceText = vcfmBranchApprovalQuote?.quote || extraction.record.sourceText;
+              const validatedDocumentHtml = `<html><head><title>${escapeDocumentText(extraction.record.documentTitle)}</title></head><body><main><h1>${escapeDocumentText(extraction.record.documentTitle)}</h1><p>${escapeDocumentText(validatedSourceText).replace(/\n/g, '<br>')}</p></main></body></html>`;
+              const checked = vcfmBranchApprovalTopic
+                ? defaultExternalSourceValidator.validateTopicContent(validatedDocumentHtml, expectation)
+                : undefined;
+              if (checked && !checked.isValid) {
+                result = { ...document, status: 'TOPIC_MISMATCH', topicMatched: false, titleMatched: false,
+                  contentMatched: false, error: checked.reason };
+              } else {
+                const sourceLocator = vcfmBranchApprovalQuote ? {
+                  sourceType: 'PDF' as const,
+                  mediaType: 'application/pdf',
+                  pageNumber: vcfmBranchApprovalQuote.pageNumber,
+                  pageCount: vcfmBranchApprovalQuote.pageCount,
+                  documentHash: extraction.record.documentHash,
+                  tableStructure: vcfmBranchApprovalQuote.tableStructure,
+                  canonicalLocator: `PDF page ${vcfmBranchApprovalQuote.pageNumber}, row 2`
+                } : extraction.record.sourceLocator;
+                extractedDocuments.set(candidateUrl, { ...extraction.record, sourceLocator });
+                result = { ...document, content: validatedDocumentHtml,
+                  contentHash: extraction.record.documentHash,
+                  pageTitle: checked?.pageTitle || extraction.record.documentTitle,
+                  status: checked ? 'SUCCESS' : document.status,
+                  topicMatched: checked ? checked.isValid : true,
+                  titleMatched: checked ? checked.isValid : true,
+                  contentMatched: checked ? checked.isValid : true,
+                  error: checked?.isValid ? undefined : checked?.reason };
+              }
+            }
+          } else {
+            result = { ...document, status: 'INVALID_CONTENT', error: extraction.reason };
+          }
+        } else result = document;
+      } else if (expansionOwned && IRAS_GST_BASICS_EXEMPT_RULE &&
+          IRAS_GST_BASICS_EXEMPT_RULE.topicIds.includes(topic.id) &&
+          topic.authorities.includes('IRAS') && candidateUrl === IRAS_GST_BASICS_EXEMPT_RULE.officialUrl) {
+        // The native GST overview places the exempt-category examples in
+        // link-only cells inside its substantive comparison table. The
+        // generic visible-text extractor correctly removes link-only chrome,
+        // but that also drops these four rule-bearing cells. Fetch and verify
+        // the exact page, require the complete eight-part native proof, then
+        // pass only its exact selected visible passages through the ordinary
+        // topic validator. The raw response hash, final URL, and retrieval
+        // metadata remain attached to the fetched document.
+        const document = await webRetriever.fetchOfficialDocument(candidateUrl, options.fetchOptions);
+        throwIfRequestAborted(options.signal);
+        retainFetchedHtmlContext(candidateUrl, document);
+        const rawTitle = document.content?.match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i)?.[1];
+        const nativeTitle = rawTitle ? cleanHtmlText(rawTitle).replace(/\s+/g, ' ').trim() : '';
+        const nativeTitleIdentityMatches = normalizeEvidenceText(nativeTitle) ===
+          normalizeEvidenceText(IRAS_GST_BASICS_EXEMPT_RULE.title);
+        const nativeMain = document.content?.match(/<main\b[^>]*>([\s\S]*?)<\/main\s*>/i)?.[1] || '';
+        const sourceIdentityQuote = [...nativeMain.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p\s*>/gi)]
+          .map(match => cleanHtmlText(match[1]).replace(/\s+/g, ' ').trim())
+          .find(text => /\bGST-registered businesses\b/i.test(text) && /\bIRAS\b/i.test(text));
+        const exactNativeIdentity = document.status === 'SUCCESS' && document.content &&
+          document.finalUrl === IRAS_GST_BASICS_EXEMPT_RULE.officialUrl &&
+          nativeTitleIdentityMatches && Boolean(sourceIdentityQuote);
+        const nativeRequest = { ...expansionRequest,
+          sourceText: exactNativeIdentity ? document.content! : '',
+          officialUrl: IRAS_GST_BASICS_EXEMPT_RULE.officialUrl };
+        const nativeProof = exactNativeIdentity ? supportPracticalExpansionRule(nativeRequest) : undefined;
+        const quotes = nativeProof === true ? selectPracticalExpansionQuotes(nativeRequest) : [];
+        if (nativeProof === true && quotes.length === 8) {
+          expectation.expectedTitles.push(IRAS_GST_BASICS_EXEMPT_RULE.title);
+          const escape = (value: string): string => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          const content = `<html><head><title>${escape(nativeTitle)}</title></head><body><main><h1>${escape(nativeTitle)}</h1><p>${escape(sourceIdentityQuote!)}</p>${quotes
+            .map(quote => `<p>${escape(quote).replace(/\n/g, '<br>')}</p>`).join('')}</main></body></html>`;
+          const checked = defaultExternalSourceValidator.validateTopicContent(content, expectation);
+          result = { ...document, content, pageTitle: checked.pageTitle,
+            status: checked.isValid ? 'SUCCESS' : 'TOPIC_MISMATCH',
+            topicMatched: checked.isValid, titleMatched: checked.isValid, contentMatched: checked.isValid,
+            error: checked.isValid ? undefined : checked.reason };
+        } else {
+          result = { ...document, status: 'TOPIC_MISMATCH',
+            error: !exactNativeIdentity
+              ? 'The IRAS GST basics source did not match its exact native URL and title identity.'
+              : nativeProof !== true
+                ? 'The IRAS GST basics source does not establish every required exempt and zero-rated category premise.'
+                : `The IRAS GST basics source yielded ${quotes.length} of 8 required category passages.` };
+        }
+      } else if (expansionOwned && (nativeWorkflow || (topic.id === 'cpf-employee-coverage' &&
+          candidateUrl === 'https://www.cpf.gov.sg/employer/employer-obligations/who-should-receive-cpf-contributions') ||
+          (topic.id === 'cpf-contribution-computation' && candidateUrl === 'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay') ||
+          (topic.id === 'cpf-adjustments-refunds' && candidateUrl === 'https://www.cpf.gov.sg/employer/compliance-and-rectifications/applying-for-refund-of-cpf-contributions'))) {
+        // CPF's employee definitions/exemptions are native action cards. The
+        // generic paragraph extractor excludes their containers. Select only
+        // a complete, contradiction-checked rule from visible native markup;
+        // then run the usual identity/body validation on those exact passages.
+        const document = await webRetriever.fetchOfficialDocument(candidateUrl, options.fetchOptions);
+        throwIfRequestAborted(options.signal);
+        retainFetchedHtmlContext(candidateUrl, document);
+        const quotes = document.status === 'SUCCESS' && document.content
+          ? selectPracticalExpansionQuotes({ ...expansionRequest, sourceText: document.content }) : [];
+        const nativeTitle = document.content?.match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i)?.[1];
+        if (quotes.length > 0 && nativeTitle && document.finalUrl === candidateUrl && (nativeWorkflow
+          ? normalizeEvidenceText(cleanHtmlText(nativeTitle)).includes(normalizeEvidenceText(nativeWorkflow.title))
+          : topic.id === 'cpf-employee-coverage'
+          ? /who should receive cpf contributions/i.test(nativeTitle)
+          : topic.id === 'cpf-adjustments-refunds' ? /applying for refund of cpf contributions/i.test(nativeTitle)
+            : /how much cpf contributions to pay/i.test(nativeTitle))) {
+          const escape = (value: string): string => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          const content = `<html><head><title>${escape(nativeTitle)}</title></head><body><main>${quotes
+            .map(quote => `<p>${escape(quote).replace(/\n/g, '<br>')}</p>`).join('')}</main></body></html>`;
+          const checked = defaultExternalSourceValidator.validateTopicContent(content, expectation);
+          result = { ...document, content, pageTitle: checked.pageTitle,
+            status: checked.isValid ? 'SUCCESS' : 'TOPIC_MISMATCH',
+            topicMatched: checked.isValid, titleMatched: checked.isValid, contentMatched: checked.isValid,
+            error: checked.isValid ? undefined : checked.reason };
+        } else result = { ...document, status: 'TOPIC_MISMATCH', error: 'Native source cards do not establish the complete requested rule and publisher identity.' };
+      } else {
+        result = await webRetriever.fetchOfficialSource(candidateUrl, {
+          ...options.fetchOptions,
+          topicValidation: expectation
+        });
+        throwIfRequestAborted(options.signal);
+        retainFetchedHtmlContext(candidateUrl, result);
+      }
       if (result.status === 'SUCCESS' && result.content) successfulPageFetches.set(candidateUrl, result);
     }
     const attempt: SourceMapFallbackAttempt = {
@@ -1339,15 +2168,101 @@ export async function resolveMappedOfficialSourceFallback(
     if (result.status !== 'SUCCESS' || !result.content || !result.finalUrl || !result.topicMatched ||
         !isApprovedSingaporeSourceUrl(result.finalUrl) || !approvedHostsForTopic(topic).includes(finalHost)) return undefined;
 
+    const exactCompanyCommencementNotice = topic.id === 'acra-annual-return-officer-particulars'
+      && STATUTORY_KNOWLEDGE_POINTERS_20261027B.some(item => item.authority === 'ACRA'
+        && item.topicIds.includes(topic.id) && item.url === result.finalUrl)
+      && supportPracticalExpansionRule({ ...expansionRequest, officialUrl: result.finalUrl,
+        sourceText: result.content }) === true;
+    const exactCompanyEntityInformationRule = topic.id === 'acra-entity-information-changes'
+      && STATUTORY_KNOWLEDGE_POINTERS_20261027B.some(item => item.authority === 'ACRA'
+        && item.topicIds.includes(topic.id) && item.url === result.finalUrl)
+      && supportStatutoryKnowledgeRule({ authority: 'ACRA', topicId: topic.id,
+        query, subject: scopedCoverageSubject, sourceText: result.content, officialUrl: result.finalUrl }) === true;
+    if (!isAcraCompanySourceUrlCompatible(topic.domainId, result.finalUrl) &&
+        !exactCompanyCommencementNotice && !exactCompanyEntityInformationRule) {
+      attempt.fetchStatus = 'DOMAIN_MISMATCH';
+      attempt.contentMatched = false;
+      attempt.error = 'Fetched ACRA page addresses a different entity type or accounting-standard authority scope.';
+      return undefined;
+    }
+    if (topic.domainId === 'ACRA_COMPANIES' && /^\/manage\/companies(?:\/legal-requirements-common-offences)?\/?$/i.test(new URL(result.finalUrl).pathname)) {
+      attempt.fetchStatus = 'TOPIC_MISMATCH';
+      attempt.contentMatched = false;
+      attempt.error = 'ACRA navigation index is discovery metadata, not topic-specific rule evidence.';
+      return undefined;
+    }
+
     // Recheck the raw HTML at this boundary as well as in ControlledWebRetriever.
     // Injected adapters and cached/custom retrievers must not make navigation
     // labels or a generic shell sufficient topic evidence.
-    const contentValidation = defaultExternalSourceValidator.validateTopicContent(result.content, expectation);
+    // Isomer's breadcrumbs and related-page cards sit inside main. Exclude
+    // headings and standalone/card links for company guidance. Inline-linked
+    // legal wording remains intact in rule prose, lists and tables.
+    const ruleDocument = topic.domainId === 'ACRA_COMPANIES'
+      ? (acraAuditExemptionContextRequest ? result.content
+        : result.content.replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]\s*>/gi, ' '))
+        .replace(/<(p|div|li)\b[^>]*>\s*<a\b[^>]*>(?:(?!<\/a\s*>)[\s\S])*<\/a\s*>\s*<\/\1\s*>/gi, ' ')
+        .replace(/<a\b[^>]*>([\s\S]*?)<\/a\s*>/gi, (anchor, contents: string) =>
+          /<(?:div|section|p)\b/i.test(contents) ? ' ' : anchor)
+      : result.content;
+    let contentValidation = defaultExternalSourceValidator.validateTopicContent(ruleDocument, expectation);
     if (!contentValidation.isValid) {
       attempt.fetchStatus = 'TOPIC_MISMATCH';
       attempt.titleMatched = false;
       attempt.contentMatched = false;
       attempt.error = contentValidation.reason || 'Fetched page lacks visible topic-specific body content.';
+      return undefined;
+    }
+
+    const momSalarySourceProof = topic.id === 'mom-salary-payment'
+      ? provesMomSalaryPaymentSource(query, contentValidation.substantiveText || '')
+      : undefined;
+    const completeFinalSalaryProof = topic.id === 'mom-salary-payment'
+      ? supportMomAcraMasCoverageRule({
+        authority: topic.authorities[0], topicId: topic.id, subject: topic.title,
+        query, sourceText: contentValidation.substantiveText || ''
+      })
+      : undefined;
+    if (momSalarySourceProof === false && completeFinalSalaryProof !== true) {
+      attempt.fetchStatus = 'TOPIC_MISMATCH';
+      attempt.contentMatched = false;
+      attempt.error = 'Fetched MOM salary guidance contains negated, contradictory, or incomplete evidence for the requested payment deadline.';
+      return undefined;
+    }
+    const momSalaryPaymentRuleQuote = topic.id === 'mom-salary-payment' && topic.domainId === 'MOM_EMPLOYMENT' &&
+      topic.authorities.includes('MOM') && momSalarySourceProof === true &&
+      isExactMomPayingSalaryUrl(candidateUrl) && isExactMomPayingSalaryUrl(result.finalUrl)
+      ? selectMomSalaryPaymentRuleQuote(query, contentValidation.substantiveText || '')
+      : undefined;
+
+    const coverageRequest = {
+      authority: topic.authorities[0], topicId: topic.id, subject: scopedCoverageSubject,
+      query, sourceText: contentValidation.substantiveText || '', officialUrl: candidateUrl
+    };
+    if (acraAuditExemptionContextRequest && !supportsAcraSmallCompanyAuditFacts(coverageRequest.sourceText)) {
+      attempt.fetchStatus = 'TOPIC_MISMATCH';
+      attempt.contentMatched = false;
+      attempt.error = 'Fetched ACRA audit guidance does not preserve the exact company and group section criteria in its retained source record.';
+      return undefined;
+    }
+    const irasCpfCoverageProof = supportIrasCpfCoverageRule(coverageRequest);
+    const momAcraMasCoverageProof = acraAuditExemptionContextRequest
+      ? undefined : supportMomAcraMasCoverageRule(coverageRequest);
+    const expansionCoverageProof = supportPracticalExpansionRule(coverageRequest);
+    const completeCoverageProof = expansionCoverageProof ?? irasCpfCoverageProof ?? momAcraMasCoverageProof;
+    const practicalSourceProofs = [
+      completeCoverageProof === true ? undefined :
+        provesIrasAcraPracticalRuleSource(query, topic.authorities[0], topic.id, contentValidation.substantiveText || ''),
+      completeCoverageProof === true ? undefined : provesCpfMasPracticalRuleSource(coverageRequest),
+      hasPracticalExpansionContradiction(coverageRequest)
+        ? false : undefined,
+      completeCoverageProof === true ? undefined : irasCpfCoverageProof,
+      completeCoverageProof === true ? undefined : momAcraMasCoverageProof
+    ];
+    if (practicalSourceProofs.includes(false)) {
+      attempt.fetchStatus = 'TOPIC_MISMATCH';
+      attempt.contentMatched = false;
+      attempt.error = 'Fetched guidance does not establish complete, consistent premises for the requested statutory rule.';
       return undefined;
     }
 
@@ -1370,14 +2285,57 @@ export async function resolveMappedOfficialSourceFallback(
     }
 
     const requiredContentTerms = topic.requiredContentTerms || [];
+    const boundedAdvisoryRecognized = isBoundedStatutoryAdvisoryRequest(boundedAdvisoryRequest);
+    const boundedAdvisorySupported = boundedAdvisoryRecognized
+      ? supportBoundedStatutoryAdvisory({
+        ...boundedAdvisoryRequest,
+        sourceText: contentValidation.substantiveText || ''
+      })
+      : undefined;
+    const preferredStatutoryAdvisoryPassage = boundedAdvisoryRecognized && boundedAdvisorySupported === true
+      ? selectBoundedStatutoryAdvisoryPassage({
+        ...boundedAdvisoryRequest,
+        sourceText: contentValidation.substantiveText || ''
+      }, 5_000)
+      : undefined;
+    if (boundedAdvisoryRecognized && boundedAdvisorySupported === true && !preferredStatutoryAdvisoryPassage) {
+      attempt.fetchStatus = 'TOPIC_MISMATCH';
+      attempt.contentMatched = false;
+      attempt.error = 'Complete bounded statutory guidance and its attached qualifications cannot be retained within the grounding excerpt limit.';
+      return undefined;
+    }
     const scopedSubject = options.evidenceScope?.context.primarySubject || semanticIrasContext?.primarySubject;
     const scopedPopulation = options.evidenceScope?.context.population || semanticIrasContext?.population;
     const preferredRulePassage = completeScopedRulePassage(
       contentValidation.substantiveText || '', topic, scopedSubject, scopedPopulation, requestedConcepts, 5_000
     );
-    const excerpt = selectRelevantFetchedText(contentValidation.substantiveText || '',
+    const preferredIrasConceptPassage = completeScopedIrasConceptPassage(
+      contentValidation.substantiveText || '', topic, scopedSubject, scopedPopulation, requestedConcepts
+    );
+    const acraDeadlineTablePassage = topic.id === 'acra_annual-returns' && isAcraAnnualReturnDeadlineQuestion(query)
+      ? getAcraAnnualReturnDeadlineTablePassage(contentValidation.substantiveText || '')
+      : undefined;
+    const acraDeadlineDutyPassage = acraDeadlineTablePassage
+      ? (contentValidation.substantiveText || '').split(/\r?\n[\t ]*\r?\n+/).map(block => block.trim())
+        .find(block => block !== acraDeadlineTablePassage && supportsAcraAnnualReturnFilingRule(block))
+      : undefined;
+    const preferredAcraDeadlinePassages = acraDeadlineTablePassage
+      ? [acraDeadlineDutyPassage ? `${acraDeadlineDutyPassage}\n\n${acraDeadlineTablePassage}` : '', acraDeadlineTablePassage]
+      : [];
+    const expansionQuotes = [
+      ...selectPracticalExpansionQuotes(coverageRequest)
+    ];
+    const legacyExcerpt = preferredStatutoryAdvisoryPassage || preferredIrasConceptPassage ||
+      selectRelevantFetchedText(contentValidation.substantiveText || '',
       [...expectation.topicTerms, ...requiredContentTerms], 5_000, query,
-      preferredRulePassage ? [preferredRulePassage] : []);
+      [...(momSalaryPaymentRuleQuote ? [momSalaryPaymentRuleQuote] : []), ...preferredAcraDeadlinePassages,
+        ...(preferredRulePassage ? [preferredRulePassage] : [])]);
+    const completeExpansionPassage = expansionQuotes.length > 0
+      ? [...new Set([expansionQuotes.join('\n\n'),
+        topic.id === 'iras-gst-input-tax' ? legacyExcerpt : undefined].filter(Boolean))].join('\n\n')
+      : '';
+    // Preserve prior concept context alongside complete same-document premises.
+    const excerpt = (completeExpansionPassage.length <= 12_000 ? completeExpansionPassage : '') || legacyExcerpt;
     const requiredContentPresent = containsRequiredContentTermsInOneBlock(contentValidation.substantiveText || '', requiredContentTerms) &&
       containsRequiredContentTermsInOneBlock(excerpt, requiredContentTerms);
     const excerptTopicMatches = expectation.topicTerms.filter(term => matchesTopicContentTerm(
@@ -1385,7 +2343,8 @@ export async function resolveMappedOfficialSourceFallback(
       term,
       expectation.allowIrasTopicTokenEquivalence === true
     )).length;
-    if (!excerpt || excerptTopicMatches < (expectation.minimumTopicTermMatches ?? 1) || !requiredContentPresent) {
+    const completeKnowledgeExcerpt = supportPracticalExpansionRule({ ...coverageRequest, sourceText: excerpt }) === true;
+    if (!excerpt || (!completeKnowledgeExcerpt && excerptTopicMatches < (expectation.minimumTopicTermMatches ?? 1)) || !requiredContentPresent) {
       attempt.fetchStatus = 'TOPIC_MISMATCH';
       attempt.contentMatched = false;
       attempt.error = requiredContentPresent
@@ -1393,26 +2352,38 @@ export async function resolveMappedOfficialSourceFallback(
         : 'Fetched page does not contain all required topic-specific section phrases for grounding.';
       return undefined;
     }
+    if (topic.id === 'acra_annual-returns' && isAcraAnnualReturnDeadlineQuestion(query) &&
+        !supportsAcraAnnualReturnDeadlineEvidence(excerpt)) {
+      attempt.fetchStatus = 'TOPIC_MISMATCH';
+      attempt.contentMatched = false;
+      attempt.error = 'Fetched ACRA annual-return page lacks the filing context and complete company-category deadline table requested.';
+      return undefined;
+    }
+    if (topic.id === 'acra_annual-returns' && !isAcraAnnualReturnDeadlineQuestion(query) &&
+        !supportsAcraAnnualReturnFilingRule(excerpt) &&
+        supportPracticalExpansionRule({ ...coverageRequest, sourceText: excerpt }) !== true) {
+      attempt.fetchStatus = 'TOPIC_MISMATCH';
+      attempt.contentMatched = false;
+      attempt.error = 'Fetched ACRA annual-return page lacks an operative company filing rule.';
+      return undefined;
+    }
     const fetchedRecord = makeLiveCandidateEvidence(topic, pointer, result.pageTitle || pointer?.documentTitle || topic.title, result.finalUrl, excerpt, result.contentHash, result.retrievedAt);
-    const isTransientTopic = (topicId: string): boolean => topicId.startsWith('iras-authority-query-');
-    const canMergeAcrossTopicScopes = isTransientTopic(topic.id);
-    const existingRecordIndex = records.findIndex(existing => existing.canonicalSourceUrl === fetchedRecord.canonicalSourceUrl &&
-      existing.contentHash === fetchedRecord.contentHash &&
-      // A single official page may serve multiple transient concept queries;
-      // keep their validated associations on one record. Registered topics
-      // retain separate records so each topic's source-map trace stays intact.
-      (canMergeAcrossTopicScopes || (existing.tags || []).some(isTransientTopic)));
-    let record = fetchedRecord;
-    if (existingRecordIndex >= 0) {
-      const existing = records[existingRecordIndex];
-      record = {
-        ...existing,
-        sourceText: [...new Set([existing.sourceText, fetchedRecord.sourceText].filter(Boolean))].join('\n\n'),
-        tags: [...new Set([...(existing.tags || []), ...(fetchedRecord.tags || [])])]
-      };
-      records[existingRecordIndex] = record;
-    } else {
-      records.push(record);
+    const extractedDocument = extractedDocuments.get(candidateUrl);
+    if (extractedDocument) fetchedRecord.sourceLocator = extractedDocument.sourceLocator;
+    const record = fetchedRecord;
+    records.push(record);
+    const fetchedBodyContext = fetchedHtmlContexts.get(candidateUrl);
+    const recordHash = record.documentHash || record.contentHash;
+    if (fetchedBodyContext && recordHash && recordHash === fetchedBodyContext.documentHash &&
+        record.canonicalSourceUrl === fetchedBodyContext.canonicalUrl && documentContextDate) {
+      admittedDocumentContexts.set(record.id, {
+        recordId: record.id,
+        documentHash: recordHash,
+        canonicalUrl: record.canonicalSourceUrl,
+        targetDate: documentContextDate,
+        completeness: 'COMPLETE',
+        sourceText: fetchedBodyContext.sourceText
+      });
     }
     if (!pointer) discoveredEvidenceIds.add(record.id);
     finalVerifiedUrls.add(result.finalUrl);
@@ -1433,10 +2404,10 @@ export async function resolveMappedOfficialSourceFallback(
         // mapped standard topics.
         record.sourceMapScope !== 'FRAMEWORK'
       ));
-    const historicalStatutoryQuery = Boolean(getOfficialSourceDiscoveryProviderConfig(topic.authorities[0])) && Boolean(
-      isUndatedHistoricalStatutoryRequest(topic, query) ||
-      targetIsHistorical
-    );
+    const historicalStatutoryQuery = Boolean(discoveryProviderForTopic(topic)) &&
+      targetDateResolution.dateRole !== 'CURRENT_WORKFLOW_FACT' && Boolean(
+        isUndatedHistoricalStatutoryRequest(topic, query) || targetIsHistorical
+      );
     const applicablePointers = pointers.filter(pointer => hasVerifiedHistoricalStatutoryScope(topic, pointer, targetDate, targetIsHistorical, query));
     return { topic, pointers, applicablePointers, historicalStatutoryQuery };
   });
@@ -1477,18 +2448,24 @@ export async function resolveMappedOfficialSourceFallback(
     const registeredTopics = topics.filter(topic => !topic.id.startsWith('iras-authority-query-'));
     const provisional = topics.filter(topic => topic.id.startsWith('iras-authority-query-'));
     const irasTopics = registeredTopics.filter(topic => topic.domainId.startsWith('IRAS_'));
-    const nonIrasTopics = registeredTopics.filter(topic => !topic.domainId.startsWith('IRAS_'));
+    const nonIrasTopics = [
+      ...registeredTopics.filter(topic => !topic.domainId.startsWith('IRAS_')),
+      ...provisional.filter(topic => !topic.domainId.startsWith('IRAS_'))
+    ];
     const nonIrasCovered = nonIrasTopics.every(topic => records.some(record => record.tags.includes(topic.id) &&
+        (topic.id !== 'acra_annual-returns' || !isAcraAnnualReturnDeadlineQuestion(query) ||
+          supportsAcraAnnualReturnDeadlineEvidence(record.sourceText)) &&
         attempts.some(attempt => attempt.topicId === topic.id && attempt.fetchStatus === 'SUCCESS' &&
           attempt.titleMatched && attempt.contentMatched && attempt.finalUrl === record.canonicalSourceUrl)));
     if (!nonIrasCovered) return false;
-    if (irasTopics.length === 0 && provisional.length === 0) return registeredTopics.length > 0;
+    const irasProvisional = provisional.filter(topic => topic.domainId.startsWith('IRAS_'));
+    if (irasTopics.length === 0 && irasProvisional.length === 0) return registeredTopics.length > 0 || nonIrasTopics.length > 0;
     // A concept-only provisional target can be supported by a fetched record
     // admitted through its registered topic in the same already-routed IRAS
     // domain. Include those registered topics for evidence admission, while
     // retaining `topics` as the only requested target for this decision.
-    const provisionalAdmissionTopics = provisional.length > 0
-      ? topicsRequiringFallback.filter(topic => topic.domainId === provisional[0].domainId && topic.domainId.startsWith('IRAS_'))
+    const provisionalAdmissionTopics = irasProvisional.length > 0
+      ? topicsRequiringFallback.filter(topic => topic.domainId === irasProvisional[0].domainId && topic.domainId.startsWith('IRAS_'))
       : [];
     const admissionTopics = [...new Map([...irasTopics, ...provisionalAdmissionTopics].map(topic => [topic.id, topic])).values()];
     const assessment = evaluateEvidenceQuality({
@@ -1545,6 +2522,15 @@ export async function resolveMappedOfficialSourceFallback(
     if (historicalStatutoryQuery && applicablePointers.length === 0) {
       attempts.push({ topicId: topic.id, fetchStatus: 'HISTORICAL_SCOPE_UNVERIFIED', titleMatched: false, contentMatched: false,
         error: 'No reviewed source-map pointer validity window covers the requested historical statutory period.' });
+      // Try only a known, explicitly dated rule pointer. Its actual body must
+      // separately prove the date and every rule premise before admission.
+      const request = { authority: topic.authorities[0] || '', topicId: topic.id, query,
+        subject: options.evidenceScope?.context.primarySubject || topic.title, sourceText: '' };
+      for (const pointer of practicalExpansionPointers(request)) {
+        if (knowledgePointerCoversDate({ ...request, officialUrl: pointer.url }, targetDate)) {
+          await tryFetch(topic, pointer.url, undefined, 'MAPPED_SOURCE', pointer.title);
+        }
+      }
       continue;
     }
     for (const pointer of applicablePointers) {
@@ -1555,12 +2541,37 @@ export async function resolveMappedOfficialSourceFallback(
       }
       await tryFetch(topic, pointer.officialSourceUrl, pointer, 'MAPPED_SOURCE');
     }
+    // The toolkit is a current retrieval pointer; it does not activate a source
+    // or establish historical applicability. Its body must still prove the rule.
+    if (topic.id === 'mas-regulatory-reporting' && !historicalStatutoryQuery &&
+        supportMomAcraMasExpansionRule({ authority: 'MAS', topicId: topic.id, query,
+          subject: options.evidenceScope?.context.primarySubject || topic.title,
+          sourceText: '', officialUrl: MAS_VCFM_TOOLKIT_URL }) !== undefined) {
+      mappedStageAttempted = true;
+      sourceMapIds.add('MAS_VCFM_COMPLIANCE_TOOLKIT_CURRENT');
+      await tryFetch(topic, MAS_VCFM_TOOLKIT_URL, undefined, 'MAPPED_SOURCE',
+        'Compliance Toolkit for Venture Capital Fund Managers');
+    }
+    if (!historicalStatutoryQuery) {
+      const expansionRequest = { authority: topic.authorities[0] || '', topicId: topic.id, query,
+        subject: options.evidenceScope?.context.primarySubject || topic.title, sourceText: '' };
+      const mappedUrls = new Set(applicablePointers.map(pointer => pointer.officialSourceUrl));
+      for (const pointer of practicalExpansionPointers(expansionRequest)) {
+        // A current rule pointer may repeat a URL already represented by a
+        // reviewed source-map pointer. Keep that page on the mapped path so a
+        // duplicate fetch cannot relabel mapped evidence as discovered.
+        if (mappedUrls.has(pointer.url)) continue;
+        mappedStageAttempted = true;
+        await tryFetch(topic, pointer.url, undefined, 'MAPPED_SOURCE', pointer.title);
+      }
+    }
   }
   const mappedCoverageAdequate = topicsRequiringFallback.length > 0 && registeredCoverageAdequate();
 
   const sitemapTopics = (): MappedCoverageTopic[] =>
     !registeredCoverageAdequate() ? unresolvedRegisteredTopics() : [];
   const discoverSitemapForTopic = async (topic: MappedCoverageTopic, isAuthorityQuery: boolean): Promise<void> => {
+    throwIfRequestAborted(options.signal);
     const work = topicWork.find(item => item.topic.id === topic.id);
     // Discovered pages have no reviewed period-specific validity metadata.
     if (work?.historicalStatutoryQuery) return;
@@ -1569,9 +2580,9 @@ export async function resolveMappedOfficialSourceFallback(
     const expectedPointers = work?.pointers || [];
     const declaredSourceUrls = expectedPointers.map(pointer => pointer.officialSourceUrl)
       .filter((url): url is string => Boolean(url));
-    const providerConfig = getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
+    const providerConfig = discoveryProviderForTopic(topic);
     const discoveryRequest: OfficialSourceDiscoveryRequest = {
-      query: options.semanticDiscoveryQuery || query,
+      query: scopedDiscoveryQuery,
       scopeQuery: query,
       authority: topic.authorities[0],
       topicId: topic.id,
@@ -1596,14 +2607,17 @@ export async function resolveMappedOfficialSourceFallback(
     try {
       sitemapStageAttempted = true;
       discoveredCandidates = await discoveryAdapter.discoverOfficialSourceCandidates(
-        cloneOfficialSourceDiscoveryRequest(discoveryRequest)
+        cloneOfficialSourceDiscoveryRequest(discoveryRequest), options.signal
       );
+      throwIfRequestAborted(options.signal);
     } catch {
+      throwIfRequestAborted(options.signal);
       // First-party discovery is optional and fail-closed. Mapped retrieval
       // results already collected remain available if the sitemap is down.
       discoveredCandidates = [];
     }
     for (const candidateUrl of discoveredCandidates) {
+      throwIfRequestAborted(options.signal);
       if (!isApprovedDiscoveryCandidateUrl(candidateUrl, approvedHosts)) {
         attempts.push({ topicId: topic.id, candidateUrl, fetchStatus: 'UNAUTHORIZED_DOMAIN_ACCESS', titleMatched: false, contentMatched: false,
           discoveryStage: 'SITEMAP_DISCOVERY', error: 'Discovery candidate was not an HTTPS URL on an approved authority hostname.' });
@@ -1667,26 +2681,105 @@ export async function resolveMappedOfficialSourceFallback(
   // Stage 2: discover from official indexes for each topic that remains
   // uncovered after the complete mapped-source pass.
   for (const topic of sitemapTopics()) await discoverSitemapForTopic(topic, false);
+  throwIfRequestAborted(options.signal);
 
-  // Each unresolved material concept receives its own official discovery
-  // scope, even when a registered topic such as the relief cap already matched.
+  // Keep the validated issue-local discovery scope independent of registered
+  // topic matches. Topic evidence still passes through the ordinary admission
+  // and semantic-support checks before it can answer this issue.
+  if (scopedAuthorityTopic) provisionalTopics.push(scopedAuthorityTopic);
+  if (scopedAuthorityTopic && options.evidenceScope && options.evidenceScope.authority !== 'IRAS' &&
+      provisionalTopics.includes(scopedAuthorityTopic)) {
+    const scope = options.evidenceScope;
+    const scopeLegacyDomains = new Set(scopedAuthorityTopic.legacyDomains);
+    const contextDomain = Object.values(SINGAPORE_DOMAIN_TAXONOMY).find(domain => domain.id === scope.context.domainId);
+    const contextDomainMatchesScope = contextDomain
+      ? contextDomain.authorities.some(authority => authority === scope.authority) &&
+        contextDomain.legacyDomains.some(domainId => scopeLegacyDomains.has(domainId))
+      : [...scopeLegacyDomains].some(domainId => domainId === scope.context.domainId);
+    const compatibleTopicDomainIds = new Set(Object.values(SINGAPORE_DOMAIN_TAXONOMY)
+      .filter(domain => domain.authorities.some(authority => authority === scope.authority) &&
+        domain.legacyDomains.some(domainId => scopeLegacyDomains.has(domainId)))
+      .map(domain => domain.id));
+    const sourceTopicsById = new Map(SINGAPORE_COVERAGE_REGISTRY.map(topic => [topic.id, topic]));
+    const alreadyFetchedOrAttemptedUrls = new Set([
+      ...attempts.map(attempt => attempt.candidateUrl).filter((url): url is string => Boolean(url)),
+      ...successfulPageFetches.keys(),
+      ...records.map(record => record.canonicalSourceUrl).filter((url): url is string => Boolean(url))
+    ]);
+    const primaryTerms = new Set(normalizeEvidenceText([scope.context.primarySubject, ...scope.context.concepts].join(' '))
+      .split(' ').filter(term => term.length >= 3 && !AUTHORITY_QUERY_STOPWORDS.has(term)));
+    const conceptTerms = new Set(normalizeEvidenceText(scope.requestedConcepts.flatMap(concept =>
+      [concept.label, ...concept.terms]).join(' ')).split(' ')
+      .filter(term => term.length >= 3 && !AUTHORITY_QUERY_STOPWORDS.has(term)));
+    const populationTerms = new Set(normalizeEvidenceText(scope.context.population).split(' ')
+      .filter(term => term.length >= 3 && !AUTHORITY_QUERY_STOPWORDS.has(term)));
+    const expandTerm = (term: string): string[] => term.endsWith('ies') && term.length > 4
+      ? [term, term.slice(0, -3) + 'y']
+      : term.endsWith('s') && term.length > 4 && !/(ss|us|is)$/.test(term)
+        ? [term, term.slice(0, -1)] : [term];
+    const matchingTerms = (requested: Set<string>, metadata: readonly string[] | undefined): number => {
+      const available = new Set((metadata || []).flatMap(value => normalizeEvidenceText(value).split(' ')));
+      const expanded = new Set([...available].flatMap(expandTerm));
+      return [...requested].filter(term => expandTerm(term).some(candidate => expanded.has(candidate))).length;
+    };
+    const candidatesByUrl = new Map<string, {
+      pointer: ReturnType<typeof practicalExpansionDiscoveryPointers>[number];
+      score: number;
+      populationMatch: boolean;
+    }>();
+    if (contextDomainMatchesScope && scopeLegacyDomains.size > 0) for (const pointer of practicalExpansionDiscoveryPointers()) {
+      if (pointer.authority !== scope.authority || !isApprovedSingaporeSourceUrl(pointer.url) ||
+          alreadyFetchedOrAttemptedUrls.has(pointer.url)) continue;
+      const compatibleTopicIds = pointer.topicIds.filter(topicId => {
+        const sourceTopic = sourceTopicsById.get(topicId);
+        return Boolean(sourceTopic && !sourceTopic.routingOnly && sourceTopic.status !== 'HISTORICAL' &&
+          sourceTopic.authorities.some(authority => authority === scope.authority) &&
+          compatibleTopicDomainIds.has(sourceTopic.domainId) &&
+          sourceTopic.legacyDomains.some(domain => scopeLegacyDomains.has(domain)));
+      });
+      if (compatibleTopicIds.length === 0) continue;
+      const titleTerms = [...(pointer.expectedTitles || []), pointer.title];
+      const contentTerms = pointer.contentTerms || [];
+      const populationMatch = Boolean(pointer.population &&
+        normalizeEvidenceText(pointer.population) === normalizeEvidenceText(scope.context.population));
+      const score = matchingTerms(conceptTerms, titleTerms) * 5 + matchingTerms(primaryTerms, titleTerms) * 3 +
+        matchingTerms(conceptTerms, contentTerms) * 2 + matchingTerms(primaryTerms, contentTerms) +
+        (pointer.population && matchingTerms(populationTerms, [pointer.population]) > 0 ? 1 : 0);
+      if (score === 0 && !populationMatch) continue;
+      const existing = candidatesByUrl.get(pointer.url);
+      if (!existing || populationMatch && !existing.populationMatch ||
+          populationMatch === existing.populationMatch && score > existing.score) {
+        candidatesByUrl.set(pointer.url, { pointer, score, populationMatch });
+      }
+    }
+    const seedCandidates = [...candidatesByUrl.values()].sort((left, right) =>
+      Number(right.populationMatch) - Number(left.populationMatch) || right.score - left.score ||
+      Number(left.pointer.documentKind === 'PDF' || (!left.pointer.documentKind && /\.pdf(?:$|[?#])/i.test(left.pointer.url))) -
+        Number(right.pointer.documentKind === 'PDF' || (!right.pointer.documentKind && /\.pdf(?:$|[?#])/i.test(right.pointer.url))) ||
+      left.pointer.url.localeCompare(right.pointer.url)).slice(0, 2);
+    for (const candidate of seedCandidates) {
+      await tryFetch(scopedAuthorityTopic, candidate.pointer.url, undefined, 'MAPPED_SOURCE', candidate.pointer.title,
+        undefined, candidate.pointer);
+    }
+  }
   for (const topic of provisionalTopics.filter(candidate => !topicCovered(candidate))) {
     await discoverSitemapForTopic(topic, true);
   }
   const sitemapCoverageAdequate = allRequiredCoverageAdequate();
 
   const discoverOnlineForTopic = async (topic: MappedCoverageTopic, isAuthorityQuery: boolean): Promise<void> => {
+    throwIfRequestAborted(options.signal);
     const work = topicWork.find(item => item.topic.id === topic.id);
     if (work?.historicalStatutoryQuery || topicCovered(topic)) return;
     const approvedHosts = discoveryHostsForTopic(topic);
-    const providerConfig = getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
+    const providerConfig = discoveryProviderForTopic(topic);
     if (!providerConfig?.searchSite || !approvedHosts.includes(providerConfig.searchSite)) return;
     const expectedPointers = work?.pointers || [];
     const declaredSourceUrls = expectedPointers.map(pointer => pointer.officialSourceUrl)
       .filter((url): url is string => Boolean(url));
     const officialDomainSearchAdapter = options.officialDomainSearchAdapter || getDefaultOfficialDomainSearchAdapter(webRetriever, options.fetchOptions);
     const searchRequest: OfficialSourceDiscoveryRequest = {
-      query: options.semanticDiscoveryQuery || query,
+      query: scopedDiscoveryQuery,
       scopeQuery: query,
       authority: topic.authorities[0],
       topicId: topic.id,
@@ -1709,9 +2802,11 @@ export async function resolveMappedOfficialSourceFallback(
     try {
       onlineSearchStageAttempted = true;
       searchCandidates = await officialDomainSearchAdapter.searchOfficialDomainCandidates(
-        cloneOfficialSourceDiscoveryRequest(searchRequest)
+        cloneOfficialSourceDiscoveryRequest(searchRequest), options.signal
       );
+      throwIfRequestAborted(options.signal);
     } catch {
+      throwIfRequestAborted(options.signal);
       searchCandidates = [];
     }
     for (const searchTrace of officialDomainSearchAdapter.getLastSearchTrace?.() || []) {
@@ -1722,6 +2817,7 @@ export async function resolveMappedOfficialSourceFallback(
       }
     }
     for (const candidateUrl of searchCandidates) {
+      throwIfRequestAborted(options.signal);
       if (!isApprovedDiscoveryCandidateUrl(candidateUrl, approvedHosts)) {
         attempts.push({ topicId: topic.id, candidateUrl, fetchStatus: 'UNAUTHORIZED_DOMAIN_ACCESS', titleMatched: false, contentMatched: false,
           discoveryStage: 'OFFICIAL_DOMAIN_SEARCH', searchQueryVariant: officialDomainSearchAdapter.getCandidateQueryVariant?.(candidateUrl),
@@ -1741,6 +2837,7 @@ export async function resolveMappedOfficialSourceFallback(
       isIrasSourceUrlAreaCompatible(topic.domainId, candidateUrl, declaredSourceUrls, query) &&
       isOfficialSourceCandidateMateriallyRelevant(candidateUrl, searchRequest, officialDomainSearchAdapter.getCandidateTitle?.(candidateUrl))
     ).slice(0, 4)) {
+      throwIfRequestAborted(options.signal);
       let host = '';
       let protocol = '';
       try {
@@ -1770,8 +2867,12 @@ export async function resolveMappedOfficialSourceFallback(
       ...(!registeredCoverageAdequate() ? unresolvedRegisteredTopics() : []),
       ...provisionalTopics.filter(topic => !topicCovered(topic))
     ];
-    for (const topic of unresolved) await discoverOnlineForTopic(topic, topic.id.startsWith('iras-authority-query-'));
+    for (const topic of unresolved) {
+      throwIfRequestAborted(options.signal);
+      await discoverOnlineForTopic(topic, topic.id.startsWith('iras-authority-query-'));
+    }
   }
+  throwIfRequestAborted(options.signal);
 
   const anyMappedAttempt = sourceMapIds.size > 0;
   const path: SourceMapFallbackTrace['path'] = records.length > 0
@@ -1790,6 +2891,9 @@ export async function resolveMappedOfficialSourceFallback(
   return {
     records,
     provisionalTopics,
+    ...(admittedDocumentContexts.size > 0
+      ? { documentContexts: [...admittedDocumentContexts.values()] }
+      : {}),
     trace: {
       path,
       sourceMapIds: [...sourceMapIds],
@@ -1957,7 +3061,8 @@ export async function buildGroundedReasoningContext(
       initialQuestionUnderstanding = { mode: 'DETERMINISTIC_FALLBACK' };
     } else {
       requestCompletenessContext = createRequestCompletenessContext(userInput);
-      initialQuestionUnderstanding = await interpretSemanticQuestion(userInput, providerOrApiKey);
+      initialQuestionUnderstanding = await interpretSemanticQuestion(userInput, providerOrApiKey,
+        undefined, undefined, retrievalOptions.signal);
     }
   }
   requestCompletenessContext = ensureRequestCompletenessContext(userInput, requestCompletenessContext, initialQuestionUnderstanding);
@@ -1982,15 +3087,18 @@ export async function buildGroundedReasoningContext(
       calculationRequired: false,
       journalEntryRequired: false,
       intent: 'STATUTORY_ADVISORY' as const,
-      missingFacts: []
+      missingFacts: [],
+      missingFactDomains: []
     }
     : reconciledQuestion.classification;
   const questionUnderstanding = reconciledQuestion.understanding;
   const irasPolicy = usesIrasEvidencePolicy(classification, userInput);
+  const hasContextualPriorReference = !startsNewAccountingScenario(userInput, currentScenario) &&
+    (isShortSemanticFollowUp(userInput, currentScenario) || hasExplicitPriorFactReference(userInput, currentScenario));
   const ignorePriorAccountingContext = Boolean(irasPolicy &&
     !classification.accountingAnalysisRequired && !classification.journalEntryRequired &&
     (!questionUnderstanding.interpretation || questionUnderstanding.interpretation.requestedOperation !== 'PREPARE_JOURNAL') &&
-    !isShortSemanticFollowUp(userInput));
+    !hasContextualPriorReference);
   const relevantScenario = ignorePriorAccountingContext ? null : currentScenario;
   const conversationContext = extractAccountingContext(relevantScenario);
   const semanticUnderstanding = await defaultTransactionUnderstandingService.understandTransaction(
@@ -1998,7 +3106,8 @@ export async function buildGroundedReasoningContext(
     relevantScenario?.functionalCurrency || 'SGD',
     'SG',
     irasPolicy ? undefined : providerOrApiKey,
-    conversationContext
+    conversationContext,
+    retrievalOptions.signal
   );
 
   // 2. Share the conflict-safe canonical routing hints with evaluation tooling.
@@ -2091,6 +3200,13 @@ export async function buildGroundedReasoningContext(
     (localQuality.status === 'INSUFFICIENT' || localQuality.uncoveredTopicIds.length > 0));
   const mappedFallback = await resolveMappedOfficialSourceFallback(fallbackTopicIds, userInput, retriever, {
     ...retrievalOptions,
+    ...(retrievalOptions.signal ? {
+      fetchOptions: {
+        ...retrievalOptions.fetchOptions,
+        signal: retrievalOptions.signal,
+        timeoutMs: getRequestTimeoutMs(retrievalOptions.signal, retrievalOptions.fetchOptions?.timeoutMs ?? 3000)
+      }
+    } : {}),
     questionUnderstanding,
     semanticDiscoveryQuery: semanticIrasContext ? semanticDiscoveryQuery : undefined,
     authorityLevelDiscovery: retrievalOptions.localOnly ? false : retrievalOptions.authorityLevelDiscovery ?? needsAuthorityFallback,
@@ -2099,6 +3215,7 @@ export async function buildGroundedReasoningContext(
         localQuality.eligibleRecords.length > 0
       : false
   });
+  throwIfRequestAborted(retrievalOptions.signal);
   const allRetrieved = [...contextualLocalRetrieved, ...mappedFallback.records];
   const evidenceQuality = irasPolicy ? applyStandaloneGstCalculationCoverage(userInput, evaluateEvidenceQuality({
     query: userInput, topicIds: evidenceTopicIds, records: allRetrieved,
@@ -2179,10 +3296,14 @@ export async function buildGroundedReasoningContext(
     primaryEvidence,
     officialGuidance,
     curatedSummaries,
+    ...(mappedFallback.documentContexts
+      ? { documentContexts: mappedFallback.documentContexts }
+      : {}),
     applicationRules,
     currentInformationRequired: classification.currentInformationRequired,
     semanticUnderstanding,
     questionUnderstanding,
+    authorityIssue: retrievalOptions.authorityIssue,
     requestCompletenessContext,
     evidenceQuality,
     sourceMapFallbackTrace: mappedFallback.trace
@@ -2480,6 +3601,12 @@ export function postProcessAIResponse(
   sourceMapFallbackTrace?: SourceMapFallbackTrace;
   groundingEvidence?: GroundingEvidenceTrace[];
 } {
+  if (parsed && typeof parsed === 'object') {
+    parsed = { ...parsed, effectiveDateOrTiming: undefined, uncertaintyDisclaimer: undefined };
+  }
+  if (currentScenario) {
+    currentScenario = { ...currentScenario, effectiveDateOrTiming: undefined, uncertaintyDisclaimer: undefined };
+  }
   if (groundedContext.evidenceQuality) {
     const taxClaimsWereOmitted = parsed?.taxClaims === undefined ||
       (Array.isArray(parsed.taxClaims) && parsed.taxClaims.length === 0);
@@ -2660,12 +3787,13 @@ export function postProcessAIResponse(
   const selectedAccountingTreatmentSummary = parsed.accountingTreatmentSummary ||
     deterministicScenario?.accountingTreatmentSummary || currentScenario?.accountingTreatmentSummary;
   const selectedSingaporeTaxTreatmentSummary = parsed.singaporeTaxTreatmentSummary ||
-    deterministicScenario?.singaporeTaxTreatmentSummary || currentScenario?.singaporeTaxTreatmentSummary;
+    (deterministicScenario?.scenarioType === 'UNRECOGNIZED' ? undefined : deterministicScenario?.singaporeTaxTreatmentSummary) ||
+    (currentScenario?.scenarioType === 'UNRECOGNIZED' ? undefined : currentScenario?.singaporeTaxTreatmentSummary);
   const selectedRegulatoryMandatesSummary = parsed.regulatoryMandatesSummary ||
     deterministicScenario?.regulatoryMandatesSummary || currentScenario?.regulatoryMandatesSummary;
 
   // Uncertainty handling & conditional conclusions
-  let uncertaintyDisclaimer = parsed.uncertaintyDisclaimer || currentScenario?.uncertaintyDisclaimer || '';
+  let uncertaintyDisclaimer = '';
 
   // 1. Missing material facts produce conditional conclusions
   if (groundedContext.missingFacts && groundedContext.missingFacts.length > 0) {

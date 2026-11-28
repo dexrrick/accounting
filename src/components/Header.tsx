@@ -24,6 +24,7 @@ import { defaultLiveRegulatoryFeedService, type LiveSyncState, type RegulatoryUp
 import { defaultSourceVersioningManager } from '../standards/sourceVersioning';
 import { getAllAuthoritativeSources } from '../standards/unifiedSourceModel';
 import { ManualMasReviewPanel } from './ManualMasReviewPanel';
+import { ManualAcraReviewPanel } from './ManualAcraReviewPanel';
 
 export type AppFontSize = 'normal' | 'large' | 'xl';
 
@@ -1032,6 +1033,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
 
               <ManualMasReviewPanel onWorkflowChange={handleManualRegistryChange} />
+              <ManualAcraReviewPanel onWorkflowChange={handleManualRegistryChange} />
 
               {/* Official Sources Allowlist Manifest */}
               <div className="space-y-2">

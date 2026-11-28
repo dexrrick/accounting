@@ -1,0 +1,21 @@
+{
+  "outputPath": "D:\\Accounting\\artifacts\\statutory-corrections-expansion-20261030\\fixed100-original.json",
+  "corpusSize": 100,
+  "routedByAuthority": {
+    "IRAS": "20/20",
+    "CPF": "20/20",
+    "MOM": "20/20",
+    "ACRA": "20/20",
+    "MAS": "20/20"
+  },
+  "verifiedByAuthority": {
+    "IRAS": 9,
+    "CPF": 14,
+    "MOM": 12,
+    "ACRA": 6,
+    "MAS": 12
+  },
+  "networkRequests": 0,
+  "modelRequests": 0,
+  "liveAcceptance": "NOT_RUN"
+}

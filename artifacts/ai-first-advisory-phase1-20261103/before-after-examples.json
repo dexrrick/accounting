@@ -1,0 +1,36 @@
+{
+  "kind": "MOCKED_ROUTING_AND_CONTEXT_EVIDENCE_NOT_LIVE_MODEL_QUALITY",
+  "baseline": "863daf4299540ed0a50d808b07c1ee0e617b284b",
+  "results": [
+    {
+      "question": "What is accrual accounting, and how does it differ from cash accounting?",
+      "before": "### Statutory Directive: Unrecognized Query (Offline Mode)\n\n**Governing Authority**: **ASC** | **Legislation**: **SFRS(I) 1-1 Presentation of Financial Statements** | **Authority Status**: **🤖 AI Proposed**\n\n---\n\n#### 1. Statutory Principle & Ruling\nGeneral explanatory context: accrual accounting records economic activity when it occurs; cash accounting follows cash receipts and payments.\n\n---\n\n#### 2. Key Rules, Thresholds & Mandatory Provisions\n",
+      "after": "# Direct Answer\n\nAccrual accounting recognizes economic activity as it occurs, while cash accounting follows cash receipts and payments.\n\n# Explanation\n\n- Under accrual accounting, an expense can be recognized before it is paid, with an outstanding liability until settlement.\n- Revenue and cash collection can also occur in different periods.\n- Cash accounting tracks receipts and payments.\n- That can make cash movements easier to follow, but it can omit outstanding balances from the picture of performance.\n\n# Accounting Treatment\n\n- Choose the applicable reporting basis before deciding how the activity is recognized.\n- An accrual explanation does not itself authorize a journal or establish missing transaction facts.\n\n# Conditions and Important Notes\n\n- The appropriate application depends on the reporting framework and the facts of the transaction.",
+      "displayFullAnswer": true,
+      "calls": [
+        {
+          "inputCharacters": 2977,
+          "currentQuestionOccurrences": 1,
+          "priorFullAnswerPresent": true,
+          "provider": "mock-gemini"
+        }
+      ],
+      "renderedHtmlCharacters": 1475
+    },
+    {
+      "question": "Explain GST input tax and output tax, including the conditions that matter for a business.",
+      "before": "The available verified evidence does not cover the full tax question. I cannot establish the tax treatment from it.",
+      "after": "# Direct Answer\n\nInput tax relates to GST on business purchases; output tax relates to GST on business supplies.\n\n# Explanation\n\n- A business should distinguish GST charged on its supplies from GST incurred on purchases.\n- These are different sides of the GST position.\n- Recovery of purchase GST depends on the purpose of the purchase and the applicable restrictions.\n\n# Conditions and Important Notes\n\n- Registration, the nature of the supply and purchase, supporting documents and the relevant period can affect the conclusion.\n\n# Verification Note\n\nA specific rate, deadline, calculation, legal requirement, or provision reference is not included because this answer path has not independently verified that claim.",
+      "displayFullAnswer": true,
+      "calls": [
+        {
+          "inputCharacters": 2995,
+          "currentQuestionOccurrences": 1,
+          "priorFullAnswerPresent": true,
+          "provider": "mock-gemini"
+        }
+      ],
+      "renderedHtmlCharacters": 1279
+    }
+  ]
+}

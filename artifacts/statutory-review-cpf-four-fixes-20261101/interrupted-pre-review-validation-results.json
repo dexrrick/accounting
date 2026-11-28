@@ -1,0 +1,20 @@
+[
+  {
+    "check": "root-lint",
+    "exitCode": 1,
+    "startedUTC": "2026-11-01T09:34:22.4750949Z",
+    "completedUTC": "2026-11-01T09:34:25.1706532Z"
+  },
+  {
+    "check": "maintained-lint",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T09:34:25.1948753Z",
+    "completedUTC": "2026-11-01T09:34:25.3552605Z"
+  },
+  {
+    "check": "typecheck",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T09:34:25.3578618Z",
+    "completedUTC": "2026-11-01T09:34:33.1145231Z"
+  }
+]

@@ -1,0 +1,107 @@
+{
+  "model": "gemini-3.5-flash-lite",
+  "baselineReplay": false,
+  "scopeRecheck": true,
+  "startedAt": "2026-11-04T12:22:05.825Z",
+  "scope": "Live generation and scoped support checks with retained registry passages and fixture workstream admission; no live retrieval, upstream admission, or browser acceptance.",
+  "cases": [
+    {
+      "authority": "IRAS",
+      "record": "GST_REG26_BLOCKED_INPUT_TAX",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "query": "Our company purchased a private motor car within the blocked input tax category and no exception applies. Does business use alone allow recovery of the GST?",
+      "mode": "injected-contradiction-live-verifier",
+      "calls": [
+        {
+          "stage": "EVIDENCE_GROUNDED_SUPPORT_VERIFICATION",
+          "elapsedMs": 10208,
+          "response": "{\"verdicts\":[{\"claimId\":\"contradiction\",\"support\":\"UNSUPPORTED\",\"claimType\":\"DEFINITIVE_APPLICATION\"}]}"
+        }
+      ],
+      "status": "ERROR_OR_WITHHELD",
+      "error": "Evidence-grounded synthesis produced no supportable claims.",
+      "elapsedMs": 10219
+    },
+    {
+      "authority": "IRAS",
+      "record": "GST_REG26_BLOCKED_INPUT_TAX",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "query": "A client incurred an expense. We have not established its nature, purpose, documentation or whether input tax restrictions apply. Is the client eligible for GST recovery today?",
+      "mode": "live-answer",
+      "calls": [
+        {
+          "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+          "elapsedMs": 16827,
+          "response": "{\"claims\":[{\"id\":\"c1\",\"kind\":\"RULE\",\"text\":\"Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance, and business purpose alone does not make a blocked claim recoverable.\",\"supportIds\":[\"passage-1\"],\"factRefs\":[],\"issueId\":\"live-5\"},{\"id\":\"c2\",\"kind\":\"APPLICATION\",\"text\":\"The client is not currently established as eligible for GST recovery today because the nature, purpose, documentation, and potential input tax restrictions of the incurred expense remain unresolved.\",\"supportIds\":[\"passage-1\"],\"factRefs\":[\"fact-current-question\"],\"issueId\":\"live-5\"},{\"id\":\"c3\",\"kind\":\"LIMITATION\",\"text\":\"Applicability for the client expense remains unresolved under IRAS; the stated facts do not yet establish the outcome.\",\"supportIds\":[],\"factRefs\":[\"fact-current-question\"],\"issueId\":\"live-5\"}]}"
+        },
+        {
+          "stage": "EVIDENCE_GROUNDED_SUPPORT_VERIFICATION",
+          "elapsedMs": 10199,
+          "response": "{\n  \"verdicts\": [\n    {\n      \"claimId\": \"c1\",\n      \"support\": \"SUPPORTED\",\n      \"claimType\": \"RULE\"\n    },\n    {\n      \"claimId\": \"c2\",\n      \"support\": \"SUPPORTED\",\n      \"claimType\": \"CONDITIONAL_APPLICATION\"\n    },\n    {\n      \"claimId\": \"c3\",\n      \"support\": \"SUPPORTED\",\n      \"claimType\": \"CONDITIONAL_APPLICATION\"\n    }\n  ]\n}"
+        }
+      ],
+      "messageText": "# Answer\n\nRegulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance, and business purpose alone does not make a blocked claim recoverable. [IRAS: GST (General) Regulations](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)\n\nThe client is not currently established as eligible for GST recovery today because the nature, purpose, documentation, and potential input tax restrictions of the incurred expense remain unresolved. [IRAS: GST (General) Regulations](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)\n\nApplicability for the client expense remains unresolved under IRAS; the stated facts do not yet establish the outcome.\n\n### Conditions and unresolved points\n\n- Applicability remains unresolved for A client incurred an expense. We have not established its nature, purpose, documentation or whether input tax restrictions apply. Is the client eligible for GST recovery today?.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_AND_SELECTIVE_AI_SUPPORT_CHECK",
+        "semanticVerificationCalls": 1,
+        "providerCalls": 2,
+        "providerAttempts": 2,
+        "providerElapsedMs": 27026,
+        "admittedClaimIds": [
+          "c1",
+          "c2",
+          "c3"
+        ],
+        "withheldClaimIds": [],
+        "claims": [
+          {
+            "claimId": "c1",
+            "kind": "RULE",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ],
+            "semanticSupport": "SUPPORTED"
+          },
+          {
+            "claimId": "c2",
+            "kind": "APPLICATION",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ],
+            "semanticSupport": "SUPPORTED"
+          },
+          {
+            "claimId": "c3",
+            "kind": "LIMITATION",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [],
+            "semanticSupport": "SUPPORTED"
+          }
+        ]
+      },
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 27042
+    },
+    {
+      "authority": "IRAS",
+      "record": "GST_REG26_BLOCKED_INPUT_TAX",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "query": "A client incurred an expense. We have not established its nature, purpose, documentation or whether input tax restrictions apply. Is the client eligible for GST recovery today?",
+      "mode": "injected-contradiction-live-verifier",
+      "calls": [
+        {
+          "stage": "EVIDENCE_GROUNDED_SUPPORT_VERIFICATION",
+          "elapsedMs": 10834,
+          "response": "{\"verdicts\":[{\"claimId\":\"contradiction\",\"support\":\"UNSUPPORTED\",\"claimType\":\"DEFINITIVE_APPLICATION\"}]}"
+        }
+      ],
+      "status": "ERROR_OR_WITHHELD",
+      "error": "Evidence-grounded synthesis produced no supportable claims.",
+      "elapsedMs": 10835
+    }
+  ],
+  "finishedAt": "2026-11-04T12:22:53.924Z"
+}

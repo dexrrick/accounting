@@ -1,0 +1,30 @@
+{
+  "reviewTarget": "Uncommitted working-tree changes against 7206fc15439e221de19c1fedd7b4f00e086b6e31",
+  "reviewerRole": "Independent reviewer agent, read-only",
+  "initialFindings": [
+    {
+      "severity": "P2",
+      "finding": "A long future-payroll clause bypassed the 32-character anniversary date guard.",
+      "resolution": "Replaced proximity checks with one clause-scoped predicate shared by evidence-date resolution and CPF source admission; added the exact negative regression."
+    },
+    {
+      "severity": "P2",
+      "finding": "Verb-led bonus employment-income reporting requests still lost the IRAS issue.",
+      "resolution": "Added reporting-action and employment-income context recognition, with planning and application regressions."
+    }
+  ],
+  "finalResult": "No remaining material findings in the final delta; both initial reviewer reproductions fixed.",
+  "independentProbes": {
+    "sourceAndDateCasesPassed": 5,
+    "routingCasesPassed": 3,
+    "controls": [
+      "Long future-payroll wording rejected",
+      "2029 boundary rejected",
+      "2027 and 2028 derived boundaries supported",
+      "Current-year wages plus derived boundary supported",
+      "IR8A and verb-led employment-income reporting retain IRAS and CPF",
+      "CPF-only bonus question suppresses incidental IRAS"
+    ]
+  },
+  "limits": "Reviewer did not run broad suites, live-source acceptance, CI, or model requests. Supervisor validation is recorded separately."
+}

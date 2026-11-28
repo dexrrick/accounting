@@ -27,7 +27,9 @@ import type {
 } from '../types/conversationState';
 import { startsNewAccountingScenario } from './conversationBoundary';
 import { executeStructuredLlmCall } from './aiTransport';
+import { getRequestTimeoutMs, throwIfRequestAborted } from './requestDeadline';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
+import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
 
 export type SemanticExtractionTier = 'AI_REASONING' | 'DETERMINISTIC_HEURISTIC_FALLBACK';
 
@@ -214,6 +216,30 @@ export function normalizeInstrument(raw?: string): InstrumentType | undefined {
   return matched;
 }
 
+function isGeneralCompanyTaxResidencyRuleQuestion(query: string): boolean {
+  return /\bincorporat(?:ion|ed)\s+(?:in\s+singapore\s+)?alone\s+(?:enough|sufficient)\s+to\s+(?:make|render)\s+(?:a|any)\s+company\s+(?:a\s+)?tax\s+resident\b/i.test(query) &&
+    /\b(?:general|control[ -]and[ -]management)\b/i.test(query) &&
+    !/\b(?:our|my|this)\s+company\b/i.test(query);
+}
+
+function isGeneralRuleQueryWithoutTransactionFacts(query: string): boolean {
+  const activeQuery = removeNegatedJournalDirectives(query).replace(
+    /\b(?:do\s+not|don't|dont|never)\s+(?:(?:need|want)\s+to\s+)?(?:calculate|compute|estimate|work\s+out|quantify)\b[^.!?;:]{0,65}/gi,
+    ' '
+  );
+  const asksForGeneralRule =
+    /\b(?:as\s+a\s+general\s+rule|general\s+(?:rules?|criteria|conditions|test|restriction|eligibility)|generally\s+(?:claimable|allowed|eligible|qualif\w*))\b/i.test(query) ||
+    isGeneralCompanyTaxResidencyRuleQuestion(query);
+  const asksForAccountingOutput =
+    /\b(?:prepare|create|make|generate|produce|provide|post|record|draft|show|include)\b[^.!?]{0,55}\b(?:journal|double[ -]+entr(?:y|ies)|accounting[ -]+entr(?:y|ies)|debit|credit)\b/i.test(activeQuery) ||
+    /\b(?:calculate|compute|estimate|work\s+out|quantify|how\s+much|what\s+amount)\b/i.test(activeQuery);
+  const hasTransactionFacts =
+    /\b(?:SGD|USD|EUR|GBP|S\$|\$)\s*\d|\b\d[\d,]*(?:\.\d+)?\s*(?:SGD|USD|EUR|GBP)\b|\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b|\b\d{4}-\d{2}-\d{2}\b/i.test(query) ||
+    /\b(?:we|i|our|my|this)\b[^.!?;]{0,100}\b(?:pay(?:s|ing)?|paid|payment|bought|buy|purchased|purchase|acquired|acquire|sold|sale|incurred|expense|cost|invoice|settle|settlement|received|invested|investment|subscription)\b/i.test(query) ||
+    /\bthe\s+(?:company|business)\b[^.!?;]{0,80}\b(?:paid|bought|purchased|acquired|sold|incurred|received|invested|subscribed|settled)\b/i.test(query);
+  return asksForGeneralRule && !asksForAccountingOutput && !hasTransactionFacts;
+}
+
 /**
  * Validates and normalizes raw transaction understanding objects.
  * Acts as a strict validation gate before AI output is accepted.
@@ -378,8 +404,9 @@ export function validateAndNormalizeUnderstanding(
 
   const factsMissing: string[] = Array.isArray(raw?.factsMissing) ? [...raw.factsMissing] : [];
   const assumptions: string[] = Array.isArray(raw?.assumptions) ? [...raw.assumptions] : [];
+  const isGeneralRuleQuery = Boolean(userQuery && isGeneralRuleQueryWithoutTransactionFacts(userQuery));
 
-  if (!raw?.reportingEntity?.type || raw.reportingEntity.type === 'unknown') {
+  if ((!raw?.reportingEntity?.type || raw.reportingEntity.type === 'unknown') && !isGeneralRuleQuery) {
     factsMissing.push('Reporting entity perspective is unspecified');
   }
 
@@ -387,7 +414,7 @@ export function validateAndNormalizeUnderstanding(
     assumptions.push(raw.currency.rationale);
   }
 
-  if (raw?.currency?.source === 'unknown') {
+  if (raw?.currency?.source === 'unknown' && !isGeneralRuleQuery) {
     factsMissing.push('Transaction currency is unspecified');
   }
 
@@ -738,16 +765,17 @@ export class DeterministicSemanticExtractor {
       assumptions.push(currency.rationale);
     }
 
-    const isCommercialTransaction =
-      ownershipContext !== 'unknown' ||
+    const generalTaxRuleExplanation = isGeneralRuleQueryWithoutTransactionFacts(query);
+    const isCommercialTransaction = !generalTaxRuleExplanation && (
       reportingEntity.type === 'company' ||
+      ownershipContext !== 'unknown' ||
       q.includes('pay') ||
       q.includes('bought') ||
       q.includes('invested') ||
       q.includes('subscribed') ||
       q.includes('issued') ||
       q.includes('cost') ||
-      q.includes('expense');
+      q.includes('expense'));
 
     if (isCommercialTransaction) {
       if (currency.source === 'unknown') {
@@ -1314,7 +1342,8 @@ export class AISemanticExtractor {
     providerOrApiKey?: ProviderSettings | string,
     _functionalCurrency: string = 'SGD',
     _jurisdiction: string = 'SG',
-    conversationContext?: ConversationAccountingContext
+    conversationContext?: ConversationAccountingContext,
+    signal?: AbortSignal
   ): Promise<any> {
     let contextPrompt = '';
     if (
@@ -1337,7 +1366,11 @@ export class AISemanticExtractor {
       `Analyze the following commercial query and extract structured economic facts:\n\nQuery: "${query}"\n${contextPrompt}\nReturn strictly valid JSON conforming to the schema.`,
       SEMANTIC_EXTRACTION_SYSTEM_PROMPT,
       providerOrApiKey,
-      { jsonMode: true, temperature: 0.1 }
+      {
+        jsonMode: true,
+        temperature: 0.1,
+        ...(signal ? { signal, timeoutMs: getRequestTimeoutMs(signal, 45_000) } : {})
+      }
     );
 
     const parsed = repairAndParseAIJson(rawJsonText);
@@ -1392,7 +1425,8 @@ export class TransactionUnderstandingService {
     functionalCurrency: string = 'SGD',
     jurisdiction: string = 'SG',
     providerOrApiKey?: ProviderSettings | string,
-    conversationContext?: ConversationAccountingContext
+    conversationContext?: ConversationAccountingContext,
+    signal?: AbortSignal
   ): Promise<TransactionUnderstanding> {
     const hasProvider = Boolean(
       (typeof providerOrApiKey === 'string' && providerOrApiKey.trim().length > 10) ||
@@ -1405,13 +1439,14 @@ export class TransactionUnderstandingService {
 
     if (hasProvider) {
       try {
-        const rawAi = await this.aiExtractor.extract(query, providerOrApiKey, functionalCurrency, jurisdiction, conversationContext);
+        const rawAi = await this.aiExtractor.extract(query, providerOrApiKey, functionalCurrency, jurisdiction, conversationContext, signal);
         const validation = validateAndNormalizeUnderstanding(rawAi, jurisdiction, 'ai', conversationContext, query);
         if (validation.isValid) {
           return validation.normalizedUnderstanding;
         }
         console.warn('[SemanticExtractor] AI extraction failed schema validation gate:', validation.errors);
       } catch (err: any) {
+        throwIfRequestAborted(signal);
         console.warn('[SemanticExtractor] AI extraction call failed, falling back to deterministic extractor:', err?.message || err);
       }
     }

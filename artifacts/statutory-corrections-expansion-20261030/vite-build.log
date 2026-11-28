@@ -1,0 +1,35 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - import "../standards/unifiedSourceModel" without a file extension (src/retrieval/externalSourceValidator.ts:1:48). Add the file extension
+  - import "./acraAnnualReturnFilingRule" without a file extension (src/retrieval/externalSourceValidator.ts:5:8). Add the file extension
+  - import "./statutoryAdvisorySupport" without a file extension (src/retrieval/externalSourceValidator.ts:10:8). Add the file extension
+  - import "./sourceAdapters" without a file extension (src/retrieval/externalSourceValidator.ts:11:66). Add the file extension
+  - import "../standards/unifiedSourceModel" without a file extension (src/retrieval/sourceAdapters.ts:1:63). Add the file extension
+  - import "../standards/unifiedSourceModel" without a file extension (src/retrieval/acraAnnualReturnFilingRule.ts:1:49). Add the file extension
+  - import "../utils/evidenceTextBoundaries" without a file extension (src/retrieval/statutoryAdvisorySupport.ts:1:53). Add the file extension
+  - import "./liveRegulatoryFeed" without a file extension (src/retrieval/sourceAdapters.ts:2:64). Add the file extension
+  - import "./controlledWebRetriever" without a file extension (src/retrieval/sourceAdapters.ts:3:45). Add the file extension
+  - import "./masCmsRuleSupport" without a file extension (src/retrieval/statutoryAdvisorySupport.ts:2:60). Add the file extension
+  - import "../types/accounting" without a file extension (src/retrieval/sourceAdapters.ts:4:41). Add the file extension
+  - import "../standards/sourceVersioning" without a file extension (src/retrieval/sourceAdapters.ts:5:53). Add the file extension
+  - import "./statutoryAdvisorySupport" without a file extension (src/retrieval/masCmsRuleSupport.ts:1:59). Add the file extension
+  - import "./unifiedSourceModel" without a file extension (src/standards/sourceVersioning.ts:1:91). Add the file extension
+  - import "./masLicensingComparisonPolicy" without a file extension (src/standards/sourceVersioning.ts:9:8). Add the file extension
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+vite v8.3.1 building client environment for production...
+transforming...
+✓ 2017 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                              0.97 kB │ gzip:   0.51 kB
+dist/assets/pdf.worker.min-Dkey6ZUl.mjs  1,321.30 kB
+dist/assets/index-BScSUBev.css              55.48 kB │ gzip:   9.87 kB
+dist/assets/pdf.worker.min-WWY7VKxM.js       0.06 kB │ gzip:   0.08 kB
+dist/assets/pdf-CjfbR2gF.js                488.17 kB │ gzip: 148.19 kB
+dist/assets/index-CERbzJF4.js            2,324.18 kB │ gzip: 637.15 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.13s

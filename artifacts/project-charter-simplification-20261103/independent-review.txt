@@ -1,0 +1,21 @@
+Independent read-only review — 03/11/2026
+Base: 6cf7c2d68b8396dd8a74c34de6481ca7c1109017
+Target: completed working diff on codex/project-charter-simplification-20261103,
+before publication; advisory services, tests, charter and architecture report.
+
+Result: No material code findings.
+
+Reviewer confirmed removal of mandatory model review/repair, preservation of
+deterministic source/numeric/issue/journal checks, canonical citation binding,
+governed fallback and honest ADMITTED metadata. Useful guardrail tests remain.
+No accounting-engine, source-registry or deployment changes were found.
+
+Documentation finding: The architecture report overstated network-attempt
+telemetry. Supervisor corrected it to say synthesis counters measure logical calls
+and attempts, not all possible network attempts. No code change was required.
+
+Limits: Reviewer inspected diffs, validation records and changed tests, and ran
+git diff --check. The reviewer did not independently rerun suites or perform live
+model, browser, CI or production validation. Qualitative claim accuracy now rests
+with generation; deterministic packet checks do not establish semantic entailment.
+Supervisor retains responsibility for final validation and publication.

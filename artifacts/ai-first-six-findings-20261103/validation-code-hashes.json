@@ -1,0 +1,30 @@
+[
+  {
+    "path": "src/services/evidenceGroundedSynthesis.ts",
+    "sha256": "2B686617B6B035DB58D36E4CD30547FE9552AFB6E06CB666D048FEEE451F01F2"
+  },
+  {
+    "path": "src/services/geminiService.ts",
+    "sha256": "EE9FAA0EE28F191115F172C16DBA32E7BEE583D71E94D8D67079AF2F8E325D45"
+  },
+  {
+    "path": "scripts/run_all_tests.mjs",
+    "sha256": "CAE74BC5FBAE7D4A76B4BE4D93D997BF47DDA50F176FE61284814A8B10507E16"
+  },
+  {
+    "path": "tests/regression/test_evidence_grounded_synthesis.mjs",
+    "sha256": "7EB70440A937EC8542BB772279DB213B8433C5B96B6699CD42D15F6EDFDF81B5"
+  },
+  {
+    "path": "tests/regression/test_ai_first_advisory_phase1.mjs",
+    "sha256": "E9AD5B5D171E3290A9F6D5B9095145EE384C6DC4B64D9C4012ECCC42E4AA9D96"
+  },
+  {
+    "path": "tests/regression/test_synthesis_numeric_provenance.mjs",
+    "sha256": "8A137837A4691AE52E2BB50765530D94F81ED3776C6DBE414BBD42901E6FE457"
+  },
+  {
+    "path": "tests/regression/test_synthesis_practical_answers.mjs",
+    "sha256": "B6FEBD389845E4D7E934E05735B44565370D51FAA72052A49AFF048A7DEF9045"
+  }
+]

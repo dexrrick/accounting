@@ -47,13 +47,18 @@ assert.ok(residency, 'The captured residency semantic response was replayed.');
 assert.equal(residency.interpretation.requestedOperation, 'EXPLAIN_RULE');
 assert.equal(residency.interpretation.requiresUserSpecificFacts, false);
 assert.equal(residency.interpretation.issues[0].operation, 'EXPLAIN_RULE');
-assert.equal(residency.governedEvidence.status, 'VERIFIED');
+assert.equal(residency.governedEvidence.evidenceStatus, 'VERIFIED');
+assert.ok(['UNCERTAIN', 'INCOMPLETE'].includes(residency.governedEvidence.requestCompletenessStatus),
+  'the replay records why the request representation remains unconfirmed');
+assert.equal(residency.governedEvidence.status, 'CONDITIONAL');
 assert.equal(residency.governedEvidence.applicationStatus, 'NOT_REQUIRED');
 assert.deepEqual(residency.governedEvidence.topLevelGaps, []);
 assert.deepEqual(residency.rejectedIdentities, [], 'Adequate mapped residency evidence prevents uncaptured retrieval.');
 assert.equal(residency.requestAttempts.length, 1);
 assert.doesNotMatch(residency.requestAttempts.map(attempt => attempt.requestedUrl).join('\n'), /sitemap|certificate-of-residence-tax-reclaim-form/i);
-assert.ok(Object.values(residency.stageVerdicts).every(Boolean));
+assert.equal(residency.stageVerdicts.OVERALL_STATUS, false);
+assert.ok(Object.entries(residency.stageVerdicts).every(([stage, passed]) =>
+  stage === 'OVERALL_STATUS' || passed === true), 'Only whole-question status remains conditional on incomplete representation.');
 
 const privateExpense = report.cases.find(result => result.caseId === 'private-expense-treatment');
 assert.ok(privateExpense, 'The retained private-expense semantic response was replayed.');

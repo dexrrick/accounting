@@ -1,0 +1,238 @@
+{
+  "frozenInputCount": 66,
+  "changedInputs": [],
+  "answers": {
+    "Frozen75": {
+      "cases": 75,
+      "corpusSha256": "ce9dd34a89519f60502aaccc8aa56891f22369befcc1222f2134a51426566d23",
+      "corpusHashUnchanged": true,
+      "unchangedAnswers": 58,
+      "changedIds": [
+        "iras-09",
+        "cpf-08",
+        "mom-03",
+        "mom-04",
+        "mom-10",
+        "acra-02",
+        "acra-04",
+        "acra-07",
+        "acra-08",
+        "acra-09",
+        "acra-10",
+        "acra-11",
+        "acra-12",
+        "acra-13",
+        "acra-14",
+        "acra-15",
+        "mas-06"
+      ],
+      "previouslyCorrectTotal": 22,
+      "correctUnchanged": [
+        "iras-01",
+        "iras-04",
+        "iras-05",
+        "iras-07",
+        "iras-15",
+        "cpf-02",
+        "cpf-03",
+        "cpf-05",
+        "cpf-11",
+        "cpf-13",
+        "cpf-14",
+        "mom-05",
+        "mom-06",
+        "mom-07",
+        "mom-13",
+        "acra-06",
+        "mas-03",
+        "mas-05",
+        "mas-07",
+        "mas-08",
+        "mas-12"
+      ],
+      "correctChangedForIndependentReview": [
+        "acra-13"
+      ],
+      "networkRequests": 0,
+      "modelRequests": 0
+    },
+    "Earlier60": {
+      "cases": 60,
+      "corpusSha256": "ffcd0d5f22fbe63d6b6a9736565deb989689c376d588016597878cb366a4afea",
+      "corpusHashUnchanged": true,
+      "unchangedAnswers": 54,
+      "changedIds": [
+        "hold-acra-01",
+        "hold-acra-04",
+        "fresh-acra-01",
+        "fresh-acra-02",
+        "reviewfresh-acra-02",
+        "novel-acra-01"
+      ],
+      "previouslyCorrectTotal": "See independent baseline grade inventory",
+      "correctUnchanged": [],
+      "correctChangedForIndependentReview": [],
+      "networkRequests": 0,
+      "modelRequests": 0
+    }
+  },
+  "evidencePaths": {
+    "fixed100-original": {
+      "cases": 100,
+      "questionsUnchanged": true,
+      "before": {
+        "IRAS/INSUFFICIENT": 11,
+        "IRAS/VERIFIED": 9,
+        "CPF/VERIFIED": 14,
+        "CPF/INSUFFICIENT": 6,
+        "MOM/INSUFFICIENT": 8,
+        "MOM/VERIFIED": 12,
+        "ACRA/INSUFFICIENT": 14,
+        "ACRA/VERIFIED": 6,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "after": {
+        "IRAS/INSUFFICIENT": 11,
+        "IRAS/VERIFIED": 9,
+        "CPF/VERIFIED": 14,
+        "CPF/INSUFFICIENT": 6,
+        "MOM/INSUFFICIENT": 8,
+        "MOM/VERIFIED": 12,
+        "ACRA/INSUFFICIENT": 14,
+        "ACRA/VERIFIED": 6,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "verifiedLosses": [],
+      "eciHold": "INSUFFICIENT",
+      "networkRequests": 0,
+      "modelRequests": 0
+    },
+    "fixed100-enriched": {
+      "cases": 100,
+      "questionsUnchanged": true,
+      "before": {
+        "IRAS/VERIFIED": 19,
+        "IRAS/INSUFFICIENT": 1,
+        "CPF/VERIFIED": 15,
+        "CPF/INSUFFICIENT": 5,
+        "MOM/INSUFFICIENT": 7,
+        "MOM/VERIFIED": 13,
+        "ACRA/INSUFFICIENT": 10,
+        "ACRA/VERIFIED": 10,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "after": {
+        "IRAS/VERIFIED": 19,
+        "IRAS/INSUFFICIENT": 1,
+        "CPF/VERIFIED": 15,
+        "CPF/INSUFFICIENT": 5,
+        "MOM/INSUFFICIENT": 7,
+        "MOM/VERIFIED": 13,
+        "ACRA/VERIFIED": 15,
+        "ACRA/INSUFFICIENT": 5,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "verifiedLosses": [],
+      "eciHold": "VERIFIED",
+      "networkRequests": 0,
+      "modelRequests": 0
+    }
+  },
+  "newSources": [
+    {
+      "authority": "ACRA",
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings/due-dates-requirements/",
+      "fixture": "acra-agm-native.html",
+      "sha256": "89cd923e7dd652935dca26b2cfed7e8a4a2674d48253bafbcb00022a3ae2d3ce",
+      "hashMatches": true,
+      "byteLengthMatches": true,
+      "httpStatus": 200,
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML"
+    },
+    {
+      "authority": "ACRA",
+      "url": "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/choosing-a-companys-financial-year-end/",
+      "fixture": "acra-fye-native.html",
+      "sha256": "dce3a0f9f300b06def396908e793fccf93bacd29873d0f3da12c637b2e680167",
+      "hashMatches": true,
+      "byteLengthMatches": true,
+      "httpStatus": 200,
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML"
+    },
+    {
+      "authority": "ACRA",
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/",
+      "fixture": "acra-annual-return-deadlines-native.html",
+      "sha256": "0bd30bad5f99825f23afcf87fbc3cbb42890818bfb5ce1607e82379007c65319",
+      "hashMatches": true,
+      "byteLengthMatches": true,
+      "httpStatus": 200,
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML"
+    },
+    {
+      "authority": "ACRA",
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions/",
+      "fixture": "acra-audit-exemptions-native.html",
+      "sha256": "d03731c7113fe32af7baef1c465d2a5257b12eb5e6ba5907dafeaa6415b35b77",
+      "hashMatches": true,
+      "byteLengthMatches": true,
+      "httpStatus": 200,
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML"
+    },
+    {
+      "authority": "ACRA",
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/",
+      "fixture": "acra-xbrl-native.html",
+      "sha256": "8e13816db7c87bfbb05195244c6397f0ed70ccd583ef468ddbd0d1be6b98d39f",
+      "hashMatches": true,
+      "byteLengthMatches": true,
+      "httpStatus": 200,
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML"
+    },
+    {
+      "authority": "ACRA",
+      "url": "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/",
+      "fixture": "acra-officers-native.html",
+      "sha256": "3de7976dc7e46210e631ab630f5a4f950aa8e21740a9cfaa10bdf2f279cb56b8",
+      "hashMatches": true,
+      "byteLengthMatches": true,
+      "httpStatus": 200,
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML"
+    },
+    {
+      "authority": "ACRA",
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/maintaining-local-companys-information-registers/updating-company-information-officers-shareholders/",
+      "fixture": "acra-updating-company-information-native.html",
+      "sha256": "7975307f6f32e45f6b1e44414aa4f2eba937ade389f628d99900b5f9a0480596",
+      "hashMatches": true,
+      "byteLengthMatches": true,
+      "httpStatus": 200,
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML"
+    },
+    {
+      "authority": "ACRA",
+      "url": "https://www.acra.gov.sg/manage/companies/resignation-or-disqualification-company-directors/reporting/",
+      "fixture": "acra-position-holder-resignation-native.html",
+      "sha256": "3043c1f568a1064712e8482885e308c184b2648b559c19edd6c10a7799887a43",
+      "hashMatches": true,
+      "byteLengthMatches": true,
+      "httpStatus": 200,
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML"
+    },
+    {
+      "authority": "ACRA",
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/applying-for-an-extension-of-time/",
+      "fixture": "acra-annual-return-extension-native.html",
+      "sha256": "c499fec77bd21c311bb7140b6ca74d930543806f6cc6a4b1f0ffd9ab890d5244",
+      "hashMatches": true,
+      "byteLengthMatches": true,
+      "httpStatus": 200,
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML"
+    }
+  ],
+  "limitation": "Evidence-path status is not whole-answer correctness. Changed answers require independent review. Unchanged answers inherit only recorded prior grades. Offline capture is not live-model/browser, CI or production acceptance."
+}

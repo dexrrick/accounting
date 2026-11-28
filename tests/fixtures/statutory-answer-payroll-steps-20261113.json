@@ -1,0 +1,217 @@
+{
+  "provenance": "Retained official MOM Paying salary document and failed per-issue admission trace from the authorized 2026-11-11 acceptance capture; record rebound to its same-fetch transient topic ID for replay.",
+  "query": "Our employee is covered by the Employment Act and the overtime provisions. Do ordinary salary and overtime have the same payment deadline after the salary period ends? Explain the practical payroll steps and cite the relevant official guidance. No journal is required.",
+  "referenceDate": "2026-11-11",
+  "understanding": {
+    "mode": "SEMANTIC_INTERPRETATION",
+    "assessmentStatus": "PASSED",
+    "interpretation": {
+      "schemaVersion": 2,
+      "jurisdiction": [
+        "Singapore"
+      ],
+      "authorityCandidates": [
+        "MOM",
+        "SSO"
+      ],
+      "contextualAuthorities": [],
+      "domain": "MOM_EMPLOYMENT",
+      "population": "EMPLOYEE",
+      "primarySubject": "ordinary salary and overtime payment deadline comparison",
+      "concepts": [
+        {
+          "concept": "Employment Act",
+          "role": "CONTEXT_ONLY"
+        },
+        {
+          "concept": "overtime provisions",
+          "role": "RELATED"
+        },
+        {
+          "concept": "payment deadline",
+          "role": "PRIMARY"
+        },
+        {
+          "concept": "payroll steps",
+          "role": "RELATED"
+        }
+      ],
+      "requestedOperation": "COMPARE",
+      "factsExplicitlyProvided": [
+        "Employee is covered by the Employment Act",
+        "Employee is covered by the overtime provisions"
+      ],
+      "confidence": 0.95,
+      "issues": [
+        {
+          "subject": "ordinary salary and overtime payment deadline comparison",
+          "population": "EMPLOYEE",
+          "domain": "MOM_EMPLOYMENT",
+          "governingAuthorities": [
+            "MOM"
+          ],
+          "contextualAuthorities": [
+            "SSO"
+          ],
+          "operation": "COMPARE",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.95
+        },
+        {
+          "subject": "practical payroll steps",
+          "population": "EMPLOYER",
+          "domain": "MOM_EMPLOYMENT",
+          "governingAuthorities": [
+            "MOM"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.9
+        }
+      ]
+    }
+  },
+  "issuePlan": {
+    "source": "SEMANTIC_ISSUES",
+    "issues": [
+      {
+        "subject": "ordinary salary and overtime payment deadline comparison",
+        "population": "EMPLOYEE",
+        "domain": "MOM_EMPLOYMENT",
+        "governingAuthorities": [
+          "MOM"
+        ],
+        "contextualAuthorities": [
+          "SSO"
+        ],
+        "operation": "COMPARE",
+        "mappedTopicIds": [
+          "mom-salary-payment",
+          "mom_overtime"
+        ],
+        "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+        "confidence": 0.95,
+        "id": "issue_77d63f0e",
+        "status": "MAPPED"
+      },
+      {
+        "subject": "practical payroll steps",
+        "population": "EMPLOYER",
+        "domain": "MOM_EMPLOYMENT",
+        "governingAuthorities": [
+          "MOM"
+        ],
+        "contextualAuthorities": [],
+        "operation": "EXPLAIN_RULE",
+        "mappedTopicIds": [],
+        "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+        "confidence": 0.9,
+        "id": "issue_5d68bda8",
+        "status": "UNRESOLVED",
+        "unresolvedReason": "NO_COVERAGE_TOPIC"
+      }
+    ],
+    "coverageEstablished": false,
+    "hasUnmappedResidual": true
+  },
+  "targetIssueId": "issue_5d68bda8",
+  "record": {
+    "id": "LIVE_TOPIC_iras-authority-query-issue-mom-practical-payroll-steps_7dc80990d2c7",
+    "authority": "MOM",
+    "authorityName": "Ministry of Manpower (MOM)",
+    "sourcePublisher": "Ministry of Manpower (MOM)",
+    "legalOrStandardInstrument": "Ministry of Manpower official guidance",
+    "documentTitle": "Paying salary",
+    "standardOrActCode": "Ministry of Manpower official guidance",
+    "paragraphOrSection": "Ministry of Manpower: practical payroll steps",
+    "sourceText": "You are using a version of browser which will not be supported after 27 May 2018. To continue to transact with MOM securely, please follow these steps to enable the Transport Layer Security (TLS) of your web browser, or upgrade to the latest version of your browser.\n\nPH pay, COMPASS, Primary Care Plan, myMOM Portal, paying salary, annual leave\n\n•\n\n•\n\n•\n\n•\n\n•\n\n•\n\n•\n\nIn accordance with the Employment Act, your employer must pay your salary at least once a month and within 7 days after the end of the salary period. There are exceptions for overtime, resignation without notice and other situations.\n\nIf you are facing a salary dispute, you should get advice from the Tripartite Alliance for Dispute Management (TADM). Use the \"Ask TADM\" chatbot for immediate answers or make an appointment to speak with a TADM advisory officer. You can also file your claims through the TADM eServices, or approach your union if you are a union member.\n\nSalary refers to remuneration, including allowances, paid for work done under a contract of service.\n\nIt does not include:\n\n• The value of accommodation, utilities or other amenities.\n\n• Pension or provident fund contribution paid by the employer.\n\n• Travelling allowance.\n\n• Payments for expenses incurred during work.\n\n• Gratuity payable on discharge or retirement.\n\n• Retrenchment benefits.\n\nSingapore does not have a minimum wage. Your salary is subject to negotiation and agreement between your employer and you or your trade union.\n\nIf you are covered by the Employment Act, your employer must pay your salary at least once a month.\n\nThey can also pay it at shorter intervals if they choose.\n\nSalary must be paid:\n\n• Within 7 days after the end of the salary period\n\n• For overtime work, within 14 days after the end of the salary period\n\nYour final salary payment could vary depending on the following situations:\n\n In this situation  |  Your final salary must be paid\n\n Employee resigns and serves the required notice period  |  On the last day of employment.\n\n Employee resigns and does not serve the notice period  |  Within 7 days of the last day of employment.\n\n Dismissal on grounds of misconduct  \n\nOn the last day of employment.\n\nIf this is not possible, then within 3 working days from date of dismissal.\n\n Employer terminates the contract  \n\nOn the last day of employment.\n\nIf this is not possible, then within 3 working days from date of termination.\n\n• If your contract involves commission, how and when the commission is paid depends on what is in your employment contract or existing policies or practices.\n\n• If you&rsquo;re a foreign employee who is leaving your employment, your employer is required to withhold all your monies due to you for tax clearance for up to 30 days upon giving notice of the cessation of your employment to the Comptroller of Income Tax. The monies include your salary, leave pay, etc.\n\nSalary should be paid:\n\n• On a working day, during working hours.\n\n• At your place of work, or any other place you and your employer have agreed on.\n\nPayment can be made:\n\n• Directly into your bank account.\n\n• By cheque. The cheque needs to be cleared by your bank before you&rsquo;re considered paid.\n\nFrom 1 April 2016, all employers must issue itemised pay slips to employees covered by the Employment Act.\n\nFrom 1 April 2016, employers must keep detailed employment records, including salary records, of employees covered by the Employment Act.\n\nNon-payment of salary is an offence.\n\nYour employer must pay your salary on time.\n\nIf you are not paid on time, approach your employer to understand if there are reasons for the late payment, and whether the regular payment schedule can be resumed.\n\nIf you do not receive your salary, you can file an employment-related claim at the Tripartite Alliance for Dispute Management (TADM), or approach your union for assistance.\n\nFile your claim early &ndash; don&rsquo;t wait for the amount to accumulate. There are limits to the claim amount and timeline for filing.\n\n•\n\n•\n\n•\n\n•\n\n•\n\n•",
+    "principleSummary": "Transient issue-scoped retrieval terms from a validated interpretation; not reviewed knowledge.",
+    "officialSourceUrl": "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+    "domain": "MOM_EMPLOYMENT",
+    "jurisdiction": "Singapore",
+    "tags": [
+      "iras-authority-query-issue-mom-practical-payroll-steps"
+    ],
+    "sourceStatus": "NEEDS_REVIEW",
+    "sourceType": "OFFICIAL_GUIDANCE",
+    "evidenceTier": "OFFICIAL_GUIDANCE",
+    "isVerbatimText": false,
+    "lastVerifiedDate": "2026-11-11",
+    "provenance": "LIVE_EXTERNAL",
+    "canonicalSourceUrl": "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+    "sourceAuthority": "MOM",
+    "retrievedAt": "2026-11-11T13:52:21.069Z",
+    "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+    "extractionStatus": "PARTIAL",
+    "documentHash": "7dc80990d2c7e3b90dcd521e5370c4b816b1be68a002e154d6f31658383c2ba4",
+    "contentHash": "7dc80990d2c7e3b90dcd521e5370c4b816b1be68a002e154d6f31658383c2ba4",
+    "lifecycleState": "CANDIDATE",
+    "recordRole": "DISCOVERED_EVIDENCE",
+    "groundingEligible": true,
+    "urlVerificationStatus": "VERIFIED",
+    "urlVerifiedDate": "2026-11-11",
+    "sourceLocator": {
+      "heading": "Paying salary",
+      "document": "Paying salary",
+      "sourceType": "HTML"
+    }
+  },
+  "trace": {
+    "path": "DISCOVERED_SOURCE",
+    "sourceMapIds": [],
+    "selectedRecordIds": [
+      "LIVE_TOPIC_iras-authority-query-issue-mom-practical-payroll-steps_7dc80990d2c7"
+    ],
+    "finalVerifiedUrls": [
+      "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+    ],
+    "candidateOnly": true,
+    "attempts": [
+      {
+        "topicId": "iras-authority-query-issue-mom-practical-payroll-steps",
+        "candidateUrl": "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+        "fetchStatus": "SUCCESS",
+        "finalUrl": "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+        "pageTitle": "Paying salary",
+        "titleMatched": true,
+        "contentMatched": true,
+        "discoveryStage": "MAPPED_SOURCE"
+      }
+    ],
+    "discoveryFetchAttempts": [],
+    "coverageDecisions": [],
+    "stages": [
+      {
+        "stage": "LOCAL_VERIFIED",
+        "status": "EXHAUSTED",
+        "reason": "Local retrieval was insufficient for at least one routed topic."
+      },
+      {
+        "stage": "MAPPED_SOURCE",
+        "status": "SKIPPED",
+        "reason": "No applicable reviewed source-map pointer was available."
+      },
+      {
+        "stage": "SITEMAP_DISCOVERY",
+        "status": "SKIPPED",
+        "reason": "Sitemap discovery was not attempted for this request."
+      },
+      {
+        "stage": "OFFICIAL_DOMAIN_SEARCH",
+        "status": "SKIPPED",
+        "reason": "Official-domain search was not attempted for this request."
+      }
+    ]
+  },
+  "documentContext": {
+    "recordId": "LIVE_TOPIC_iras-authority-query-issue-mom-practical-payroll-steps_7dc80990d2c7",
+    "documentHash": "7dc80990d2c7e3b90dcd521e5370c4b816b1be68a002e154d6f31658383c2ba4",
+    "canonicalUrl": "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+    "targetDate": "2026-11-11",
+    "completeness": "COMPLETE",
+    "sourceText": "You are using a version of browser which will not be supported after 27 May 2018. To continue to transact with MOM securely, please follow these steps to enable the Transport Layer Security (TLS) of your web browser, or upgrade to the latest version of your browser.\n\nSkip to main content\n\nMinistry of Manpower Homepage About us\n\nWork passes\n\nEmployment practices\n\nWorkplace safety and health\n\nMore\n\nStatistics and publications\n\neServices\n\nCalculators and self-assessment tools\n\nForms\n\nNewsroom\n\nmyMOM Portal\n\nAbout us\n\nWork passes\n\nEmployment practices\n\nWorkplace safety and health\n\nMore\n\nStatistics and publications\n\neServices\n\nCalculators and self-assessment tools\n\nForms\n\nNewsroom\n\nSalary Home Employment practicesSalaryPaying salary\n\nPH pay, COMPASS, Primary Care Plan, myMOM Portal, paying salary, annual leave\n\nJump To\n\nSelect\n\nWhat is salary\n\nHow often salary must be paid\n\nHow salary should be paid\n\nItemised pay slips\n\nSalary records\n\nIf you are paid late or not paid salary\n\nRelated questions\n\nPaying salary\n\nIn accordance with the Employment Act, your employer must pay your salary at least once a month and within 7 days after the end of the salary period. There are exceptions for overtime, resignation without notice and other situations.\n\nIf you are facing a salary dispute, you should get advice from the Tripartite Alliance for Dispute Management (TADM). Use the \"Ask TADM\" chatbot for immediate answers or make an appointment to speak with a TADM advisory officer. You can also file your claims through the TADM eServices, or approach your union if you are a union member.\n\nWhat is salary\n\nSalary refers to remuneration, including allowances, paid for work done under a contract of service.\n\nIt does not include:\n\nThe value of accommodation, utilities or other amenities.\n\nPension or provident fund contribution paid by the employer.\n\nTravelling allowance.\n\nPayments for expenses incurred during work.\n\nGratuity payable on discharge or retirement.\n\nRetrenchment benefits.\n\nSingapore does not have a minimum wage. Your salary is subject to negotiation and agreement between your employer and you or your trade union.\n\nHow often salary must be paid\n\nIf you are covered by the Employment Act, your employer must pay your salary at least once a month.\n\nThey can also pay it at shorter intervals if they choose.\n\nSalary must be paid:\n\nWithin 7 days after the end of the salary period\n\nFor overtime work, within 14 days after the end of the salary period\n\nYour final salary payment could vary depending on the following situations:\n\n In this situation  |  Your final salary must be paid\n\n Employee resigns and serves the required notice period  |  On the last day of employment.\n\n Employee resigns and does not serve the notice period  |  Within 7 days of the last day of employment.\n\n Dismissal on grounds of misconduct  \n\nOn the last day of employment.\n\nIf this is not possible, then within 3 working days from date of dismissal.\n\n Employer terminates the contract  \n\nOn the last day of employment.\n\nIf this is not possible, then within 3 working days from date of termination.\n\nIf your contract involves commission, how and when the commission is paid depends on what is in your employment contract or existing policies or practices.\n\nIf you&rsquo;re a foreign employee who is leaving your employment, your employer is required to withhold all your monies due to you for tax clearance for up to 30 days upon giving notice of the cessation of your employment to the Comptroller of Income Tax. The monies include your salary, leave pay, etc.\n\nHow salary should be paid\n\nSalary should be paid:\n\nOn a working day, during working hours.\n\nAt your place of work, or any other place you and your employer have agreed on.\n\nPayment can be made:\n\nDirectly into your bank account.\n\nBy cheque. The cheque needs to be cleared by your bank before you&rsquo;re considered paid.\n\nItemised pay slips\n\nFrom 1 April 2016, all employers must issue itemised pay slips to employees covered by the Employment Act.\n\nSalary records\n\nFrom 1 April 2016, employers must keep detailed employment records, including salary records, of employees covered by the Employment Act.\n\nIf you are paid late or not paid salary\n\nNon-payment of salary is an offence.\n\nYour employer must pay your salary on time.\n\nIf you are not paid on time, approach your employer to understand if there are reasons for the late payment, and whether the regular payment schedule can be resumed.\n\nIf you do not receive your salary, you can file an employment-related claim at the Tripartite Alliance for Dispute Management (TADM), or approach your union for assistance.\n\nFile your claim early &ndash; don&rsquo;t wait for the amount to accumulate. There are limits to the claim amount and timeline for filing.\n\nWhat's next\n\nAllowable salary deductions\n\nShare this page Share this page on facebookTweet this pageEmail this pagePrint this page\n\nLast Updated: 30 January 2026\n\nRelated questions\n\nAs an employee, can my employer withhold my final salary payment if I leave without a proper handover?\n\nCan wages be paid in kind (for example, with meals or accommodation)?\n\nAm I entitled to commission payments if I've resigned and left the company?\n\nIs salary during an employee's notice period subject to CPF deductions?\n\nMy employer has been late in paying my salary. What can I do?\n\nCan my employer deduct my pay for coming late to work?\n\nMore on Salary\n\nItemised pay slips\n\nAllowable salary deductions\n\nMonthly and daily salary: definitions and calculation\n\nVariable wage components: AWS, bonus, variable pay\n\nCalculate pay for an incomplete month of work\n\nCalculate public holiday pay\n\nCalculate overtime pay for a monthly-rated employee\n\nCalculate pay for work on a rest day\n\nInformation and Services\n\nMinistry of Manpower\n\nSocial media\n\nAbout us Careers Contact us Feedback Share your views @ Reach\n\nMinistry of Manpower Facebook page Ministry of Manpower LinkedIn page Ministry of Manpower Telegram Ministry of Manpower youtube channel\n\nReport vulnerability\n\nPrivacy\n\nTerms of use\n\nLegislation\n\nSitemap\n\nSupported browsers\n\n&copy; 2026 Government of Singapore"
+  }
+}

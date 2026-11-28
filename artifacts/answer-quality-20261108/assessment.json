@@ -1,0 +1,237 @@
+{
+  "dateSingapore": "2026-11-08",
+  "commit": "2a282cef56a42e99b7f057de22e863258fddb972",
+  "repository": "https://github.com/dexrrick/accounting",
+  "branch": "codex/project-charter-simplification-20261103",
+  "model": "gemini-3.5-flash-lite",
+  "mode": "Real processAccountingQuery with real Gemini and native source fetches; headless source checkout.",
+  "originalSample": {
+    "cases": 8,
+    "fullyAdequate": 0,
+    "partial": 1,
+    "failedCoreUsefulness": 7,
+    "noJournalProduced": true
+  },
+  "review": {
+    "kind": "INDEPENDENT_AGENT_AND_SUPERVISOR",
+    "basis": "Current official-source rubric and saved displayed outputs; no fixtures injected into the application path.",
+    "safety": "No fabricated journals in the nine assessed outputs. The original eight displayed no unsupported affirmative statutory entitlement. This limited observation does not establish comprehensive safety; the paired control has the qualifications noted below."
+  },
+  "execution": {
+    "attempts": 10,
+    "totalModelRequests": 21,
+    "modelRequestBudget": 40,
+    "sourceFetchRequests": 138,
+    "originalMedianMs": 6580,
+    "originalMinMs": 3091,
+    "originalMaxMs": 34799,
+    "responsesWithUsageMetadata": 18,
+    "recordedPromptTokens": 31074,
+    "recordedCandidateTokens": 5957,
+    "recordedTotalTokens": 37031,
+    "usageLimit": "Partial measured usage: two SSE responses lack captured usage and one HTTP503 response has none. Not a billing/cost total.",
+    "providerIncident": "Initial IRAS interpretation returned HTTP503 high demand. Batch stopped; one bounded later retry succeeded. Failed attempt retained in answers/iras-private-car.json."
+  },
+  "cases": [
+    {
+      "id": "accounting-accrual",
+      "grade": "FAIL",
+      "finding": "No explanation of accrual, cash timing or unpaid liabilities; only a statutory-evidence fallback.",
+      "question": "Explain accrual accounting versus cash accounting for a small business with unpaid supplier invoices. Give a practical explanation; I am not asking for a journal entry.",
+      "capture": "answers/accounting-accrual.json",
+      "durationMs": 8069,
+      "modelRequests": 4,
+      "sourceRequests": 0,
+      "noJournalProduced": true,
+      "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+      "answer": "### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.",
+      "sources": []
+    },
+    {
+      "id": "accounting-asset-register",
+      "grade": "FAIL",
+      "finding": "No explanation of the asset register, ledger or reconciliation; repeated internal mapping diagnostics instead.",
+      "question": "Explain how the accountant should register an asset at cost in the fixed asset register and on acquisition in the general ledger. How do the register and ledger relate? No journal amounts are needed.",
+      "capture": "answers/accounting-asset-register.json",
+      "durationMs": 3091,
+      "modelRequests": 1,
+      "sourceRequests": 0,
+      "noJournalProduced": true,
+      "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+      "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Evidence is incomplete for one or more material issues.\n\n#### Singapore accounting standards — Accounting treatment\n\n**Status:** Evidence incomplete\n\n**fixed asset registration and general ledger acquisition treatment** (party in scope: Company)\n- **Evidence gap:** The issue has no resolved authority and topic mapping for this workstream.\n\n**relationship between fixed asset register and general ledger** (party in scope: Company)\n- **Application unresolved:** For relationship between fixed asset register and general ledger, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.\n- **Evidence gap:** The issue has no resolved authority and topic mapping for this workstream.\n- **Evidence gap:** fixed asset registration and general ledger acquisition treatment: The issue has no resolved authority and topic mapping for this workstream.\n- **Evidence gap:** relationship between fixed asset register and general ledger: The issue has no resolved authority and topic mapping for this workstream.\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.\n- fixed asset register: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- general ledger: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- cost measurement: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- fixed asset registration and general ledger acquisition treatment: The issue has no resolved authority and topic mapping for this workstream.\n- relationship between fixed asset register and general ledger: The issue has no resolved authority and topic mapping for this workstream.\n- fixed asset registration and general ledger acquisition treatment: No reviewed topic was resolved for this issue\n- relationship between fixed asset register and general ledger: No reviewed topic was resolved for this issue",
+      "sources": []
+    },
+    {
+      "id": "iras-private-car",
+      "grade": "FAIL",
+      "finding": "Successful retry retrieves the relevant official page but omits the basic business-use restriction and shows an off-scenario connected-person passage.",
+      "question": "Our GST-registered Singapore company bought a private motor car for business use. We are not a motor dealer or driving school. Can we recover the input GST, and what restrictions or exceptions should we check? I only need advice, not a journal.",
+      "capture": "answers/iras-private-car-retry1.json",
+      "durationMs": 34799,
+      "modelRequests": 3,
+      "sourceRequests": 118,
+      "noJournalProduced": true,
+      "answerPath": "AI_GROUNDED_SYNTHESIS",
+      "answer": "# Answer\n\nFor input GST recovery eligibility for private motor car, case-specific treatment or calculation has not been verified, and the relevant facts and statutory conditions still need to be established. [IRAS: Motor Vehicles Expenses](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses)\n\nWhere the connected person is GST-registered, the input tax claim on the motor car expenses recovered by you is disallowed under Regulation 27. [IRAS: Motor Vehicles Expenses](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses)\n\n### Conditions and unresolved points\n\nSome requested conclusions could not be supported by the admitted passages and stated facts, so they have been withheld.\n\n- Verified evidence is still needed for Issue plan.\n\n- Verified evidence is still needed for input tax recovery.\n\n- Verified evidence is still needed for private motor car.\n\n- Verified evidence is still needed for input GST recovery eligibility for private motor car.\n\n- Verified evidence is still needed for restrictions and exceptions for private motor car GST.\n\n- Applicability remains unresolved for input GST recovery eligibility for private motor car.\n\n- A supported explanation of restrictions and exceptions for private motor car GST was not established from the available evidence.",
+      "sources": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses"
+      ]
+    },
+    {
+      "id": "cpf-employer-responsibility",
+      "grade": "FAIL",
+      "finding": "No direct employer-remittance answer or useful payroll checklist. Rate-topic admission and mapping gaps replace non-calculation advice.",
+      "question": "We are hiring a Singapore citizen employee on a contract of service. Who is responsible for paying CPF contributions, and what employee and pay details should payroll collect before calculating them? Do not calculate a contribution or create a journal.",
+      "capture": "answers/cpf-employer-responsibility.json",
+      "durationMs": 5501,
+      "modelRequests": 1,
+      "sourceRequests": 3,
+      "noJournalProduced": true,
+      "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+      "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Evidence is incomplete for one or more material issues.\n\n#### CPF Board — CPF contributions\n\n**Status:** Evidence incomplete\n\n**responsibility for paying CPF contributions** (party in scope: Employer)\n- **Application unresolved:** For responsibility for paying CPF contributions, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.\n- **Evidence gap:** Candidates failed authority, domain, provenance, date, topic, or source-text checks.\n- **Evidence gap:** No candidate passed the evidence admission checks for this issue.\n- **Evidence gap:** No complete source quotation passed claim verification for this issue.\n- **Evidence gap:** Verified quotations do not support the requested topic cpf_contribution_rates.\n\n**employee and pay details to collect for payroll** (party in scope: Employer)\n- **Application unresolved:** For employee and pay details to collect for payroll, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.\n- **Evidence gap:** The issue has no resolved authority and topic mapping for this workstream.\n- **Evidence gap:** responsibility for paying CPF contributions: Candidates failed authority, domain, provenance, date, topic, or source-text checks.\n- **Evidence gap:** responsibility for paying CPF contributions: No candidate passed the evidence admission checks for this issue.\n- **Evidence gap:** responsibility for paying CPF contributions: No complete source quotation passed claim verification for this issue.\n- **Evidence gap:** responsibility for paying CPF contributions: Verified quotations do not support the requested topic cpf_contribution_rates.\n- **Evidence gap:** employee and pay details to collect for payroll: The issue has no resolved authority and topic mapping for this workstream.\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.\n- CPF Contribution Due Dates and Late Payment: A taxonomy topic remained unresolved because no validated requested issue claimed it.\n- CPF contributions: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- payroll details: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- responsibility for paying CPF contributions: Candidates failed authority, domain, provenance, date, topic, or source-text checks.\n- responsibility for paying CPF contributions: No candidate passed the evidence admission checks for this issue.\n- responsibility for paying CPF contributions: No complete source quotation passed claim verification for this issue.\n- responsibility for paying CPF contributions: Verified quotations do not support the requested topic cpf_contribution_rates.\n- employee and pay details to collect for payroll: The issue has no resolved authority and topic mapping for this workstream.\n- employee and pay details to collect for payroll: No reviewed topic was resolved for this issue\n- CPF Contribution Due Dates and Late Payment: A requested issue was not assigned to a supported topic",
+      "sources": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/who-should-receive-cpf-contributions",
+        "https://www.cpf.gov.sg/member/growing-your-savings/cpf-contributions/saving-as-an-employee"
+      ]
+    },
+    {
+      "id": "mom-salary-overtime",
+      "grade": "FAIL",
+      "finding": "Neither the ordinary-salary nor overtime deadline is delivered, and practical steps are absent. A generated overtime rule is withheld despite an official overtime quotation in the workstream.",
+      "question": "Our employee is covered by the Employment Act and the overtime provisions. Do ordinary salary and overtime have the same payment deadline after the salary period ends? Explain the practical payroll steps and cite the relevant official guidance. No journal is required.",
+      "capture": "answers/mom-salary-overtime.json",
+      "durationMs": 6452,
+      "modelRequests": 3,
+      "sourceRequests": 7,
+      "noJournalProduced": true,
+      "answerPath": "AI_GROUNDED_SYNTHESIS",
+      "answer": "# Answer\n\nThe admitted passages do not contain official guidance regarding the specific payment deadline for ordinary salary, nor do they provide the practical payroll steps required to process ordinary salary and overtime under the Employment Act. [MOM: Hours of work, overtime and rest day](https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days)\n\n### Conditions and unresolved points\n\nSome requested conclusions could not be supported by the admitted passages and stated facts, so they have been withheld.\n\n- Verified evidence is still needed for Issue plan.\n\n- Verified evidence is still needed for Salary Periods, Payment and Deductions.\n\n- Verified evidence is still needed for Employment Act.\n\n- Verified evidence is still needed for ordinary salary payment deadline.\n\n- Verified evidence is still needed for overtime payment deadline.\n\n- Verified evidence is still needed for practical payroll steps.\n\n- Whether Salary Periods, Payment and Deductions applies to your circumstances remains unresolved from the available evidence.",
+      "sources": [
+        "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+      ]
+    },
+    {
+      "id": "acra-sole-director-secretary",
+      "grade": "PARTIAL",
+      "finding": "Correct sole-director restriction and basic candidate eligibility. Practical appointment timing/process is missing; the unresolved-applicability footer conflicts with the direct answer.",
+      "question": "Our Singapore private company has one director. Can that sole director also act as company secretary, and what should we do when appointing a secretary? Please cite the official requirements. No accounting entry is requested.",
+      "capture": "answers/acra-sole-director-secretary.json",
+      "durationMs": 6708,
+      "modelRequests": 3,
+      "sourceRequests": 4,
+      "noJournalProduced": true,
+      "answerPath": "AI_GROUNDED_SYNTHESIS",
+      "answer": "# Answer\n\nEvery company must have at least one company director and one company secretary. [ACRA: Step 4.3: Choosing company directors & other key officers | Accounting and Corporate Regulatory Authority](https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/)\n\nThe company secretary must not be the same person as the sole director. [ACRA: Step 4.3: Choosing company directors & other key officers | Accounting and Corporate Regulatory Authority](https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/)\n\nA company secretary must be a real person (not a company), and must be a Singapore citizen, Singapore permanent resident, or someone who meets local residency rules. [ACRA: Step 4.3: Choosing company directors & other key officers | Accounting and Corporate Regulatory Authority](https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/)\n\nBecause your company has a sole director, that sole director cannot also act as the company secretary under ACRA rules. [ACRA: Step 4.3: Choosing company directors & other key officers | Accounting and Corporate Regulatory Authority](https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/)\n\n### Conditions and unresolved points\n\nSome requested conclusions could not be supported by the admitted passages and stated facts, so they have been withheld.\n\n- Verified evidence is still needed for Issue plan.\n\n- Verified evidence is still needed for company secretary.\n\n- Verified evidence is still needed for sole director.\n\n- Verified evidence is still needed for appointment requirements.\n\n- Applicability remains unresolved for sole director acting as company secretary eligibility.\n\n- Applicability remains unresolved for company secretary appointment procedure and requirements.\n\n- Whether company secretary appointment procedure and requirements applies to your circumstances remains unresolved from the available evidence.",
+      "sources": [
+        "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/",
+        "https://www.acra.gov.sg/resources/guides-forms/registering-a-local-company-in-singapore-forms-templates/"
+      ]
+    },
+    {
+      "id": "mas-fund-management-startup",
+      "grade": "FAIL",
+      "finding": "No licensing perimeter, conditional exemption guidance, relevant missing facts or official links; a generic fallback only. No source requests were observed for this case.",
+      "question": "We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.",
+      "capture": "answers/mas-fund-management-startup.json",
+      "durationMs": 7151,
+      "modelRequests": 3,
+      "sourceRequests": 0,
+      "noJournalProduced": true,
+      "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+      "answer": "### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.",
+      "sources": [
+        "https://www.mas.gov.sg/regulation/capital-markets/understand-the-types-of-capital-market-entities/fund-managers",
+        "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"
+      ]
+    },
+    {
+      "id": "mixed-first-employee",
+      "grade": "FAIL",
+      "finding": "The model identifies CPF and MOM, but the final output contains only CPF rate/parser diagnostics and omits MOM salary duties.",
+      "question": "We are hiring our first employee in Singapore. Explain how CPF registration and contribution duties differ from MOM salary-payment duties, and what facts you need from us before applying the rules. Please cover both authorities. Do not calculate payroll or create journal entries.",
+      "capture": "answers/mixed-first-employee.json",
+      "durationMs": 5682,
+      "modelRequests": 1,
+      "sourceRequests": 6,
+      "noJournalProduced": true,
+      "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+      "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Evidence is incomplete for one or more material issues.\n\n#### CPF Board — CPF contributions\n\n**Status:** Evidence incomplete\n\n**CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages** (party in scope: Not established)\n- **Evidence gap:** No independently validated CPF rate-schedule parser covers the requested period and population with the admitted evidence.\n- **Evidence gap:** No complete source quotation passed claim verification for this issue.\n- **Evidence gap:** Verified quotations do not support the requested topic cpf_contribution_rates.\n- **Evidence gap:** Verified quotations do not support the requested topic cpf-ordinary-wages.\n- **Evidence gap:** CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: No independently validated CPF rate-schedule parser covers the requested period and population with the admitted evidence.\n- **Evidence gap:** CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: No complete source quotation passed claim verification for this issue.\n- **Evidence gap:** CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: Verified quotations do not support the requested topic cpf_contribution_rates.\n- **Evidence gap:** CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: Verified quotations do not support the requested topic cpf-ordinary-wages.\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.\n- CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: No independently validated CPF rate-schedule parser covers the requested period and population with the admitted evidence.\n- CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: No complete source quotation passed claim verification for this issue.\n- CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: Verified quotations do not support the requested topic cpf_contribution_rates.\n- CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: Verified quotations do not support the requested topic cpf-ordinary-wages.",
+      "sources": [
+        "https://www.cpf.gov.sg/service/article/when-and-how-do-i-obtain-my-cpf-submission-number-csn-as-a-new-employer",
+        "https://www.cpf.gov.sg/employer/tools-and-services/forms-e-applications/apply-for-cpf-submission-number",
+        "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+      ]
+    }
+  ],
+  "exploratoryPairedControl": {
+    "id": "accounting-accrual-control",
+    "grade": "USEFUL_WITH_CAVEATS",
+    "question": "Explain accrual accounting versus cash accounting for a small business with unpaid supplier invoices. Give a practical explanation.",
+    "answer": "# Direct Answer\n\nFor a small business handling unpaid supplier invoices, accrual accounting requires recognizing expenses and liabilities when goods or services are received regardless of when cash changes hands, whereas cash accounting records expenses only when cash is actually paid out to the supplier.\n\n# Explanation\n\n- Under the accrual basis of accounting, transactions are recorded in the periods in which the economic events occur.\n- Under the cash basis of accounting, revenues and expenses are tracked strictly based on the physical movement of cash.\n- Because the supplier invoice is unpaid, no cash outflow has occurred, meaning the expense is omitted from the income statement and the liability is omitted from the balance sheet until the settlement payment is eventually made.\n- Choosing between these methods affects how financial performance is portrayed.\n- Accrual accounting provides a more comprehensive view of obligations and financial commitments by matching expenses to the period the related benefits were consumed, whereas cash accounting offers simplicity and tracks immediate liquidity but may distort profitability when significant bills remain unpaid.\n\n# Accounting Treatment\n\n- Under accrual frameworks such as SFRS(I), the accrual basis is mandatory for general-purpose financial reporting to ensure that liabilities and matching expenses are captured in the correct accounting period.\n\n# Conditions and Important Notes\n\n- The applicability of either method depends on statutory reporting requirements, entity size, and whether the business prepares general-purpose financial statements or simpler tax-only computations.\n\n# Verification Note\n\nA specific rate, deadline, calculation, legal requirement, or provision reference is not included because this answer path has not independently verified that claim.",
+    "capture": "answers/accounting-accrual-control.json",
+    "modelRequests": 1,
+    "durationMs": 3464,
+    "finding": "Core timing and unpaid-liability explanation delivered via AI-first. Broad wording treats supplier invoices as immediate expenses even though some purchases create assets; the uncited SFRS(I) mandatory-basis assertion sits awkwardly with the verification note. Excluded from the original eight-case score."
+  },
+  "prioritizedFindings": [
+    {
+      "priority": 1,
+      "title": "Reuse existing negative-journal intent handling before advisory routing",
+      "observation": "Both accounting prompts set journalEntryRequired=true and aiFirstEligible=false when they explicitly say no journal is wanted. Removing only the negative directive flips both flags. The paired live accrual control then delivers a useful answer in one model call versus four calls and a fallback for the original wording.",
+      "nextAction": "Trace and correct the mismatch between existing negated-journal handling and advisory eligibility. Preserve the exact requests as end-to-end acceptance cases. This is a demonstrated routing issue, not a request for new statutory keywords.",
+      "evidence": [
+        "routing-diagnostic.json",
+        "answers/accounting-accrual.json",
+        "answers/accounting-accrual-control.json"
+      ],
+      "code": [
+        "D:/Accounting/src/services/aiFirstAdvisory.ts:145",
+        "D:/Accounting/src/services/geminiService.ts:994",
+        "D:/Accounting/src/services/geminiService.ts:997"
+      ],
+      "confidence": "Confirmed eligibility inconsistency; this does not explain every subsequent fallback."
+    },
+    {
+      "priority": 2,
+      "title": "Preserve non-calculation questions and every requested authority",
+      "observation": "CPF remittance responsibility and the mixed first-employee question are diverted into contribution-rate admission/parser gaps. The mixed model interpretation explicitly identifies CPF and MOM; the final response omits MOM.",
+      "nextAction": "Trace semantic validation, reconciliation and workstream selection. Distinguish explaining duties from calculating rates; keep requested issue coverage without bypassing source admission.",
+      "evidence": [
+        "answers/cpf-employer-responsibility.json",
+        "answers/mixed-first-employee.json"
+      ],
+      "confidence": "Observed output and trace gap; precise implementation cause not yet assigned."
+    },
+    {
+      "priority": 3,
+      "title": "Trace relevant evidence and core claims through final validation",
+      "observation": "IRAS fetches the relevant motor-vehicle page but displays a connected-person passage without the corresponding facts. MOM has an official fourteen-day overtime quotation and a matching generated rule, but c1 is withheld from the final answer. ACRA generates a six-month appointment rule that does not reach the displayed answer.",
+      "nextAction": "Inspect issue/passage association, evidence selection and numerical/claim checks for these actual claims. Establish the exact cause before changing validation; retain unsupported-claim protections.",
+      "evidence": [
+        "answers/iras-private-car-retry1.json",
+        "answers/mom-salary-overtime.json",
+        "answers/acra-sole-director-secretary.json"
+      ],
+      "confidence": "Omissions observed. MOM quote/generation/withheld trace is explicit; exact validation cause and ACRA passage eligibility remain unresolved."
+    },
+    {
+      "priority": 4,
+      "title": "Deliver useful limitations instead of internal coverage diagnostics",
+      "observation": "Several answers expose topic mapping, parser and admission diagnostics instead of known general rules, relevant missing facts and next steps. MAS returns no useful perimeter or source guidance in this tested path.",
+      "nextAction": "Assess user-facing responses against directness and issue completeness, with primary-source grounding. Investigate MAS retrieval/routing coverage from this exact question rather than assuming the repository has no MAS sources.",
+      "evidence": [
+        "answers/accounting-asset-register.json",
+        "answers/mas-fund-management-startup.json"
+      ],
+      "confidence": "Confirmed user-facing gap; no claim of complete registry/source absence."
+    }
+  ],
+  "limitations": [
+    "Eight deliberately selected practical questions, one model/provider, one run per original case after a single IRAS transient retry; not a statistically representative failure rate or a before/after regression result.",
+    "Headless evaluation only. Browser UI, deployed Worker transport, CI and production/release acceptance were not tested.",
+    "Capture uses native responses and real retrieval but enforces request limits, a 150-second case timeout and provider fail-fast behavior. These boundaries do not measure normal automatic recovery from an unavailable provider.",
+    "Raw streaming generation is unavailable for accrual and MAS because the capture parser expected JSON. Displayed final answers remain captured and reviewable.",
+    "Zero observed source fetches in a case does not prove authority inaccessibility or absence of repository coverage.",
+    "No production code, source activation, deployment or Git publication was performed for this assessment."
+  ]
+}

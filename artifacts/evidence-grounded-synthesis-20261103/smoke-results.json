@@ -1,0 +1,9 @@
+{
+  "name": "smoke",
+  "exitCode": 1,
+  "elapsedSeconds": 272.9,
+  "arguments": [
+    "scripts/run_all_tests.mjs",
+    "--tier=smoke"
+  ]
+}

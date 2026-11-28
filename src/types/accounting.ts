@@ -1,4 +1,12 @@
 export type AccountingStandard = 'SFRS_I' | 'IFRS';
+export type AdvisoryFailureStatus =
+  | 'AUTH_OR_PERMISSION'
+  | 'RATE_LIMIT'
+  | 'TIMEOUT'
+  | 'NETWORK'
+  | 'INVALID_RESPONSE'
+  | 'CONTEXT_LIMIT'
+  | 'OTHER';
 
 export type {
   OwnershipContext,
@@ -318,10 +326,18 @@ export interface ChatMessage {
   /** Kept in session state only; never persisted with chat preferences or feedback. */
   images?: ChatImageAttachment[];
   fullText?: string;
+  /** Shows a complete structured advisory response instead of a preview. */
+  displayFullAnswer?: boolean;
   clarificationPrompt?: MissingFieldInfo[];
   relationPrompt?: boolean;
   scenarioSnapshot?: AccountingScenarioState;
   retryPayload?: { text: string; images: ChatImageAttachment[] };
+  advisoryFailureStatus?: AdvisoryFailureStatus;
+  advisoryRetryPayload?: {
+    text: string;
+    scenarioSnapshot: AccountingScenarioState | null;
+    originalUserMessageId: string;
+  };
 }
 
 export type SupportedImageMimeType = 'image/png' | 'image/jpeg' | 'image/webp';

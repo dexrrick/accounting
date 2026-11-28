@@ -1,0 +1,71 @@
+{
+  "scope": "Offline fixed-corpus evidence-path and explanation-presence preservation; not complete-answer correctness or live acceptance",
+  "runs": {
+    "fixed100-original": {
+      "corpusSize": 100,
+      "corpusUnchanged": true,
+      "stableDuringReplay": true,
+      "countsBefore": {
+        "IRAS/INSUFFICIENT": 11,
+        "IRAS/VERIFIED": 9,
+        "CPF/VERIFIED": 14,
+        "CPF/INSUFFICIENT": 6,
+        "MOM/INSUFFICIENT": 8,
+        "MOM/VERIFIED": 12,
+        "ACRA/INSUFFICIENT": 14,
+        "ACRA/VERIFIED": 6,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "countsAfter": {
+        "IRAS/INSUFFICIENT": 11,
+        "IRAS/VERIFIED": 9,
+        "CPF/VERIFIED": 14,
+        "CPF/INSUFFICIENT": 6,
+        "MOM/INSUFFICIENT": 8,
+        "MOM/VERIFIED": 12,
+        "ACRA/INSUFFICIENT": 14,
+        "ACRA/VERIFIED": 6,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "networkRequests": 0,
+      "modelRequests": 0,
+      "losses": []
+    },
+    "fixed100-enriched": {
+      "corpusSize": 100,
+      "corpusUnchanged": true,
+      "stableDuringReplay": true,
+      "countsBefore": {
+        "IRAS/VERIFIED": 19,
+        "IRAS/INSUFFICIENT": 1,
+        "CPF/VERIFIED": 15,
+        "CPF/INSUFFICIENT": 5,
+        "MOM/INSUFFICIENT": 7,
+        "MOM/VERIFIED": 13,
+        "ACRA/INSUFFICIENT": 10,
+        "ACRA/VERIFIED": 10,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "countsAfter": {
+        "IRAS/VERIFIED": 19,
+        "IRAS/INSUFFICIENT": 1,
+        "CPF/VERIFIED": 15,
+        "CPF/INSUFFICIENT": 5,
+        "MOM/INSUFFICIENT": 7,
+        "MOM/VERIFIED": 13,
+        "ACRA/INSUFFICIENT": 10,
+        "ACRA/VERIFIED": 10,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "networkRequests": 0,
+      "modelRequests": 0,
+      "losses": []
+    }
+  },
+  "previousException": "The prior original-corpus IRAS ECI incomplete-waiver-evidence qualification is inherited. This iteration does not upgrade an incomplete original quote to fully verified.",
+  "passed": true
+}

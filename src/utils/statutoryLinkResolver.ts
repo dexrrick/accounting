@@ -297,6 +297,13 @@ export function sanitizeStatutoryLinks(markdownText: string, verifiedEvidence: r
     return placeholder;
   });
 
+  const protectedVccActTitles: string[] = [];
+  sanitized = sanitized.replace(/\bVariable\s+Capital\s+Companies\s+Act(?:\s+2018)?\b/gi, actTitle => {
+    const placeholder = `___PROTECTED_VCC_ACT_${protectedVccActTitles.length}___`;
+    protectedVccActTitles.push(actTitle);
+    return placeholder;
+  });
+
   const addLink = (anchor: string, linkUrl: string): string => {
     const safeUrl = getSafeOfficialUrl(linkUrl, undefined, undefined, undefined, verifiedEvidence);
     if (!safeUrl) return anchor;
@@ -371,6 +378,7 @@ export function sanitizeStatutoryLinks(markdownText: string, verifiedEvidence: r
 
   // 3. Restore all original/cleaned markdown links
   sanitized = sanitized.replace(/___MD_LINK_(\d+)___/g, (_, idx) => linkPlaceholders[parseInt(idx, 10)] || '');
+  sanitized = sanitized.replace(/___PROTECTED_VCC_ACT_(\d+)___/g, (_, idx) => protectedVccActTitles[parseInt(idx, 10)] || '');
 
   return sanitized;
 }

@@ -10,6 +10,7 @@ import {
   type GroundedReasoningContext
 } from './groundingContextBuilder';
 import { RequestProfiler } from './telemetry';
+import { getRequestTimeoutMs, throwIfRequestAborted } from './requestDeadline';
 
 /**
  * Normalizes an Azure OpenAI endpoint input into a valid URL base.
@@ -119,7 +120,8 @@ export async function callAzureOpenAI(
   azureConfig: AzureConfig,
   chatHistory: ChatMessage[] = [],
   groundedContext?: GroundedReasoningContext,
-  deterministicScenario?: AccountingScenarioState | null
+  deterministicScenario?: AccountingScenarioState | null,
+  signal?: AbortSignal
 ): Promise<GeminiResponse> {
   const endpoint = normalizeAzureEndpoint(azureConfig.endpoint);
   if (!endpoint) {
@@ -150,7 +152,15 @@ export async function callAzureOpenAI(
 
   // 45-second AbortController timeout to guarantee reliable completion of complex statutory reasoning
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 45000);
+  const timeoutMs = signal ? getRequestTimeoutMs(signal, 45000) : 45000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const onExternalAbort = () => controller.abort();
+  if (signal?.aborted) controller.abort();
+  else signal?.addEventListener('abort', onExternalAbort, { once: true });
+  const cleanupRequest = () => {
+    clearTimeout(timeoutId);
+    signal?.removeEventListener('abort', onExternalAbort);
+  };
 
   const tReq0 = Date.now();
   let res: Response;
@@ -165,19 +175,22 @@ export async function callAzureOpenAI(
       signal: controller.signal
     });
   } catch (netErr: any) {
-    clearTimeout(timeoutId);
+    cleanupRequest();
+    throwIfRequestAborted(signal);
     if (netErr.name === 'AbortError' || controller.signal.aborted) {
       throw new Error(`Azure OpenAI request timed out after 45s. Reverting to deterministic accounting engine.`);
     }
     throw new Error(`Azure OpenAI Connection Failed: Network error reaching ${endpoint}. Check endpoint address or CORS settings (${netErr?.message})`);
   } finally {
-    clearTimeout(timeoutId);
+    // The timeout remains active while the response body is read below.
   }
 
   profiler.recordStage('gemini_request', Date.now() - tReq0);
 
   if (!res.ok) {
-    const errorText = await res.text();
+    let errorText = '';
+    try { errorText = await res.text(); }
+    finally { cleanupRequest(); }
     if (res.status === 401) {
       throw new Error(`Azure Authentication Error (401): Invalid or expired Azure OpenAI API Key. Please verify your key in Settings.`);
     } else if (res.status === 404) {
@@ -190,7 +203,9 @@ export async function callAzureOpenAI(
     throw new Error(`Azure OpenAI Error (${res.status}): ${errorText}`);
   }
 
-  const data = await res.json();
+  let data;
+  try { data = await res.json(); }
+  finally { cleanupRequest(); }
   if (data?.usage) {
     profiler.setTokenCounts(data.usage.prompt_tokens || 0, data.usage.completion_tokens || 0);
   }
@@ -211,7 +226,8 @@ export async function callStandardOpenAI(
   openaiConfig: OpenAIConfig,
   chatHistory: ChatMessage[] = [],
   groundedContext?: GroundedReasoningContext,
-  deterministicScenario?: AccountingScenarioState | null
+  deterministicScenario?: AccountingScenarioState | null,
+  signal?: AbortSignal
 ): Promise<GeminiResponse> {
   if (!openaiConfig.apiKey || openaiConfig.apiKey.trim().length < 10) {
     throw new Error('Valid OpenAI API Key is required. Please configure in Settings.');
@@ -234,7 +250,15 @@ export async function callStandardOpenAI(
 
   // 45-second AbortController timeout to guarantee reliable completion of complex statutory reasoning
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 45000);
+  const timeoutMs = signal ? getRequestTimeoutMs(signal, 45000) : 45000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const onExternalAbort = () => controller.abort();
+  if (signal?.aborted) controller.abort();
+  else signal?.addEventListener('abort', onExternalAbort, { once: true });
+  const cleanupRequest = () => {
+    clearTimeout(timeoutId);
+    signal?.removeEventListener('abort', onExternalAbort);
+  };
 
   const tReq0 = Date.now();
   let res: Response;
@@ -249,19 +273,22 @@ export async function callStandardOpenAI(
       signal: controller.signal
     });
   } catch (netErr: any) {
-    clearTimeout(timeoutId);
+    cleanupRequest();
+    throwIfRequestAborted(signal);
     if (netErr.name === 'AbortError' || controller.signal.aborted) {
       throw new Error(`OpenAI request timed out after 45s. Reverting to deterministic accounting engine.`);
     }
     throw new Error(`OpenAI Connection Failed: Network error reaching ${url} (${netErr?.message})`);
   } finally {
-    clearTimeout(timeoutId);
+    // Keep the timeout active while the response body is read below.
   }
 
   profiler.recordStage('gemini_request', Date.now() - tReq0);
 
   if (!res.ok) {
-    const errorText = await res.text();
+    let errorText = '';
+    try { errorText = await res.text(); }
+    finally { cleanupRequest(); }
     if (res.status === 401) {
       throw new Error(`OpenAI Authentication Error (401): Invalid API Key.`);
     } else if (res.status === 429) {
@@ -270,7 +297,9 @@ export async function callStandardOpenAI(
     throw new Error(`OpenAI Error (${res.status}): ${errorText}`);
   }
 
-  const data = await res.json();
+  let data;
+  try { data = await res.json(); }
+  finally { cleanupRequest(); }
   if (data?.usage) {
     profiler.setTokenCounts(data.usage.prompt_tokens || 0, data.usage.completion_tokens || 0);
   }

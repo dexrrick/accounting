@@ -1,0 +1,50 @@
+Statutory coverage corrections and expansion — 30/10/2026
+
+Status: Functional changes implemented and independently reviewed. Local validation is qualified by two preexisting fixture-digest failures; this is not an all-green release acceptance.
+
+Review target
+Repository: https://github.com/dexrrick/accounting
+Branch: codex/statutory-corrections-expansion-20261030
+Exact starting commit / comparison base:59cede9c83c27d8398a97a49ddb246a547e771a8
+Implementation commit:6de920463d3f92c918fdf4ccc1946d1a4c4ef5bf
+Diff: https://github.com/dexrrick/accounting/compare/59cede9c83c27d8398a97a49ddb246a547e771a8...6de920463d3f92c918fdf4ccc1946d1a4c4ef5bf
+The earlier reviewed milestone compared 59cede9 against 781df409c89b67a185f4a7a53279d1d574aae43c. This task starts at 59cede9.
+Reports follow in a separate documentation commit. The completion message identifies and verifies the final remote branch head including those reports. No PR, merge, deployment, source activation or release approval.
+
+Changes and review focus
+1. Date roles: targetDateResolver.ts and statutoryWorkflows20261029.ts distinguish workflow facts from requests for historical law. Multiple payment/repayment, YA/FYE/disposal and dissolution dates no longer automatically select old legislation. Explicit historical legal-duty requests remain fail-closed. Validate ambiguous and mixed-domain dates.
+2. CPF refunds: coverageRegistry.ts and semanticQuestionUnderstanding.ts recognize overpayments, mistaken contributions, recovery and money-back wording. Employer context is affirmative; employee-voiced questions mentioning their employer do not acquire employer duties. Conditional repayment-due dates stay distinct from payment, discovery and actual repayment. Invalid dates, competing dates and leap-day anniversaries do not receive unsupported deadline arithmetic. Employee-share repayment and account-fund conditions are preserved.
+3. MAS director changes: original realistic LFMC question now selects the workflow. Exact retained toolkit rows 3/17 support prior Form 11 approval for Non-Executive-to-Executive and subsequent notification as soon as practicable for Executive-to-Non-Executive. The 14-day limit remains resignation-specific. No extension to other licence classes.
+4. Completeness display: authorityEvidenceResponse.ts separates verified listed guidance, individual application and material gaps. Underlying whole-question/evidence status is not upgraded. Owned workflow guidance precedes older generic explanations so supplied-date applications are rendered.
+5. Further coverage: IRAS connected-person car expenses/partial recovery, CPF age-band and PR-year timing, MOM non-working-day versus rest-day public holidays, ACRA foreign-company update timing, and MAS toolkit scope. groundingContextBuilder.ts adds the toolkit's own content anchors through the existing source validator. The toolkit is non-exhaustive and excludes fund-level/outside-SFA duties.
+Changed files and exact tested/committed digests: implementation-commit.json and tested-source-state.json. New and extended regressions cover original wording, source omissions, reversed requirements, wrong URL, wrong issue binding, split revisions, historical/mixed requests and missing premises. No frozen evaluation questions, grading criteria or evidence expectations were changed.
+
+Independent complete-answer grading
+Columns: CORRECT / PARTIAL / UNSUPPORTED / INCORRECT.
+review30:25/1/4/0 ->26/0/4/0
+fresh10:4/0/6/0 ->8/0/2/0
+workflow10:4/1/5/0 ->10/0/0/0
+Total:44 correct,0 partial,6 unsupported,0 incorrect. All 33 previously correct answers preserved; no regressions found. Reviewer examined 14 substantive complete-answer changes against exact admitted official evidence, 30 status-only changes with equal substantive bodies, and 6 byte-identical answers. These are bounded offline grades, not a whole-corpus or production score.
+
+Reported cases
+fresh29-iras-01/02, fresh29-cpf-01/02 and fresh29-mas-02: UNSUPPORTED -> CORRECT.
+fresh29-acra-02: PARTIAL -> CORRECT. All previously correct workflow answers remain correct.
+IRAS YA2025 retention now runs through 31/12/2029 and rejects shredding 01/10/2029. CPF ordinary payment and conditional repayment clocks are distinguished, without inferring refund acceptance. Full before/after answers, per-question grades, expectations, quotations and bindings: grading-input.json and independent-answer-grades.json.
+
+Verification
+PASS: Node 22 preflight; scoped lint over src/scripts/tests; TypeScript; Vite and worker builds; focused workflow, topic-routing, status, adjacent application and MAS/IRAS source-expansion suites. Independent reviewer reran workflow and source-expansion suites.
+Smoke:153/155 passed. Full regression:176/178 passed. Both failures are retained IRAS input-tax excerpt / MOM salary-deductions native fixture hashes already inconsistent with their manifests at the exact reviewed base. Windows CRLF adds a separate raw-byte delta. No fixtures, expected digests or checks were weakened. legacy-fixture-integrity.json records the evidence; restoring Git blobs would not match the recorded expected captures. Root-wide lint also sees unrelated untracked temporary copies; the project source/test scope passes.
+PASS: all three frozen question-only application replays, original/enriched fixed100 and natural30 replays; 33 retained source records matched their declared digests (distinct from the two legacy mismatches).
+Qualified preservation:53/54 original-fixture statuses,54/54 native-enriched paths,25/25 previous general explanations. iras-eci-03 intentionally remains INSUFFICIENT with the identical original admitted quotation because it omits waiver conditions. Native enrichment separately supplies complete evidence; strict original preservation is not claimed as passed.
+Runtime LIVE_EXTERNAL labels in these offline responses come from the frozen fetch fixtures and do not establish live retrieval. No GitHub CI, live-model/browser, production or historical-ACRA acceptance was performed or claimed.
+
+Remaining gaps and next source work
+Unsupported: hold-acra-03, reviewfresh-acra-01 (19/10/2026 annual-return applicability); hold-mas-03, fresh-mas-02, reviewfresh-mas-02 (future/transition misconduct notice scope); hold-mas-04 (precise VCFM QDC form not established by a generic LFMC table).
+Next: source-complete ACRA commencement/earlier-filing treatment; bounded prospective MAS notice guidance and transition evidence; specific VCFM/fund-level QDC documentation. Broader statutory coverage remains non-exhaustive.
+
+Evidence
+All paths below are in artifacts/statutory-corrections-expansion-20261030 on the review branch: independent-answer-grades.json; grading-input.json; answer-deltas.json; preservation-report.json; source-integrity.json; legacy-fixture-integrity.json; validation-results.json; smoke.log; full.log; implementation-commit.json; corpora/; review-bundle.zip. The bundle includes complete replay reports and this handoff. Raw source fixtures remain under the committed tests/fixtures paths.
+
+Ready-to-copy review prompt
+Independently review https://github.com/dexrrick/accounting branch codex/statutory-corrections-expansion-20261030, implementation commit 6de920463d3f92c918fdf4ccc1946d1a4c4ef5bf against 59cede9c83c27d8398a97a49ddb246a547e771a8 using your GitHub access. Confirm the exact commit you inspected. Use the handoff as context and verify its claims against the code, diff, tests and available CI evidence. Inspect the two baseline fixture failures and qualified ECI preservation rather than assuming green validation. Report actionable findings with severity, file/line, impact and suggested fixes. State access/verification limitations. Keep the review read-only.
+

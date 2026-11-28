@@ -1,9 +1,20 @@
 import type { RequestedQuestionConcept } from '../services/semanticQuestionUnderstanding';
+import { supportIrasCpfExpansionRule } from './irasCpfExpansionRules';
+import { supportIrasCpfMasPracticalRule } from './irasCpfMasPracticalRules20261027';
+import {
+  hasSpecificIrasWhtTreatyScope,
+  hasIrasMasKnowledgeContradiction,
+  isGeneralIrasWhtTreatyEffectQuestion,
+  supportIrasMasKnowledgeRule
+} from './irasMasKnowledge20261027b';
+import { supportStatutoryWorkflowRule } from './statutoryWorkflows20261029';
 
 export type GeneralIrasRuleSupport = true | false | undefined;
 
 export interface GeneralIrasRuleSupportInput {
   sourceText: string;
+  /** Original request, when the caller has it, so a generic concept cannot erase specific scope. */
+  query?: string;
   /** Canonical source-map/coverage topic domain, such as IRAS_CORPORATE_TAX. */
   domainId: string;
   /** Canonical coverage-topic associations for this request/concept. */
@@ -11,10 +22,14 @@ export interface GeneralIrasRuleSupportInput {
   /** Bounded issue or request subject, not source metadata or a URL. */
   subject: string;
   population?: string;
-  concepts?: readonly Pick<RequestedQuestionConcept, 'label' | 'terms'>[];
+  concepts?: readonly Pick<RequestedQuestionConcept, 'id' | 'label' | 'terms'>[];
 }
 
-type RuleFamily = 'FOREIGN_DIVIDEND' | 'GST_INPUT_TAX' | 'PRIVATE_EXPENSE_DEDUCTIBILITY' | 'ROYALTY_WITHHOLDING_TAX';
+const WHT_TREATY_EFFECT_CONCEPT_ID = 'semantic_effect_of_a_tax_treaty_on_withholding_tax_applic';
+const WHT_TREATY_EFFECT_TOPIC_IDS = new Set(['iras-withholding-tax', 'iras-wht-treaty-relief']);
+
+type RuleFamily = 'FOREIGN_DIVIDEND' | 'GST_INPUT_TAX' | 'PRIVATE_EXPENSE_DEDUCTIBILITY' |
+  'ROYALTY_WITHHOLDING_TAX' | 'COMPANY_TAX_RESIDENCY' | 'CPF_CASH_TOP_UP_RELIEF' | 'GST_MOTOR_CAR_INPUT_TAX';
 
 const FOREIGN_DIVIDEND_TOPIC_IDS = new Set([
   'iras-foreign-sourced-income',
@@ -23,6 +38,9 @@ const FOREIGN_DIVIDEND_TOPIC_IDS = new Set([
 const GST_INPUT_TAX_TOPIC_IDS = new Set(['iras-gst-input-tax', 'iras-gst-blocked-input-tax']);
 const PRIVATE_EXPENSE_TOPIC_IDS = new Set(['iras-cit-deductibility', 'iras-cit-disallowed-expenses']);
 const ROYALTY_WITHHOLDING_TOPIC_IDS = new Set(['iras-withholding-tax-interest-royalties', 'iras-withholding-tax']);
+const COMPANY_TAX_RESIDENCY_TOPIC_IDS = new Set(['iras-corporate-tax-residency']);
+const CPF_CASH_TOP_UP_TOPIC_IDS = new Set(['iras-individual-cpf-cash-top-up-relief']);
+const GST_MOTOR_CAR_TOPIC_IDS = new Set(['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles']);
 
 const FOREIGN_DIVIDEND_SUBJECT_WORDS = new Set([
   'a', 'an', 'the', 'our', 'its', 's', 'company', 'corporate', 'business', 'singapore', 'foreign', 'sourced', 'overseas',
@@ -39,6 +57,33 @@ const GST_INPUT_TAX_SUBJECT_WORDS = new Set([
   'condition', 'conditions', 'taxable', 'supply', 'supplies', 'used', 'use', 'registered', 'registration', 'for', 'of', 'on', 'by',
   'in', 'to', 'with', 'where', 'when', 'if', 'is', 'are', 'be', 'may', 'what', 'how', 'does', 'do', 'explain',
   'input-tax'
+]);
+
+const IRAS_GENERAL_QUESTION_WORDS = new Set([
+  'a', 'an', 'the', 'and', 'or', 'of', 'for', 'from', 'in', 'on', 'to', 'by', 'with', 'as', 'is', 'are', 'be',
+  'can', 'could', 'does', 'do', 'how', 'what', 'when', 'where', 'which', 'who', 'why', 'whether', 'may', 'must',
+  'will', 'would', 'should', 'not', 'only', 'all', 'any', 'general', 'generally', 'rule', 'rules', 'guidance',
+  'overview', 'explain', 'explanation', 'condition', 'conditions', 'eligibility', 'eligible', 'requirement',
+  'requirements', 'criteria', 'supporting', 'document', 'documents', 'documentation', 'claim', 'claiming', 'recover',
+  'recovery', 'recoverable', 'company', 'business', 'businesses', 'singapore'
+]);
+const IRAS_GST_OUTPUT_CATEGORY_TOPIC_IDS = new Set([
+  'iras-gst-standard-rated-supplies', 'iras-gst-zero-rating', 'iras-gst-exempt-supplies', 'iras-gst-out-of-scope-supplies'
+]);
+const IRAS_GST_OUTPUT_CATEGORY_WORDS = new Set([
+  ...IRAS_GENERAL_QUESTION_WORDS,
+  'gst', 'goods', 'good', 'service', 'services', 'supply', 'supplies', 'sale', 'sales', 'taxable', 'standard',
+  'rated', 'rating', 'rate', 'zero', 'exempt', 'exemption', 'scope', 'outside', 'out', 'charge', 'chargeable',
+  'customer', 'customers', 'overseas', 'international', 'export', 'exported', 'compare', 'comparison', 'different',
+  'difference', 'distinction', 'between', 'category', 'categories'
+]);
+const IRAS_ECI_GENERAL_TOPIC_IDS = new Set(['iras-cit-eci']);
+const IRAS_ECI_GENERAL_WORDS = new Set([
+  ...IRAS_GENERAL_QUESTION_WORDS,
+  'eci', 'estimated', 'chargeable', 'income', 'tax', 'filing', 'file', 'submit', 'submission', 'deadline', 'due',
+  'fye', 'financial', 'year', 'end', 'waiver', 'nil', 'revenue', 'annual', 'million', 'exemption', 'partial',
+  'start-up', 'startup', 'profit', 'accounting', 'book', 'loss', 'skip', 'no', 'mean', 'means', 'establish', 'establishes',
+  'established', 'qualify', 'qualification', 'assessment', 'ya'
 ]);
 
 const PRIVATE_EXPENSE_SUBJECT_WORDS = new Set([
@@ -68,6 +113,7 @@ function canonicalWord(value: string): string {
   if (value === 'overseas') return value;
   if (value === 'pays') return 'pay';
   if (value === 'paid') return 'pay';
+  if (value === 'establishes') return 'establish';
   if (value === 'claiming' || value === 'claimed' || value === 'claims') return 'claim';
   if (value === 'recovering' || value === 'recovered' || value === 'recovers') return 'recover';
   if (value === 'recovery' || value === 'recoveries') return 'recovery';
@@ -107,6 +153,11 @@ function hasPhrase(words: readonly string[], phrase: readonly string[]): boolean
 
 function includesAny(words: readonly string[], allowed: ReadonlySet<string>): boolean {
   return words.some(word => allowed.has(word));
+}
+
+function usesOnlyAllowedWords(phrases: readonly string[], allowed: ReadonlySet<string>): boolean {
+  const words = phrases.flatMap(tokenize).map(canonicalWord);
+  return words.length > 0 && words.every(word => allowed.has(word));
 }
 
 type RuleSourceUnit =
@@ -185,6 +236,11 @@ function boundedRuleSourceUnits(sourceText: string): RuleSourceUnit[] {
 
 function selectedFamily(input: GeneralIrasRuleSupportInput, words: readonly string[]): RuleFamily | undefined {
   const topics = new Set(input.topicIds);
+  const concepts = input.concepts || [];
+  const conceptIds = new Set(concepts.map(concept => concept.id));
+  // The new topic-specific proof helpers establish only the canonical
+  // propositions they were written for. Conceptless legacy requests continue
+  // through their existing subject-scoped support paths.
   const foreignDividend = [...FOREIGN_DIVIDEND_TOPIC_IDS].some(id => topics.has(id)) &&
     (includesAny(words, new Set(['foreign', 'overseas'])) || hasPhrase(words, ['outside', 'singapore'])) &&
     includesAny(words, new Set(['dividend']));
@@ -195,12 +251,158 @@ function selectedFamily(input: GeneralIrasRuleSupportInput, words: readonly stri
     includesAny(words, new Set(['tax', 'deductibility', 'deductible', 'deduction']));
   const royaltyWithholding = [...ROYALTY_WITHHOLDING_TOPIC_IDS].some(id => topics.has(id)) &&
     includesAny(words, new Set(['royalty'])) && includesAny(words, new Set(['withholding', 'withhold', 'wht']));
+  const companyTaxResidency = [...COMPANY_TAX_RESIDENCY_TOPIC_IDS].some(id => topics.has(id)) &&
+    (conceptIds.has('company_tax_residency_rule') || conceptIds.has('company_tax_residency_incorporation'));
+  const cpfCashTopUpRelief = [...CPF_CASH_TOP_UP_TOPIC_IDS].some(id => topics.has(id)) &&
+    (conceptIds.has('cpf_cash_top_up_relief') || conceptIds.has('cpf_cash_top_up_relief_eligibility') ||
+      conceptIds.has('cpf_cash_top_up_relief_limits'));
+  const gstMotorCarInputTax = [...GST_MOTOR_CAR_TOPIC_IDS].some(id => topics.has(id)) &&
+    (conceptIds.has('gst_blocked_motor_car_input_tax') || conceptIds.has('gst_motor_car_input_tax_exceptions'));
   const selected: RuleFamily[] = [];
   if (foreignDividend) selected.push('FOREIGN_DIVIDEND');
-  if (gstInputTax) selected.push('GST_INPUT_TAX');
+  if (gstMotorCarInputTax) selected.push('GST_MOTOR_CAR_INPUT_TAX');
+  else if (gstInputTax) selected.push('GST_INPUT_TAX');
   if (privateExpense) selected.push('PRIVATE_EXPENSE_DEDUCTIBILITY');
   if (royaltyWithholding) selected.push('ROYALTY_WITHHOLDING_TAX');
+  if (companyTaxResidency) selected.push('COMPANY_TAX_RESIDENCY');
+  if (cpfCashTopUpRelief) selected.push('CPF_CASH_TOP_UP_RELIEF');
   return selected.length === 1 ? selected[0] : undefined;
+}
+
+function hasCompanyTaxResidencyControlManagementRule(sourceText: string): boolean {
+  return boundedRuleSourceUnits(sourceText).some(unit => {
+    const text = unit.kind === 'statement' ? unit.text : `${unit.heading} ${unit.item}`;
+    const taxResidencyRule = /\b(?:company|corporate)\b[^.!?;:]{0,55}\btax resident\b|\btax residenc(?:y|e) of (?:a|the) company\b/i.test(text);
+    const testLink = /\bcontrol and management\b/i.test(text) &&
+      (/\b(?:exercised|exercised in|is exercised)\b[^.!?;:]{0,55}\bin singapore\b|\bin singapore\b[^.!?;:]{0,55}\bcontrol and management\b/i.test(text) ||
+        /\btax residenc(?:y|e) of (?:a|the) company\b[^.!?;:]{0,65}\bdetermined by where\b[^.!?;:]{0,45}\bbusiness is controlled and managed\b/i.test(text));
+    return taxResidencyRule && testLink &&
+      /\bcontrol and management\b/i.test(text) &&
+      !/\b(?:not|never|no)\b[^.!?;:]{0,35}\b(?:tax resident|tax residency|control and management)\b/i.test(text);
+  });
+}
+
+function hasCompanyTaxResidencyIncorporationQualification(sourceText: string): boolean {
+  return boundedRuleSourceUnits(sourceText).some(unit => {
+    const text = unit.kind === 'statement' ? unit.text : `${unit.heading} ${unit.item}`;
+    return /\bplace of incorporation of (?:a|the) company\b/i.test(text) &&
+      /\bnot necessarily indicative of\b/i.test(text) &&
+      /\btax residenc(?:y|e) of (?:a|the) company\b/i.test(text);
+  });
+}
+
+function hasCpfCashTopUpIntroduction(sourceText: string): boolean {
+  return boundedRuleSourceUnits(sourceText).some(unit => {
+    const text = unit.kind === 'statement' ? unit.text : `${unit.heading} ${unit.item}`;
+    return /\bcpf cash top[ -]?up relief\b/i.test(text) &&
+      /\bgiven to encourage\b/i.test(text) &&
+      /\bsingaporeans? and permanent residents\b/i.test(text) &&
+      /\bretirement needs\b/i.test(text);
+  });
+}
+
+function hasCpfCashTopUpEligibility(sourceText: string): boolean {
+  const units = boundedRuleSourceUnits(sourceText);
+  const attachedItems = units.filter((unit): unit is Extract<RuleSourceUnit, { kind: 'headed-list' }> => unit.kind === 'headed-list' &&
+    /\bto qualify for (?:the )?tax relief\b/i.test(unit.heading)).map(unit => unit.item);
+  const text = attachedItems.join(' ');
+  const mrssExcluded = /\bmatching grants? under the matched retirement savings scheme\s*\(mrss\)[^.!?]{0,100}\bwill not be eligible\b/i.test(sourceText);
+  const mmssExcluded = /\bmatched medisave scheme\s*\(mmss\)[^.!?]{0,100}\bmatching grant\b[^.!?]{0,100}\bwill not qualify\b/i.test(sourceText);
+  return /\bto qualify for (?:the )?tax relief\b/i.test(sourceText) && mrssExcluded && mmssExcluded &&
+    /\bsingapore citizen\s*\/\s*permanent resident\b|\bsingapore citizen or permanent resident\b/i.test(text) &&
+    /\bcash top[ -]?ups?\b/i.test(text) && /\b(?:previous|preceding) year\b|\bin 20\d{2}\b/i.test(text) &&
+    /\bretirement sum topping[ -]?up scheme\b|\brstu\b/i.test(text);
+}
+
+function hasCpfCashTopUpLimits(sourceText: string): boolean {
+  const text = sourceText.normalize('NFC').replace(/\u00a0/g, ' ');
+  const combinedGrantExclusion = /\bdo not attract mrss and\/or mmss grants\b/i.test(text);
+  const separateGrantExclusions = /\b(?:do not|must not) attract mrss matching grants?\b/i.test(text) &&
+    /\b(?:do not|must not) attract mmss matching grants?\b/i.test(text);
+  const excludesMatchingGrants = combinedGrantExclusion || separateGrantExclusions;
+  const headlineCap = /\b(?:individuals? may continue to enjoy|maximum|up to)\b[^.!?;:]{0,180}\btax relief\b[^.!?;:]{0,180}\$\s*16,?000\b/i.test(text) &&
+    /\$\s*8,?000\b[^.!?;:]{0,55}\bfor self\b/i.test(text) &&
+    /\$\s*8,?000\b[^.!?;:]{0,75}\bfor family members\b/i.test(text) &&
+    excludesMatchingGrants;
+  const personalReliefCap = /\bpersonal income tax relief cap of \$\s*80,?000\b/i.test(text) &&
+    /\btotal amount of all tax reliefs claimed\b/i.test(text);
+  const ownSaLimit = /\brecipients below age 55\b/i.test(text) &&
+    /\bspecial account\s*\(sa\)(?![a-z0-9])/i.test(text) &&
+    /\b(?:full retirement sum|frs)\b/i.test(text) &&
+    /\b(?:maximum allowed cash top[ -]?up|frs\s*[–-]\s*sa savings)\b/i.test(text);
+  const ownRaLimit = /\brecipients aged 55 years and above\b/i.test(text) &&
+    /\bretirement account\s*\(ra\)(?![a-z0-9])/i.test(text) &&
+    /\b(?:full retirement sum|frs)\b/i.test(text) &&
+    /\b(?:maximum allowed cash top[ -]?up|frs\s*[–-]\s*ra)\b/i.test(text);
+  return headlineCap && personalReliefCap && ownSaLimit && ownRaLimit;
+}
+
+function hasGstMotorCarInputTaxRestriction(sourceText: string): boolean {
+  return boundedRuleSourceUnits(sourceText).some(unit => {
+    const text = unit.kind === 'statement' ? unit.text : `${unit.heading} ${unit.item}`;
+    return /\b(?:input tax|gst)\b/i.test(text) && /\bmotor cars?\b/i.test(text) &&
+      /\b(?:generally )?(?:blocked|disallow(?:ed)?|cannot claim|not claimable)\b/i.test(text) &&
+      /\b(?:purchase|running expenses?)\b/i.test(text);
+  });
+}
+
+export type GstMotorCarInputTaxExceptionKind = 'THIRD_PARTY' | 'CONNECTED_PERSON';
+
+/** Identify only complete, bounded exception passages; cross-references and examples do not qualify. */
+export function getGstMotorCarInputTaxExceptionKinds(sourceText: string): GstMotorCarInputTaxExceptionKind[] {
+  const paragraphs = sourceText.normalize('NFC').replace(/\u00a0/g, ' ').split(/\r?\n[\t ]*\r?\n+/);
+  const kinds = new Set<GstMotorCarInputTaxExceptionKind>();
+  for (const paragraph of paragraphs) {
+    if (paragraph.length > 3_200) continue;
+    const sentences = sentenceParts(paragraph);
+    const legacyThirdParty = sentences.some(text =>
+      /\b(?:from|on or after) 1 jan(?:uary)? 2023\b/i.test(text) &&
+      /\bmotor.car costs? incurred for a third party\b|\bmotor car\b[^.!?;:]{0,65}\bused by a third party\b/i.test(text) &&
+      /\bcost and running expenses of the motor car incurred\b/i.test(text) &&
+      /\b(?:may|can)\s+(?:be\s+)?claimed\b|\bwill be allowed\b[^.!?;:]{0,55}\bclaim(?:s)?\b/i.test(text) &&
+      /\b(?:ordinary )?conditions for claiming input tax\b|\bconditions for input tax claim\b/i.test(text));
+    const currentThirdParty = sentences.some(text =>
+      /\bfrom 1 jan(?:uary)? 2023\b/i.test(text) &&
+      /\byou can claim input tax on the cost and running expenses of a motor car used by a third party\b/i.test(text) &&
+      /\bif you meet the conditions for claiming input tax\b/i.test(text)) &&
+      sentences.some(text =>
+        /^a third party does not include you or your employees, or a connected person\b/i.test(text));
+    if (legacyThirdParty || currentThirdParty) {
+      kinds.add('THIRD_PARTY');
+    }
+  }
+  for (let index = 0; index < paragraphs.length; index += 1) {
+    const boundedPassage = paragraphs.slice(index, index + 4).join(' ');
+    if (boundedPassage.length > 3_200) continue;
+    if (/\bexpenses on motor car used by a connected person\b/i.test(boundedPassage) &&
+        /\bfrom 1 jan(?:uary)? 2023\b/i.test(boundedPassage) &&
+        /\bcannot claim input tax on the cost and running expenses of the motor car\b/i.test(boundedPassage) &&
+        /\bunless you satisfy both of the following conditions\b/i.test(boundedPassage) &&
+        /\bin addition to the conditions for claiming input tax\b/i.test(boundedPassage) &&
+        /\b1[.)]\s*you recover the motor car expenses from the connected person\b/i.test(boundedPassage) &&
+        /\brecover only a portion\b[^.!?;:]{0,100}\bclaim input tax to the extent of the portion recovered\b/i.test(boundedPassage) &&
+        /\b2[.)]\s*the recovery is not ancillary to any primary supply made by you to the connected person\b/i.test(boundedPassage)) {
+      kinds.add('CONNECTED_PERSON');
+    }
+    const currentConnectedPersonPassage = paragraphs.slice(index, index + 5).join(' ');
+    if (currentConnectedPersonPassage.length <= 3_200 &&
+        /^motor car used by a connected person\b/i.test(paragraphs[index]) &&
+        /\bfrom 1 jan(?:uary)? 2023\b[^.!?;:]{0,180}\bwhere a motor car is used by a connected person\b/i.test(currentConnectedPersonPassage) &&
+        /\bgst incurred on the motor car expenses is generally not claimable\b/i.test(currentConnectedPersonPassage) &&
+        /\ban exception applies only if you satisfy both of the following conditions\b/i.test(currentConnectedPersonPassage) &&
+        /\byou recover the motor car expenses from the connected person\b/i.test(currentConnectedPersonPassage) &&
+        /\brecover only a portion\b[^.!?;:]{0,100}\bonly claim input tax to the extent of the portion recovered\b/i.test(currentConnectedPersonPassage) &&
+        /\bthe recovery is not ancillary to (?:any primary supply made by you to the connected person|any primary supply you make to them)\b/i.test(currentConnectedPersonPassage) &&
+        /\bwhere the connected person is gst-registered, the input tax claim on the motor car expenses recovered by you is disallowed under regulation 27\b/i.test(currentConnectedPersonPassage)) {
+      kinds.add('CONNECTED_PERSON');
+    }
+  }
+  return [...kinds];
+}
+
+function hasSubstantiveGstMotorCarInputTaxExceptions(sourceText: string): boolean {
+  const kinds = new Set(getGstMotorCarInputTaxExceptionKinds(sourceText));
+  return kinds.has('THIRD_PARTY') && kinds.has('CONNECTED_PERSON');
 }
 
 function hasForeignDividendReceiptTaxRule(sourceText: string): boolean {
@@ -411,20 +613,116 @@ function hasRoyaltyWithholdingRule(sourceText: string, requiresNonResident: bool
  * does not establish the general rule.
  */
 export function supportGeneralIrasRuleConcept(input: GeneralIrasRuleSupportInput): GeneralIrasRuleSupport {
-  if (input.population !== undefined && input.population !== 'COMPANY') return undefined;
   const concepts = input.concepts || [];
+  const isWhtTreatyEffectSubject = input.domainId === 'IRAS_CORPORATE_TAX' &&
+    (input.population === undefined || input.population === 'COMPANY') &&
+    input.topicIds.some(topicId => WHT_TREATY_EFFECT_TOPIC_IDS.has(topicId)) &&
+    isGeneralIrasWhtTreatyEffectQuestion(input.subject);
+  if (isWhtTreatyEffectSubject && input.query && hasSpecificIrasWhtTreatyScope(input.query)) return false;
+  // Treaty-effect requests need their own scope checks below before any generic
+  // IRAS source-family adapter can accept the same concept label.
+  if (!concepts.some(concept => concept.id?.startsWith(WHT_TREATY_EFFECT_CONCEPT_ID) === true) &&
+      (input.population === undefined || input.population === 'COMPANY') &&
+      ['IRAS_GST', 'IRAS_CORPORATE_TAX'].includes(input.domainId)) {
+    for (const topicId of input.topicIds) {
+      const request = { authority: 'IRAS', topicId, query: input.subject, subject: input.subject,
+        sourceText: input.sourceText };
+      const support = supportIrasMasKnowledgeRule(request) ?? supportStatutoryWorkflowRule(request);
+      if (support === true && concepts.every(concept => (supportIrasMasKnowledgeRule({ ...request,
+        subject: [concept.label, ...concept.terms].join(' ') }) ?? supportStatutoryWorkflowRule({ ...request,
+        subject: [concept.label, ...concept.terms].join(' ') })) === true)) return true;
+      // Incomplete new-family proof may use the bounded legacy semantic proof;
+      // only an explicit new-family contradiction/scope veto blocks fallback.
+      if (support === false && hasIrasMasKnowledgeContradiction(request)) return false;
+    }
+  }
+  const treatyEffectConcepts = concepts.filter(concept => concept.id?.startsWith(WHT_TREATY_EFFECT_CONCEPT_ID) === true);
+  if (treatyEffectConcepts.length > 0) {
+    const conceptScopeText = [input.query, input.subject, ...concepts.flatMap(concept => [concept.label, ...concept.terms])]
+      .filter((value): value is string => Boolean(value)).join('\n');
+    if (treatyEffectConcepts.length !== concepts.length || concepts.length !== 1 ||
+        concepts[0].id !== WHT_TREATY_EFFECT_CONCEPT_ID || input.domainId !== 'IRAS_CORPORATE_TAX' ||
+        input.population !== undefined && input.population !== 'COMPANY' ||
+        !input.topicIds.some(topicId => WHT_TREATY_EFFECT_TOPIC_IDS.has(topicId)) ||
+        hasSpecificIrasWhtTreatyScope(conceptScopeText) ||
+        !isGeneralIrasWhtTreatyEffectQuestion(conceptScopeText)) return false;
+    // The concept binding is deliberately tied to the complete retained IRAS
+    // treaty/service/interest passages. The answer stays conditional because
+    // this source does not determine a treaty outcome for an unspecified
+    // recipient or payment.
+    return supportIrasMasKnowledgeRule({
+      authority: 'IRAS',
+      topicId: 'iras-wht-treaty-relief',
+      query: conceptScopeText,
+      subject: input.subject,
+      sourceText: input.sourceText
+    }) === true;
+  }
+  // Full-family proof is limited to general concepts. A checklist cannot prove
+  // a specific blocked-input exception, supply classification, or entity case.
+  if (input.population === undefined || input.population === 'COMPANY') {
+    const requestedPhrases = [input.subject, ...concepts.flatMap(concept => [concept.label, ...concept.terms])];
+    const topics = new Set(input.topicIds);
+    let adapterTopicIds: string[] = [];
+    if (input.domainId === 'IRAS_GST' && topics.size === 1 && topics.has('iras-gst-input-tax') &&
+        usesOnlyAllowedWords(requestedPhrases, new Set([...GST_INPUT_TAX_SUBJECT_WORDS, ...IRAS_GENERAL_QUESTION_WORDS]))) {
+      adapterTopicIds = ['iras-gst-input-tax'];
+    } else if (input.domainId === 'IRAS_GST' && topics.size > 0 &&
+        [...topics].every(topicId => IRAS_GST_OUTPUT_CATEGORY_TOPIC_IDS.has(topicId)) &&
+        usesOnlyAllowedWords(requestedPhrases, IRAS_GST_OUTPUT_CATEGORY_WORDS)) {
+      adapterTopicIds = [...topics];
+    } else if (input.domainId === 'IRAS_CORPORATE_TAX' && topics.size === 1 &&
+        [...topics].every(topicId => IRAS_ECI_GENERAL_TOPIC_IDS.has(topicId)) &&
+        usesOnlyAllowedWords(requestedPhrases, IRAS_ECI_GENERAL_WORDS)) {
+      adapterTopicIds = [...topics];
+    }
+    for (const topicId of adapterTopicIds) {
+      const support = (subject: string): boolean | undefined => {
+        const request = { authority: 'IRAS', topicId, query: subject, subject, sourceText: input.sourceText };
+        return supportIrasCpfExpansionRule(request) ?? supportIrasCpfMasPracticalRule(request);
+      };
+      if (support(input.subject) === true && concepts.every(concept =>
+        support([concept.label, ...concept.terms].join(' ')) === true)) return true;
+    }
+  }
   const subjectWords = tokenize(input.subject);
   const conceptWords = concepts.flatMap(concept => [concept.label, ...concept.terms].flatMap(tokenize));
   const words = [...subjectWords, ...conceptWords].map(canonicalWord);
   const family = selectedFamily(input, words);
   if (!family) return undefined;
 
+  const populationAllowed = family === 'CPF_CASH_TOP_UP_RELIEF'
+    ? input.population === undefined || input.population === 'INDIVIDUAL' || input.population === 'EMPLOYEE'
+    : family === 'COMPANY_TAX_RESIDENCY' || family === 'GST_MOTOR_CAR_INPUT_TAX'
+      ? input.population === undefined || input.population === 'COMPANY'
+      : input.population === undefined || input.population === 'COMPANY';
+  if (!populationAllowed) return family === 'CPF_CASH_TOP_UP_RELIEF' ? false : undefined;
+
   if (family === 'ROYALTY_WITHHOLDING_TAX' && hasOppositeRoyaltyPaymentDirection(input.subject)) return false;
 
-  const expectedDomain = family === 'GST_INPUT_TAX' ? 'IRAS_GST' : 'IRAS_CORPORATE_TAX';
+  const expectedDomain = family === 'GST_INPUT_TAX' || family === 'GST_MOTOR_CAR_INPUT_TAX' ? 'IRAS_GST'
+    : family === 'CPF_CASH_TOP_UP_RELIEF' ? 'IRAS_INDIVIDUAL_TAX' : 'IRAS_CORPORATE_TAX';
   if (input.domainId !== expectedDomain) return undefined;
 
-  if ([...SPECIFIC_TOPIC_IDS].some(id => input.topicIds.includes(id))) return undefined;
+  if (family !== 'GST_MOTOR_CAR_INPUT_TAX' && [...SPECIFIC_TOPIC_IDS].some(id => input.topicIds.includes(id))) return undefined;
+  if (family === 'COMPANY_TAX_RESIDENCY') {
+    const incorporationRequested = concepts.some(concept => concept.id === 'company_tax_residency_incorporation');
+    return incorporationRequested
+      ? hasCompanyTaxResidencyIncorporationQualification(input.sourceText)
+      : hasCompanyTaxResidencyControlManagementRule(input.sourceText);
+  }
+  if (family === 'CPF_CASH_TOP_UP_RELIEF') {
+    const ids = new Set(concepts.map(concept => concept.id));
+    if (ids.has('cpf_cash_top_up_relief_eligibility')) return hasCpfCashTopUpEligibility(input.sourceText);
+    if (ids.has('cpf_cash_top_up_relief_limits')) return hasCpfCashTopUpLimits(input.sourceText);
+    return hasCpfCashTopUpIntroduction(input.sourceText);
+  }
+  if (family === 'GST_MOTOR_CAR_INPUT_TAX') {
+    const exceptionsRequested = concepts.some(concept => concept.id === 'gst_motor_car_input_tax_exceptions');
+    return exceptionsRequested
+      ? hasSubstantiveGstMotorCarInputTaxExceptions(input.sourceText)
+      : hasGstMotorCarInputTaxRestriction(input.sourceText);
+  }
   if (family === 'ROYALTY_WITHHOLDING_TAX') {
     const requestedPhrases = [input.subject, ...concepts.flatMap(concept => [concept.label, ...concept.terms])];
     const hasResidentWithoutNonresidentQualifier = requestedPhrases.some(phrase => {
@@ -436,8 +734,9 @@ export function supportGeneralIrasRuleConcept(input: GeneralIrasRuleSupportInput
   }
   const allowedWords = family === 'FOREIGN_DIVIDEND' ? FOREIGN_DIVIDEND_SUBJECT_WORDS
     : family === 'GST_INPUT_TAX' ? GST_INPUT_TAX_SUBJECT_WORDS
-      : family === 'PRIVATE_EXPENSE_DEDUCTIBILITY' ? PRIVATE_EXPENSE_SUBJECT_WORDS : ROYALTY_WITHHOLDING_SUBJECT_WORDS;
-  if (words.some(word => !allowedWords.has(word))) return undefined;
+      : family === 'PRIVATE_EXPENSE_DEDUCTIBILITY' ? PRIVATE_EXPENSE_SUBJECT_WORDS
+        : family === 'ROYALTY_WITHHOLDING_TAX' ? ROYALTY_WITHHOLDING_SUBJECT_WORDS : undefined;
+  if (allowedWords && words.some(word => !allowedWords.has(word))) return undefined;
 
   const requiresNonResident = family === 'ROYALTY_WITHHOLDING_TAX' &&
     (words.includes('nonresident') || hasPhrase(words, ['non', 'resident']));
@@ -445,7 +744,10 @@ export function supportGeneralIrasRuleConcept(input: GeneralIrasRuleSupportInput
   switch (family) {
     case 'FOREIGN_DIVIDEND': return hasForeignDividendReceiptTaxRule(input.sourceText) ||
       hasDefinedForeignIncomeReceiptTaxRule(input.sourceText);
-    case 'GST_INPUT_TAX': return hasGstInputTaxClaimRule(input.sourceText);
+    case 'GST_INPUT_TAX': return hasGstInputTaxClaimRule(input.sourceText) ||
+      input.topicIds.includes('iras-gst-input-tax') && supportIrasCpfExpansionRule({
+        authority: 'IRAS', topicId: 'iras-gst-input-tax', query: input.subject,
+        subject: input.subject, sourceText: input.sourceText }) === true;
     case 'PRIVATE_EXPENSE_DEDUCTIBILITY': return hasPrivateExpenseDeductibilityRule(input.sourceText);
     case 'ROYALTY_WITHHOLDING_TAX': return hasRoyaltyWithholdingRule(input.sourceText, requiresNonResident);
   }

@@ -1,0 +1,118 @@
+{
+  "branch": "codex/statutory-corrections-expansion-20261030",
+  "publication": "No commit, push, merge, deployment or source activation",
+  "files": [
+    {
+      "path": ".gitattributes",
+      "sha256": "982b13505cd46e1986cdfed6b2983345a65a334ac9ea46f4de7b297ee935c315",
+      "bytes": 2136
+    },
+    {
+      "path": "scripts/run_all_tests.mjs",
+      "sha256": "97b04ce3f339f56437384fc60003845e9180c8e84effaab5a453d195cf1cde0f",
+      "bytes": 29675
+    },
+    {
+      "path": "src/classification/questionClassifier.ts",
+      "sha256": "f561960aab0afaa432f0701573da845bb589f0af1f8b4a348936c6b3cb3a61d5",
+      "bytes": 43878
+    },
+    {
+      "path": "src/retrieval/acraMomKnowledge20261027b.ts",
+      "sha256": "d249c811f351e3149ab220cb092ff68ce14e1c284b414ce7d39645a7404eb8da",
+      "bytes": 49411
+    },
+    {
+      "path": "src/retrieval/irasMasKnowledge20261027b.ts",
+      "sha256": "f9ea20d75133775faae0ea52fa304bd704d87bcd65653061db3aa33e3696689d",
+      "bytes": 55694
+    },
+    {
+      "path": "src/retrieval/momAcraMasExpansionRules.ts",
+      "sha256": "d9bd8fffb23cef4a3895f93d755b9646cd242af6e1e010915e6d1fd012a2a232",
+      "bytes": 28556
+    },
+    {
+      "path": "src/retrieval/statutoryCommencementScope.ts",
+      "sha256": "b29ba64f8d158330f3fba7ab859730c0a48d1a708c68aacac01bcccd2f8e4849",
+      "bytes": 10293
+    },
+    {
+      "path": "src/retrieval/statutoryWorkflows20261029.ts",
+      "sha256": "b2c4ab430e366aa717c3e875107fb0ebe58ef8631b5cd769f629127caa6fcba5",
+      "bytes": 46831
+    },
+    {
+      "path": "src/retrieval/targetDateResolver.ts",
+      "sha256": "84a5d6128e44c8037a74746e545f402bfcd2fece9cc8198e1b243de6afed3995",
+      "bytes": 19668
+    },
+    {
+      "path": "src/services/semanticQuestionUnderstanding.ts",
+      "sha256": "50c4b6964415317f20493fa566b78d8af9755a918f81640cf9e2d86ebd371195",
+      "bytes": 244193
+    },
+    {
+      "path": "src/standards/coverageRegistry.ts",
+      "sha256": "046653d68310fe4d2e30eb96ac4b02967573735be6c5a97f6aec08f9f342f652",
+      "bytes": 153899
+    },
+    {
+      "path": "src/standards/statutes/mom.ts",
+      "sha256": "113ab07f76d398637505031d6bbfb7810a1469b576da2a8cbc97acca0678c76b",
+      "bytes": 24032
+    },
+    {
+      "path": "tests/fixtures/statutoryExpansionSources/iras-eci-filing-native.html",
+      "sha256": "43845c83661d3c49a75f3b564d1c64c882a926056cbca25335ce3350b9cf6ca7",
+      "bytes": 4503
+    },
+    {
+      "path": "tests/fixtures/statutoryExpansionSources/iras-gst-input-tax-native.html",
+      "sha256": "555b359e9042a5f0ba717a379857902833c5e813a1f97d2e5b456a76648749c6",
+      "bytes": 9756
+    },
+    {
+      "path": "tests/fixtures/statutoryExpansionSources/mom-salary-deductions-native.html",
+      "sha256": "9c70f7305f2d41440ea82f194d517f4ee5c235c117dab04fc3a09105355a9aac",
+      "bytes": 62360
+    },
+    {
+      "path": "tests/regression/test_acra_mom_knowledge_20261027b.mjs",
+      "sha256": "96a9bdb71fa78535f3dd25c1ef044a8172aa034c03888fadafaf31bb6193cc4e",
+      "bytes": 30021
+    },
+    {
+      "path": "tests/regression/test_iras_mas_knowledge_20261027b.mjs",
+      "sha256": "317386393051ae2c7ac254d1b3e471357eec15f988d801a073e144fbe4310be2",
+      "bytes": 27005
+    },
+    {
+      "path": "tests/regression/test_statutory_commencement_scope_20261030.mjs",
+      "sha256": "1ff3c6f9d97bbcefed44828ab1d787e2dcac135ebb86ffb0f4b48779a085b73c",
+      "bytes": 16814
+    },
+    {
+      "path": "tests/regression/test_statutory_practical_router_refinements_20261030.mjs",
+      "sha256": "45a7643d52c6cc65f85d4120663108f7d58d380e3327ffe2a0259e38eee870c9",
+      "bytes": 11967
+    },
+    {
+      "path": "tests/regression/test_statutory_review_date_roles_20261028.mjs",
+      "sha256": "2a5203d367562ce7d32b361889c0ac1c692dfc94c97c7203b68e28653481de7d",
+      "bytes": 8538
+    },
+    {
+      "path": "tests/regression/test_statutory_review_fallback_20261028.mjs",
+      "sha256": "c333692cdd2b4d4eeb830d10368dce431783ee6aadc584efbf6bc4a464ab055f",
+      "bytes": 15731
+    },
+    {
+      "path": "tests/regression/test_statutory_workflows_20261029.mjs",
+      "sha256": "b9e03d28d7c7ada2f3c7032b163ad68a9814f6108781f0bdab7a7300da2927c3",
+      "bytes": 49341
+    }
+  ],
+  "headCommit": "5d24ecc8aa7db7ac96c207171d0dae49d9caeb90",
+  "state": "UNCOMMITTED_LOCAL_CHANGES"
+}

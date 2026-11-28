@@ -1,0 +1,7 @@
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=58.95ms (first_vis=58.83ms, gemini=0ms, ground=35ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=41.01ms (first_vis=41ms, gemini=0ms, ground=23ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=196.01ms (first_vis=195.99ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=110.51ms (first_vis=110.51ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=192ms (first_vis=192ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=104.83ms (first_vis=104.82ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+ACRA/MOM statutory knowledge rules passed (7 complete source families, transition-date guards and numeric/polarity mutations).

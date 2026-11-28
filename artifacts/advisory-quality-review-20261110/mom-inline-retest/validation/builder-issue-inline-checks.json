@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "status": "FOCUSED_CHECKS_PASS",
+  "scope": "Inline issue-ID support follow-up only; no live provider or network calls.",
+  "repository": {
+    "path": "[LOCAL_REPOSITORY]",
+    "head": "bef2cffbadbc8f4d7264a73b20f97b83dbecda78",
+    "branch": "codex/project-charter-simplification-20261103",
+    "sourceAndRegressionFilesChanged": [
+      "src/services/evidenceGroundedSynthesis.ts",
+      "tests/regression/test_evidence_grounded_synthesis.mjs"
+    ],
+    "otherPreexistingEditsPreserved": true
+  },
+  "implementation": {
+    "compactPassageFields": [
+      "id",
+      "issueId",
+      "bindingRef",
+      "completeAdmittedPassage"
+    ],
+    "bindingMetadataRetainsIssueId": true,
+    "generationInstructionRequiresSameIssueSupport": true,
+    "generationSystemChanged": false,
+    "contextBudgetOrOriginalValidatorChanged": false
+  },
+  "offlinePacketProfiles": {
+    "mode": "NO_PROVIDER_OR_NETWORK_TOKEN_PROFILE",
+    "realProviderCalls": 0,
+    "realNetworkCalls": 0,
+    "generationSystem": "Extracted current GENERATION_SYSTEM initializer through the TypeScript compiler API, then appended the same runtime journal-summary suffix used by tryGenerateGroundedSynthesis.",
+    "estimator": "estimateAdvisoryTokens from src/services/aiFirstAdvisory.ts",
+    "results": [
+      {
+        "label": "latest114",
+        "packetPath": "[LOCAL_WORKSPACE]\\advisory-quality-fixes-20261110\\mom-inline-retest\\generation-packet.json",
+        "passageCount": 114,
+        "bindingCount": 8,
+        "promptChars": 35817,
+        "generationSystemChars": 3370,
+        "promptTokens": 8973,
+        "generationSystemTokens": 843,
+        "totalTokens": 9816,
+        "budget": 15000,
+        "exactQuotesInline": true,
+        "inlineIssueIdsMatchBindings": true,
+        "quoteDictionaryPresent": false,
+        "result": "PASS_WITHIN_BUDGET"
+      },
+      {
+        "label": "prior103",
+        "packetPath": "[LOCAL_WORKSPACE]\\advisory-quality-fixes-20261110\\offline-packets\\mom-salary-overtime.json",
+        "passageCount": 103,
+        "bindingCount": 7,
+        "promptChars": 38835,
+        "generationSystemChars": 3370,
+        "promptTokens": 9741,
+        "generationSystemTokens": 843,
+        "totalTokens": 10584,
+        "budget": 15000,
+        "exactQuotesInline": true,
+        "inlineIssueIdsMatchBindings": true,
+        "quoteDictionaryPresent": false,
+        "result": "PASS_WITHIN_BUDGET"
+      }
+    ],
+    "reproductionCommand": "$env:NODE_OPTIONS='--require=[LOCAL_REPOSITORY]/.tmp/canonical-node22/userinfo-shim.cjs --import=file:///[LOCAL_REPOSITORY]/.tmp/canonical-node22/external-fetch-guard.mjs'; & '[LOCAL_REPOSITORY]\\.tmp\\canonical-node22\\node.exe' '[LOCAL_REPOSITORY]\\node_modules\\tsx\\dist\\cli.mjs' -e '<inline offline packet profiler: normalize saved packets to current compact row encoding; estimate packet plus current generation system>'",
+    "note": "The profiler read the saved offline packet JSON, added issueId inline from retained issue-owned binding metadata, retained complete quotes inline, used the current encoding instruction, and made no provider/network requests."
+  },
+  "checks": [
+    {
+      "name": "evidence-grounded synthesis regression",
+      "command": "$env:NODE_OPTIONS='--require=[LOCAL_REPOSITORY]/.tmp/canonical-node22/userinfo-shim.cjs --import=file:///[LOCAL_REPOSITORY]/.tmp/canonical-node22/external-fetch-guard.mjs'; & '[LOCAL_REPOSITORY]\\.tmp\\canonical-node22\\node.exe' '[LOCAL_REPOSITORY]\\node_modules\\tsx\\dist\\cli.mjs' tests/regression/test_evidence_grounded_synthesis.mjs",
+      "exitCode": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "TypeScript build",
+      "command": "$env:NODE_OPTIONS='--require=[LOCAL_REPOSITORY]/.tmp/canonical-node22/userinfo-shim.cjs --import=file:///[LOCAL_REPOSITORY]/.tmp/canonical-node22/external-fetch-guard.mjs'; & '[LOCAL_REPOSITORY]\\.tmp\\canonical-node22\\node.exe' '[LOCAL_REPOSITORY]\\node_modules\\typescript\\bin\\tsc' --build --pretty false",
+      "exitCode": 0,
+      "result": "PASS",
+      "note": "Completed with write escalation for node_modules/.tmp incremental metadata."
+    }
+  ],
+  "independentReview": "PENDING_FOR_THIS_FOLLOWUP"
+}

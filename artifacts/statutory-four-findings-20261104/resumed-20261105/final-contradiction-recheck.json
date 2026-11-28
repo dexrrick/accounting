@@ -1,0 +1,63 @@
+{
+  "model": "gemini-3.5-flash-lite",
+  "baselineReplay": false,
+  "scopeRecheck": false,
+  "startedAt": "2026-11-04T23:53:08.012Z",
+  "scope": "Live generation and scoped support checks with retained registry passages and fixture workstream admission; no live retrieval, upstream admission, or browser acceptance.",
+  "cases": [
+    {
+      "authority": "IRAS",
+      "record": "GST_REG26_BLOCKED_INPUT_TAX",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "query": "A client incurred an expense. We have not established its nature, purpose, documentation or whether input tax restrictions apply. Is the client eligible for GST recovery today?",
+      "mode": "injected-contradiction-live-verifier",
+      "calls": [
+        {
+          "promptCharacters": 1510,
+          "systemCharacters": 1335,
+          "providerUsage": {
+            "status": 200,
+            "usage": {
+              "promptTokenCount": 573,
+              "candidatesTokenCount": 22,
+              "totalTokenCount": 595,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 573
+                }
+              ],
+              "serviceTier": "standard"
+            },
+            "retryAfter": null
+          },
+          "stage": "EVIDENCE_GROUNDED_SUPPORT_VERIFICATION",
+          "elapsedMs": 951,
+          "response": "{\"verdicts\":[{\"claimId\":\"contradiction\",\"support\":\"UNSUPPORTED\",\"claimType\":\"RULE\"}]}"
+        }
+      ],
+      "status": "ERROR_OR_WITHHELD",
+      "error": "Evidence-grounded synthesis produced no supportable claims.",
+      "elapsedMs": 967
+    }
+  ],
+  "providerResponses": [
+    {
+      "status": 200,
+      "usage": {
+        "promptTokenCount": 573,
+        "candidatesTokenCount": 22,
+        "totalTokenCount": 595,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 573
+          }
+        ],
+        "serviceTier": "standard"
+      },
+      "retryAfter": null
+    }
+  ],
+  "finishedAt": "2026-11-04T23:53:08.980Z"
+}

@@ -1,0 +1,1263 @@
+diff --git a/scripts/run_all_tests.mjs b/scripts/run_all_tests.mjs
+index 992bd1b..f38fa5c 100644
+--- a/scripts/run_all_tests.mjs
++++ b/scripts/run_all_tests.mjs
+@@ -54,6 +54,7 @@ const testSuites = [
+   { name: 'Five-family Statutory Workflow Source Proof', file: 'test_statutory_workflows_20261029.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+   { name: 'Statutory Actual Answer Routing Repairs', file: 'test_statutory_review_application_answer_repairs_20261029.mjs', layer: 'input-understanding', tier: 'smoke' },
+   { name: 'Statutory Existing Rule Actual Application Mappings', file: 'test_statutory_review_application_existing_rule_mappings_20261029.mjs', layer: 'input-understanding', tier: 'smoke' },
++  { name: 'Statutory Practical Source Expansion Full Applications', file: 'test_statutory_priority3_source_expansions_20261030.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+   { name: 'IRAS and MAS Source-backed Knowledge', file: 'test_iras_mas_knowledge_20261027b.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+   { name: 'IRAS Native WHT Filing and Treaty Production Proof', file: 'test_iras_wht_filing_treaty_production.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+   { name: 'IRAS General Rule Actual Application Path', file: 'test_iras_general_rule_actual_path_20261029.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+diff --git a/src/retrieval/acraMomKnowledge20261027b.ts b/src/retrieval/acraMomKnowledge20261027b.ts
+index 5da4886..8fb2a56 100644
+--- a/src/retrieval/acraMomKnowledge20261027b.ts
++++ b/src/retrieval/acraMomKnowledge20261027b.ts
+@@ -147,8 +147,8 @@ const RULES: readonly Rule[] = [
+     limitations: ['Does not decide a specific date’s gazetted holiday status or compute holiday pay without schedule and wage facts.', 'Does not replace separate rest-day, overtime or part-time rules.'],
+     requiredSourceTerms: ['covered by the employment act', '11 paid public holidays', 'you were not absent on the working day immediately before or after a holiday without consent or a reasonable excuse', 'you are on authorised leave (e.g. sick leave, annual leave, unpaid leave) on the day immediately before or after a holiday', 'not entitled to holiday pay if the holiday falls on your approved unpaid leave', 'falls on a rest day', 'following working day will be a paid public holiday', 'non-working day', 'one extra day', 'gross rate', 'work on a public holiday', 'extra day', 'basic rate', 'part 4'],
+     quoteMatchers: [/If covered by the Employment Act[^.]*year\./i, /The gazetted holidays are[^.]*Christmas Day\./i, /You are entitled to your gross rate of pay on a public holiday, if:[\s\S]*?You are on authorised leave[^.]*\./i, /You are not entitled to holiday pay if the holiday falls on your approved unpaid leave\./i, /If a holiday falls on a non-working day[^.]*in lieu\./i, /If it falls on a rest day[^.]*paid holiday\./i, /By default, an employee required to work[^.]*\./i, /Time off in lieu may be used[^.]*Part IV\./i, /An employee not covered by the Employment Act[^.]*contract\./i],
+-    queryPattern: /\bpublic holida(?:y|ys)\b[\s\S]{0,180}\b(?:entitl|paid|pay|work|off|day|rate|employment act)\b|\b(?:entitl|paid|pay|work|off|day|rate)\b[\s\S]{0,180}\bpublic holida(?:y|ys)\b/i,
+-    subjectPattern: /\bpublic holida(?:y|ys)\b/i
++    queryPattern: /\bpublic[- ]holida(?:y|ys)\b[\s\S]{0,180}\b(?:entitl|paid|pay|work|off|day|rate|employment act)\b|\b(?:entitl|paid|pay|work|off|day|rate)\b[\s\S]{0,180}\bpublic[- ]holida(?:y|ys)\b/i,
++    subjectPattern: /\bpublic[- ]holida(?:y|ys)\b/i
+   },
+   {
+     id: 'MOM_FINAL_SALARY_DEADLINES', authority: 'MOM', topicIds: ['mom-salary-payment'], officialUrl: MOM_FINAL_SALARY_URL,
+diff --git a/src/retrieval/irasMasKnowledge20261027b.ts b/src/retrieval/irasMasKnowledge20261027b.ts
+index 25bdd5c..da3ddda 100644
+--- a/src/retrieval/irasMasKnowledge20261027b.ts
++++ b/src/retrieval/irasMasKnowledge20261027b.ts
+@@ -28,9 +28,11 @@ export type IrasMasKnowledgeRuleId =
+   | 'IRAS_ECI_PRACTICAL_WAIVER'
+   | 'IRAS_WHT_SERVICES'
+   | 'IRAS_WHT_FILING_DATE'
+-  | 'MAS_SFA_MISCONDUCT_REPORTING_2027';
++  | 'MAS_SFA_MISCONDUCT_REPORTING_2027'
++  | 'MAS_LFMC_TOOLKIT_SCOPE';
+ 
+-export type IrasMasKnowledgeFixtureKind = 'IRAS_NATIVE_HTML_PAGE' | 'IRAS_VISIBLE_PAGE_EXCERPT' | 'MAS_OFFICIAL_NOTICE_PDF_VISIBLE_TEXT_EXCERPT';
++export type IrasMasKnowledgeFixtureKind = 'IRAS_NATIVE_HTML_PAGE' | 'IRAS_VISIBLE_PAGE_EXCERPT'
++  | 'MAS_OFFICIAL_NOTICE_PDF_VISIBLE_TEXT_EXCERPT' | 'MAS_LFMC_TOOLKIT_NATIVE_PDF';
+ 
+ export interface IrasMasKnowledgeRuleMetadata {
+   id: IrasMasKnowledgeRuleId;
+@@ -57,6 +59,7 @@ const IRAS_ECI_URL = 'https://www.iras.gov.sg/taxes/corporate-income-tax/estimat
+ const IRAS_WHT_SERVICES_URL = 'https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax';
+ const IRAS_WHT_DATE_URL = 'https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date';
+ const MAS_MISCONDUCT_URL = 'https://www.mas.gov.sg/-/media/mas-media-library/regulation/notices/cmg/notice-sfa-04-n24/notice-sfa-04-n24-reporting-of-misconduct-of-representatives.pdf?hash=C027656887BDCD18A5742523AA08B2A1&sc_lang=en';
++const MAS_LFMC_TOOLKIT_URL = 'https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf';
+ 
+ /** Source URLs, legal dates and scope are kept with the rule; fixtures identify their retained capture form. */
+ export const IRAS_MAS_KNOWLEDGE_RULES_20261027B: readonly IrasMasKnowledgeRuleMetadata[] = Object.freeze([
+@@ -138,6 +141,20 @@ export const IRAS_MAS_KNOWLEDGE_RULES_20261027B: readonly IrasMasKnowledgeRuleMe
+     requiredFacts: ['Whether the entity is a CMS licence holder or exempt under SFA section 99(1)(a)–(d).', 'Whether the subject was a representative when the alleged conduct occurred.', 'The date first reasonable grounds arose.', 'Whether a report was submitted under the cancelled Notice before 1 January 2027 or was due by 31 December 2026.'],
+     effectiveDateEvidence: 'The Notice itself says it takes effect on 1 January 2027, cancels SFA 04-N11 that day, and states transitional provisions for pre-2027 matters. The notice issue date (30 December 2025) is not treated as its effective date.',
+     limitations: ['This bounded rule covers the Notice commencement, covered CMI population, initial Misconduct Report deadline and transitional provisions only; it does not explain Investigation Reports, Update Reports or all misconduct categories.', 'It is manager-level reporting about representatives and does not establish fund/VCC-level return requirements or QDC reporting.', 'The retained visible-text excerpt is limited to paragraphs 1, 2, 5, 20 and 21; the native official PDF is the primary document.', 'A company-specific conclusion requires the CMI status, representative period, reasonable-grounds date and transition facts.']
++  },
++  {
++    id: 'MAS_LFMC_TOOLKIT_SCOPE', authority: 'MAS', topicIds: ['mas-lfmc'],
++    officialUrl: MAS_LFMC_TOOLKIT_URL, title: 'Compliance Toolkit for Licensed Fund Management Companies',
++    fixture: 'mas-lfmc-native-extract.txt', nativePdfFixture: 'mas-lfmc-toolkit.pdf',
++    fixtureKind: 'MAS_LFMC_TOOLKIT_NATIVE_PDF',
++    authorityAndProvisions: ['MAS LFMC SFA Compliance Toolkit, page 2 scope description; no statutory section is attributed to the toolkit.'],
++    population: 'Licensed fund management companies using this SFA compliance toolkit',
++    rule: 'MAS describes this toolkit as a reference to common applications, forms and submissions under the Securities and Futures Act that apply to LFMCs. MAS expressly says the toolkit is not exhaustive and excludes obligations outside the SFA and fund-level requirements, such as the Code of Collective Investment Schemes.',
++    conditions: ['The scope statement applies to this LFMC toolkit and its stated SFA coverage.'],
++    exceptions: ['This toolkit cannot be treated as a complete checklist of LFMC obligations, obligations outside the SFA, or fund-level requirements.'],
++    requiredFacts: ['The applicable fund-level rules and other legislation must be identified separately for the relevant activities and fund.'],
++    effectiveDateEvidence: 'The retained PDF is the version last revised 29 May 2026; its revision date identifies the document version, not the commencement of every requirement.',
++    limitations: ['Do not generalise this LFMC toolkit scope to VCFMs, other licence classes or every MAS regulatory obligation.']
+   }
+ ]);
+ 
+@@ -190,7 +207,7 @@ function gstInputFamily(text: string, topicId: string): GstInputFamily {
+   const motorAllowed = ['iras-gst-input-tax', 'iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(topicId);
+   const medical = medicalAllowed && ( /\b(?:medical|health screening|primary care plan|pcp|work injury compensation)\b/i.test(text)
+     || isMedicalInsurancePremiumPremise({ query: text, subject: '' }));
+-  const motor = motorAllowed && /\b(?:motor car|motor vehicle|private hire car|company car|vehicle expense|car expense)\b/i.test(text);
++  const motor = motorAllowed && /\b(?:motor car|motor vehicle|private hire car|company car|vehicle expense|car expense|expenses? (?:for|of|on) (?:a\s+)?subsidiary(?:'s|’s)?\s+car)\b/i.test(text);
+   if (medical && motor) return 'compound';
+   if (medical) return 'medical';
+   if (motor) return 'motor';
+@@ -207,6 +224,13 @@ function hasGstInputScopeConflict(input: Pick<IrasMasKnowledgeRequest, 'authorit
+ 
+ function namedRule(input: Pick<IrasMasKnowledgeRequest, 'authority' | 'topicId' | 'query' | 'subject'>): Rule | undefined {
+   const text = queryText(input);
++  if (input.authority === 'MAS' && input.topicId === 'mas-lfmc' &&
++      /\b(?:lfmc|licensed fund management company|licensed investment manager)\b/i.test(text) &&
++      /\b(?:toolkit|checklist)\b/i.test(text) &&
++      /\b(?:complete|comprehensive|all duties|fund.level|outside (?:the )?sfa|non.sfa|scope)\b/i.test(text) &&
++      !/\b(?:vcfm|venture capital fund manager|other licence class)\b/i.test(text)) {
++    return IRAS_MAS_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'MAS_LFMC_TOOLKIT_SCOPE');
++  }
+   if (input.authority === 'IRAS') {
+     // The issue/concept subject owns the family. The original query can clarify
+     // a generic subject, but cannot redirect an already specific subject.
+@@ -276,6 +300,14 @@ function hasNonCurrentScope(query: string, rule: Rule): boolean {
+       || (hasDatedWhtPayment && resolved.targetDate?.startsWith(`${currentYear}-`)));
+ }
+ 
++function toolkitScopePassagePatterns(): RegExp[] {
++  return [
++    /This Compliance Toolkit aims to provide guidance on:[\s\S]{0,500}?Applications for approvals from MAS;[\s\S]{0,300}?Notifications to be submitted to MAS;[\s\S]{0,300}?Regulatory submissions to MAS[\s\S]{0,160}?applicable to LFMCs/i,
++    /This compliance toolkit aims to provide LFMCs with a simple reference[^.]{0,250}?applicable to LFMCs\.[\s\S]{0,180}?However, it is not exhaustive,[\s\S]{0,220}?all legislations and requirements that are applicable to them\./i,
++    /For the avoidance of doubt, this toolkit excludes reporting obligations that fall outside the SFA; as well as fund-level requirements \(e\.g\. Code of Collective Investment Scheme\)\./i
++  ];
++}
++
+ function passagePatterns(rule: Rule): RegExp[] {
+   switch (rule.id) {
+     case 'IRAS_GST_STAFF_MEDICAL_INPUT_TAX': return [
+@@ -326,6 +358,7 @@ function passagePatterns(rule: Rule): RegExp[] {
+       /20\s*\|?\s*Despite paragraph 5, where a CMI[\s\S]{0,1800}?has not submitted to the Authority a Misconduct Report[\s\S]{0,700}?the CMI must submit to the Authority a Misconduct Report in relation to the misconduct under this Notice[\s\S]{0,500}?no later than 21 calendar days, or such longer period as the Authority may allow in writing, after 1 January 2027\./i,
+       /21\s*\|?\s*This Notice does not apply to or in relation to any of the following[\s\S]{0,1800}?the Cancelled Notice as in force immediately before 1 January 2027 continues to apply to or in relation to any of the following as if this Notice has not been issued:[\s\S]{0,1300}?any case for which a CMI submitted a Misconduct Report under the Cancelled Notice[\s\S]{0,500}?any case for which a CMI was required under the Cancelled Notice to submit a Misconduct Report[\s\S]{0,500}?by 31 December 2026,[\s\S]{0,500}?any electronic system which may be established by the Authority in place of MASNET\./i
+     ];
++    case 'MAS_LFMC_TOOLKIT_SCOPE': return toolkitScopePassagePatterns();
+   }
+ }
+ 
+@@ -333,7 +366,7 @@ function normalized(value: string): string { return plainText(value).replace(/\s
+ 
+ function extracts(rule: Rule, sourceText: string): string[] {
+   const source = normalized(sourceText);
+-  const patterns = passagePatterns(rule);
++  const patterns = rule.id === 'MAS_LFMC_TOOLKIT_SCOPE' ? toolkitScopePassagePatterns() : passagePatterns(rule);
+   const slices = patterns.map(pattern => pattern.exec(source)?.[0]?.trim()).filter((value): value is string => Boolean(value));
+   return slices.length === patterns.length && slices.every(slice => slice.length <= MAX_PASSAGE_LENGTH) ? [...new Set(slices)] : [];
+ }
+@@ -347,6 +380,7 @@ function contradicts(rule: Rule, sourceText: string): boolean {
+     case 'IRAS_WHT_SERVICES': return /services performed in singapore[^.]{0,140}withholding tax is not applicable|only the overseas work[^.]{0,100}subject to withholding tax|services performed in singapore[^.]{0,130}\b(?:10|15|20) percent\b/i.test(text);
+     case 'IRAS_WHT_FILING_DATE': return /(?:no need|not required) to file wht[^.]{0,120}(?:dta|ari)|wht (?:is )?due by the 15th of the following month/i.test(text);
+     case 'MAS_SFA_MISCONDUCT_REPORTING_2027': return /takes effect from 1 january 2026|no later than 14 calendar days[^.]{0,100}(?:misconduct report|reasonable grounds)|does not apply to former representatives|the CMI must not submit a Misconduct Report/i.test(text);
++    case 'MAS_LFMC_TOOLKIT_SCOPE': return /(?:toolkit|checklist) (?:is|remains) exhaustive|covers? all (?:fund.level|non.sfa|outside the sfa) requirements/i.test(text);
+   }
+ }
+ 
+@@ -365,9 +399,12 @@ export function supportIrasMasKnowledgeRule(request: IrasMasKnowledgeRequest): b
+   if (!rule) return undefined;
+   if (hasGstInputScopeConflict(request)) return false;
+   if (rule.id === 'IRAS_GST_STAFF_MEDICAL_INPUT_TAX' && isMedicalInsurancePremiumPremise(request)) return false;
++  if (rule.id === 'MAS_LFMC_TOOLKIT_SCOPE' && request.officialUrl !== undefined && request.officialUrl !== rule.officialUrl) return false;
+   if (!exactUrl(request.officialUrl, rule.officialUrl) || hasNonCurrentScope(request.query, rule)) return false;
+   const text = normalized(request.sourceText);
+-  return !contradicts(rule, text) && extracts(rule, text).length === passagePatterns(rule).length;
++  const requiredPassageCount = rule.id === 'MAS_LFMC_TOOLKIT_SCOPE'
++    ? toolkitScopePassagePatterns().length : passagePatterns(rule).length;
++  return !contradicts(rule, text) && extracts(rule, text).length === requiredPassageCount;
+ }
+ 
+ export function selectIrasMasKnowledgeQuotes(request: IrasMasKnowledgeRequest): string[] {
+@@ -439,6 +476,7 @@ function proofQuery(rule: Rule): string {
+     case 'IRAS_WHT_SERVICES': return 'Does WHT apply to service fees paid to a non-resident company?';
+     case 'IRAS_WHT_FILING_DATE': return 'What is the WHT filing and payment due date?';
+     case 'MAS_SFA_MISCONDUCT_REPORTING_2027': return 'What does Notice SFA 04-N24 require from 1 January 2027?';
++    case 'MAS_LFMC_TOOLKIT_SCOPE': return 'Does the LFMC toolkit cover all requirements including obligations outside the SFA and fund-level duties?';
+   }
+ }
+ 
+@@ -450,16 +488,18 @@ function proofSubject(rule: Rule): string {
+     case 'IRAS_WHT_SERVICES': return 'Withholding tax on non-resident service payments';
+     case 'IRAS_WHT_FILING_DATE': return 'Withholding tax filing and payment deadline';
+     case 'MAS_SFA_MISCONDUCT_REPORTING_2027': return 'SFA 04-N24 reporting of misconduct by representatives from 1 January 2027';
++    case 'MAS_LFMC_TOOLKIT_SCOPE': return 'MAS LFMC toolkit scope and fund-level requirements';
+   }
+ }
+ 
+ function answerText(rule: Rule): string {
+   switch (rule.id) {
+     case 'IRAS_GST_STAFF_MEDICAL_INPUT_TAX': return 'IRAS states that staff medical input tax is generally disallowed under regulation 26 of the GST (General) Regulations. Subject to the ordinary input-tax conditions, the stated exceptions are expenses obligatory under WICA or a qualifying Industrial Relations Act collective agreement; or, for expenses incurred on or after 1 October 2021, treatment connected with a work-related health risk or requirement and required under relevant Singapore written law. For the advisory limb, IRAS specifies treatment related to COVID-19 and required under a written advisory of the Government or a Singapore public authority. IRAS specifically says Primary Care Plan expenses do not meet the described work-related exception. A claim needs the expense date, legal/collective-agreement basis, work-related risk and mandate evidence, GST registration and invoice facts.';
+-    case 'IRAS_GST_MOTOR_CAR_INPUT_TAX': return 'IRAS generally disallows input tax on a motor car’s purchase and running costs under regulation 27, unless the vehicle is outside the regulation 25(1) motor-car definition or a specific exception applies. Its examples include qualifying chauffeured pay-per-trip transport services from 1 April 2022; qualifying costs for cars used by a third party from 1 January 2023; and vehicles such as lorries, vans and motorcycles that are not motor cars. Costs for cars used physically or economically by you or your employees remain disallowed. For a connected person’s car, the claimant must recover the expense and the recovery must not be ancillary to a primary supply; partial recovery limits the claim. All exceptions remain subject to the ordinary claim conditions and records.';
++    case 'IRAS_GST_MOTOR_CAR_INPUT_TAX': return 'IRAS generally disallows input tax on a motor car’s purchase and running costs under regulation 27, unless the vehicle is outside the regulation 25(1) motor-car definition or a specific exception applies. Its examples include qualifying chauffeured pay-per-trip transport services from 1 April 2022; qualifying costs for cars used by a third party from 1 January 2023; and vehicles such as lorries, vans and motorcycles that are not motor cars. Costs for cars used physically or economically by you or your employees remain disallowed. For a connected person’s car, the claimant must recover the expense and the recovery must not be ancillary to a primary supply; partial recovery limits the claim to the recovered portion. If only half the expenses are recovered, the exception permits input tax only to the extent of that half, not the unrecovered half. All exceptions remain subject to the ordinary claim conditions and records.';
+     case 'IRAS_ECI_PRACTICAL_WAIVER': return 'IRAS generally requires ECI filing within three months after FYE. The general waiver requires both annual revenue of S$5 million or less for that financial year and nil ECI for the YA, with ECI measured before partial or start-up exemption. Revenue is the company’s main source of income; for an investment holding company it is investment income. A nil ECI or book loss alone does not qualify a company whose relevant revenue exceeds S$5 million; likewise, revenue below the threshold does not qualify when ECI is positive. IRAS gives separate entity categories that need not file and says companies self-assess the waiver. To assess a particular YA, confirm FYE, principal/investment revenue, pre-exemption ECI and any specifically excluded category.';
+     case 'IRAS_WHT_SERVICES': return 'IRAS says WHT applies to specified service and management fees paid to a non-resident company to the extent attributable to work done in Singapore; a mixed Singapore/overseas engagement must be apportioned. Services supplied electronically from overseas without sending staff are described as performed outside Singapore. The current page states the prevailing 17% Corporate Income Tax rate on gross service fees for Singapore work, but the applicable DTA, payee residence and permanent-establishment facts may change the rate or treatment. IRAS also says the old related-party cost-pooling concession was withdrawn for payments liable on or after 1 November 2022. Specific treatment requires the payee type and residence, service scope/location, DTA and relevant dates.';
+     case 'IRAS_WHT_FILING_DATE': return 'IRAS requires WHT filing and payment by the 15th of the second month after its defined date of payment. For most payments, use the earliest of the contractual due date (or invoice date if there is no agreement, ignoring credit terms), credit to an account designated by the non-resident, and actual payment. Director fees have separate timing rules based on arrears/advance approval, entitlement, credit and actual payment. WHT still must be filed when a DTA or ARI makes the rate zero. GIRO is normally deducted on the 25th of the due month, or the next working day if that date is a weekend/public holiday. The exact deadline requires the payment type and all relevant dates.';
+     case 'MAS_SFA_MISCONDUCT_REPORTING_2027': return 'MAS Notice SFA 04-N24 takes effect on 1 January 2027. It applies to CMS licence holders and persons exempt under SFA section 99(1)(a)–(d), for misconduct by their representatives and former representatives. A CMI must submit a Misconduct Report no later than 21 calendar days after the date it first has reasonable grounds to believe the current or former representative committed misconduct during the representative period, unless the Authority allows a longer period in writing. Paragraph 20 addresses a pre-2027 reasonable-grounds case where no Misconduct Report in the form set out in the cancelled Notice had been submitted by 1 January 2027: the report under SFA 04-N24 is due within 21 calendar days after 1 January 2027, or a longer period allowed in writing. Paragraph 21 keeps the cancelled Notice applicable where a report was submitted before 1 January 2027 or was required by 31 December 2026. A case-specific conclusion requires the CMI status, representative period, reasonable-grounds date and transition facts.';
++    case 'MAS_LFMC_TOOLKIT_SCOPE': return 'The MAS LFMC toolkit is a reference for common SFA approvals, notifications and regulatory submissions applicable to LFMCs. MAS says it is not exhaustive and expressly excludes obligations outside the SFA and fund-level requirements, such as the Code of Collective Investment Schemes. It therefore is not a complete checklist for all duties affecting a managed fund. Identify applicable fund-level requirements and other legislation separately. This scope statement applies to the LFMC toolkit; it does not establish the scope of VCFM or other licence-class toolkits.';
+   }
+ }
+diff --git a/src/retrieval/statutoryKnowledge20261027b.ts b/src/retrieval/statutoryKnowledge20261027b.ts
+index 9515dc3..70eb224 100644
+--- a/src/retrieval/statutoryKnowledge20261027b.ts
++++ b/src/retrieval/statutoryKnowledge20261027b.ts
+@@ -21,9 +21,11 @@ export const STATUTORY_KNOWLEDGE_RULES_20261027B = [
+ export const STATUTORY_KNOWLEDGE_POINTERS_20261027B = STATUTORY_KNOWLEDGE_RULES_20261027B.map(rule => ({
+   authority: rule.authority, topicIds: rule.topicIds, url: rule.officialUrl, title: rule.title,
+   expectedTitles: rule.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027' ? ['NOTICE ON REPORTING']
+-    : rule.id === 'MAS_LFMC_KEY_APPOINTMENTS' ? [rule.title, 'Licensed Fund Management Companies'] : [rule.title],
++    : rule.id === 'MAS_LFMC_KEY_APPOINTMENTS' ? [rule.title, 'Licensed Fund Management Companies']
++      : rule.id === 'MAS_LFMC_TOOLKIT_SCOPE' ? [rule.title, 'COMPLIANCE TOOLKIT FOR LICENSED FUND MANAGEMENT COMPANIES', 'Licensed Fund Management Companies'] : [rule.title],
+   standardIdentifiers: rule.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027' ? ['SFA 04-N24'] : [rule.authority],
+-  contentTerms: rule.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027' ? ['CMS licence', 'representatives', 'misconduct'] : undefined,
++  contentTerms: rule.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027' ? ['CMS licence', 'representatives', 'misconduct']
++    : rule.id === 'MAS_LFMC_TOOLKIT_SCOPE' ? ['not exhaustive', 'outside the SFA', 'fund-level requirements'] : undefined,
+   documentKind: /\.pdf$/i.test(new URL(rule.officialUrl).pathname) || rule.id === 'CPF_2026_ADDITIONAL_WAGE_CEILING'
+     ? 'PDF' as const : 'HTML' as const
+ }));
+diff --git a/src/retrieval/statutoryWorkflows20261029.ts b/src/retrieval/statutoryWorkflows20261029.ts
+index bfec01c..23c4384 100644
+--- a/src/retrieval/statutoryWorkflows20261029.ts
++++ b/src/retrieval/statutoryWorkflows20261029.ts
+@@ -5,7 +5,7 @@ import type {
+ } from '../utils/authorityEvidencePresentation';
+ import { groupExactIssueClaimsByDocument } from '../utils/authorityEvidencePresentation';
+ import { cleanHtmlText, cleanHtmlTextPreservingTableCells } from './sourceAdapters';
+-import { defaultTargetDateResolver, TargetDateResolver } from './targetDateResolver';
++import { defaultTargetDateResolver, hasHistoricalStatutoryVersionIntent, TargetDateResolver } from './targetDateResolver';
+ 
+ export interface StatutoryWorkflowRequest {
+   authority: string;
+@@ -73,7 +73,7 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
+     exceptions: ['The page distinguishes foreign companies and does not establish every filing duty for officers, share capital, annual returns, VCCs or historical periods.'],
+     requiredFacts: ['Entity type and the category of information changed.', 'The date of the change and any category-specific filing facts.'],
+     effectiveDateEvidence: 'The captured page does not state a legal commencement date. Its retrieval date is not treated as an effective date.',
+-    limitations: ['General current page guidance only; no deadline date is calculated here.', 'For an entity-specific answer, confirm the entity category and the actual change date.'],
++    limitations: ['A calendar deadline requires a confirmed change date and entity category.', 'For an entity-specific answer, confirm the applicable filing route.'],
+     requiredSourceTerms: [
+       'All registered entities must notify ACRA of any changes within 14 days from the date of change, except foreign companies which have 30 days.',
+       'Within 14 days from the date of the change', 'Within 30 days from the date of the change',
+@@ -140,7 +140,7 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
+     exceptions: ['Excess Additional Wage ceiling contributions are a prompt-application category.', 'CPF Annual Limit excess contributions paid from 2023 are refunded automatically to the employer from February 2024; this is distinct from an application for an AW-ceiling refund.'],
+     requiredFacts: ['Refund category and CPF payment date.', 'For conditional wages, the contractual or mutually agreed repayment due date.', 'Whether the employee share was returned and funds remain available in CPF account(s).', 'For AW or annual-limit excess, the relevant year and excess category.'],
+     effectiveDateEvidence: 'The page’s annual-limit statement explicitly starts in February 2024 and applies to excess paid from 2023. Other page-update dates are not treated as effective dates.',
+-    limitations: ['No refund due date is computed, including for leap-year anniversaries.', 'The source does not establish that a particular refund application will be accepted or the amount CPF Board will refund.'],
++    limitations: ['Do not infer a refund deadline when the payment date, conditional-wage repayment date or calendar anniversary is unclear.', 'The source does not establish that a particular refund application will be accepted or the amount CPF Board will refund.'],
+     requiredSourceTerms: [
+       'Any request for refund of CPF contributions paid must be made immediately and no later than one year from the date of payment of the CPF contributions.',
+       'PAYMENTS RECEIVED ON', 'field in your record of payment to determine the date of payment',
+@@ -164,7 +164,7 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
+       /annual limit[^.!?\n]{0,220}\b(?:must apply|application required|not refunded automatically)\b/i,
+       /AW ceiling[^.!?\n]{0,220}\brefunded automatically\b/i
+     ],
+-    queryPattern: /\b(?:cpf|central provident fund)\b[\s\S]{0,180}\b(?:refund|overpaid|excess contribution|wrongly paid|repayment)\b|\b(?:refund|overpaid|excess contribution)\b[\s\S]{0,180}\b(?:cpf|central provident fund)\b/i,
++    queryPattern: /\b(?:cpf|central provident fund)\b[\s\S]{0,180}\b(?:refund\w*|overpaid|overpayment|excess contribution|wrongly paid|mistaken contribution|paid in error|repayment|recover\w*|money back)\b|\b(?:refund\w*|overpaid|overpayment|excess contribution|mistaken contribution|recover\w*|money back)\b[\s\S]{0,180}\b(?:cpf|central provident fund)\b/i,
+     subjectPattern: /\b(?:cpf|contribution|refund|repayment)\b/i
+   },
+   {
+@@ -212,8 +212,8 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
+     fixtureFile: 'mas-lfmc-toolkit.pdf', fixtureKind: 'RETAINED_NATIVE_OFFICIAL_PDF',
+     population: 'Licensed Fund Management Companies (LFMCs)',
+     provisions: ['MAS LFMC Compliance Toolkit requirement 3, which cites section 96 of the Securities and Futures Act and regulation 12 of the Securities and Futures (Licensing and Conduct of Business) Regulations.'],
+-    rule: 'The current MAS LFMC Compliance Toolkit row 3 says an LFMC must seek prior MAS approval using Form 11 before appointing a Chief Executive Officer or Director, or before changing a Director’s appointment nature from Non-Executive to Executive. Row 17 is a separate subsequent notification: it covers CEO or Director resignation, an Executive-to-Non-Executive change, changed CEO/Director particulars, and changed business interests or shareholdings provided in Form 11.',
+-    conditions: ['The toolkit applies to Licensed Fund Management Companies and identifies the SFA and LCBR requirements in its scope.', 'Row 3 calls for prior approval; row 17 separately concerns subsequent notifications and must not be substituted for row 3.'],
++    rule: 'The current MAS LFMC Compliance Toolkit row 3 says an LFMC must seek prior MAS approval using Form 11 before appointing a Chief Executive Officer or Director, or before changing a Director’s appointment nature from Non-Executive to Executive; already being on the board does not remove approval for that change. Row 17 is a separate subsequent notification: it covers CEO or Director resignation, an Executive-to-Non-Executive change, changed CEO/Director particulars, and changed business interests or shareholdings provided in Form 11. Row 17 gives “As soon as practicable” for these notifications; its additional no-later-than-14-days limit is specifically attached to the resignation in item (i).',
++    conditions: ['The toolkit applies to Licensed Fund Management Companies and identifies the SFA and LCBR requirements in its scope.', 'Row 3 calls for prior approval; row 17 separately concerns subsequent notifications and must not be substituted for row 3. Its 14-day time limit applies to item (i), resignation.'],
+     exceptions: ['This toolkit is not exhaustive and excludes requirements outside the SFA and fund-level requirements.', 'The toolkit revision date is not a legal commencement date; this summary does not establish historic requirements.'],
+     requiredFacts: ['Whether the firm is an LFMC.', 'Whether the person is a CEO or Director and whether the action is an initial appointment, Director nature change, resignation or later particulars change.'],
+     effectiveDateEvidence: 'The retained PDF identifies its issue/revision dates only; neither those dates nor row 17’s update note establishes legal commencement for row 3.',
+@@ -223,12 +223,14 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
+       '3 To seek MAS’ approval', 'Form 11 - Appointment', 'Prior | to | the', 'appointment of a Chief Executive Officer',
+       'Section 96 of the SFA', 'Regulation 12 of',
+       '(CEO) or Director;', 'nature of Director appointment from Non-',
+-      '17 To notify MAS of', 'resignation of CEO', 'Executive', 'Non-Executive',
++      '17 To notify MAS of', 'resignation of CEO', 'As soon as practicable', 'for (i), no later than',
++      '14 days from the date of', 'the resignation', 'nature of the appointment of a Director',
++      'Executive to one that is', 'Non-Executive',
+       'change in particulars', 'provided in Form 11'
+     ],
+     quoteMatchers: [
+       /3 To seek MAS’ approval[\s\S]{0,1000}Form 11[\s\S]{0,240}Prior\s*\|\s*to\s*\|\s*the[\s\S]{0,500}Section 96 of the SFA[\s\S]{0,500}Regulation 12 of[\s\S]{0,300}\(CEO\) or Director;[\s\S]{0,300}nature of Director appointment from Non-[\s\S]{0,200}Executive to Executive[\s\S]{0,200}Executive to Executive/i,
+-      /17 To notify MAS of[\s\S]{0,2200}resignation of CEO[\s\S]{0,1800}Non-Executive[\s\S]{0,1800}provided in Form 11/i,
++      /17 To notify MAS of \(i\)[\s\S]{0,300}resignation of CEO[\s\S]{0,300}As soon as practicable[\s\S]{0,250}for \(i\), no later than[\s\S]{0,250}nature of the appointment of a Director[\s\S]{0,250}14 days from the date of[\s\S]{0,250}from one that is Executive to one that is[\s\S]{0,150}the resignation[\s\S]{0,150}Non-Executive[\s\S]{0,1600}provided in Form 11/i,
+       /Relevant to:\s*\|\s*LFMCs/i
+     ],
+     contradictionPatterns: [
+@@ -237,7 +239,7 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
+       /row 3[^.!?\n]{0,220}\bnotification\b/i,
+       /17 To notify MAS[^\n]{0,900}\bprior approval\b/i
+     ],
+-    queryPattern: /\b(?:LFMC|licensed fund management company|fund manager)\b[\s\S]{0,180}\b(?:appoint\w*|appointment|CEO|director|Form 11)\b|\b(?:appoint\w*|appointment|CEO|director|Form 11)\b[\s\S]{0,180}\b(?:LFMC|licensed fund management company)\b/i,
++    queryPattern: /\b(?:LFMC|licensed fund management company|fund manager)\b[\s\S]{0,220}\b(?:appoint\w*|appointment|CEO|director|Form 11|executive|non.executive|role change|nature of (?:the )?appointment)\b|\b(?:appoint\w*|appointment|CEO|director|Form 11|executive\s*(?:to|into|becomes?)\s*non.executive|non.executive\s*(?:to|into|becomes?)\s*executive|nature of (?:the )?appointment)\b[\s\S]{0,220}\b(?:LFMC|licensed fund management company)\b/i,
+     subjectPattern: /\b(?:LFMC|fund management|CEO|director|Form 11|key appointment)\b/i
+   }
+ ]);
+@@ -287,12 +289,8 @@ function hasAllRequiredQuotes(rule: Rule, sourceText: string): boolean {
+   return rule.quoteMatchers.every(pattern => pattern.test(clean));
+ }
+ 
+-function historicalVersionRequest(query: string): boolean {
+-  return /\b(?:historical|historic|back then|at that time|at that date|used to|what was|what were|previous law|prior law|former rule|superseded|in force|what (?:law|rules?|requirements?) applied|which (?:law|rules?) applied|law applicable in|rules? applicable in|effective as of)\b/i.test(query);
+-}
+-
+ function scopeAllowsCurrentRule(query: string): boolean {
+-  if (historicalVersionRequest(query)) return false;
++  if (hasHistoricalStatutoryVersionIntent(query)) return false;
+   const resolution = defaultTargetDateResolver.resolveAuthorityEvidenceDate(query);
+   const currentYear = TargetDateResolver.CURRENT_SYSTEM_DATE.slice(0, 4);
+   const hasNonCurrentYear = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)].some(match => match[0] !== currentYear);
+@@ -347,8 +345,119 @@ function sourceFor(rule: Rule, source: AuthorityPresentedSource, issueId: string
+       .some(group => sourceProves(rule, group.map(claim => claim.text).join('\n')));
+ }
+ 
+-function answerText(rule: Rule): string {
+-  return `${rule.rule} ${rule.conditions.join(' ')} ${rule.exceptions.join(' ')} For case-specific application, consider: ${rule.requiredFacts.join(' ')} ${rule.limitations.join(' ')}`;
++function answerText(rule: Rule, query: string): string {
++  const application = rule.id === 'ACRA_ENTITY_INFORMATION_UPDATE_DEADLINES'
++    ? acraForeignCompanyDeadlineApplication(query)
++    : rule.id === 'IRAS_COMPANY_TAX_RECORD_RETENTION'
++      ? irasRecordRetentionApplication(query)
++      : undefined;
++  return `${rule.rule} ${rule.conditions.join(' ')} ${rule.exceptions.join(' ')} For case-specific application, consider: ${rule.requiredFacts.join(' ')} ${rule.limitations.join(' ')}${application ? ` ${application}` : ''}`;
++}
++
++function acraForeignCompanyDeadlineApplication(query: string): string | undefined {
++  if (!/\b(?:registered in Singapore as (?:a )?foreign compan(?:y|ies)|we are (?:an? )?(?:overseas[- ]incorporated )?foreign compan(?:y|ies)|(?:our|the) compan(?:y|ies) (?:is|are) (?:an? )?foreign compan(?:y|ies))\b/i.test(query) ||
++      /\b(?:not|never|isn't|aren't|not sure|unclear|whether|maybe|possibly)\b[^.!?;]{0,60}\bforeign compan(?:y|ies)\b/i.test(query)) return undefined;
++  const dayCountPattern = String.raw`(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty[- ]one|twenty[- ]two|twenty[- ]three|twenty[- ]four|twenty[- ]five|twenty[- ]six|twenty[- ]seven|twenty[- ]eight|twenty[- ]nine|twenty|thirty)`;
++  const parseElapsedDays = (clause: string): { days: number; index: number } | undefined => {
++    const match = new RegExp(String.raw`\b${dayCountPattern}\s+days?\s+ago\b`, 'i').exec(clause);
++    if (!match) return undefined;
++    const before = clause.slice(0, match.index);
++    if (/\b(?:twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)[ -]$/i.test(before) ||
++        /\b(?:one|two|three|four|five|six|seven|eight|nine) hundred(?: and)?[ -]$/i.test(before)) return undefined;
++    const elapsed = match[1];
++    const words: Record<string, number> = {
++      one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
++      ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16,
++      seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, 'twenty-one': 21, 'twenty one': 21,
++      'twenty-two': 22, 'twenty two': 22, 'twenty-three': 23, 'twenty three': 23,
++      'twenty-four': 24, 'twenty four': 24, 'twenty-five': 25, 'twenty five': 25,
++      'twenty-six': 26, 'twenty six': 26, 'twenty-seven': 27, 'twenty seven': 27,
++      'twenty-eight': 28, 'twenty eight': 28, 'twenty-nine': 29, 'twenty nine': 29, thirty: 30
++    };
++    const days = /^\d+$/.test(elapsed) ? Number(elapsed) : words[elapsed.toLowerCase()];
++    return Number.isInteger(days) ? { days, index: match.index } : undefined;
++  };
++  const changeClause = query.split(/[.!?;]+/).find(clause =>
++    /\b(?:change\w*|updat\w*)\b/i.test(clause) &&
++    /\b(?:registered office|entity email|business email|company email|business activities|entity information|registered address|office address)\b/i.test(clause) &&
++    parseElapsedDays(clause) !== undefined);
++  if (!changeClause) return undefined;
++  const elapsed = parseElapsedDays(changeClause);
++  if (!elapsed || elapsed.days > 30) return undefined;
++  const beforeElapsed = changeClause.slice(0, elapsed.index);
++  const lastChange = [...beforeElapsed.matchAll(/\b(?:change\w*|updat\w*)\b/gi)].at(-1);
++  if (!lastChange || /\b(?:resign\w*|quit\w*|terminat\w*|dismiss\w*|paid|paying|contribut\w*|discover\w*|found|submitted|filed|joined|left)\b/i.test(beforeElapsed.slice(lastChange.index! + lastChange[0].length))) return undefined;
++  return `On the stated facts, ${elapsed.days} days is within the foreign-company 30-day period, so the company is not yet late. Notify ACRA within that period.`;
++}
++
++function irasRecordRetentionApplication(query: string): string | undefined {
++  const ya = /\b(?:YA|Year of Assessment)\s*(20\d{2})\b/i.exec(query)?.[1];
++  if (!ya) return undefined;
++  const endYear = Number(ya) + 4;
++  if (!Number.isSafeInteger(endYear) || endYear < 2000 || endYear > 9999) return undefined;
++  const disposal = /\b(?:shred|destroy|discard|dispose of)\w*\b[^.!?;\n]{0,80}?\b(\d{1,2})[/-](\d{1,2})[/-](20\d{2})\b/i.exec(query);
++  let application = `For YA ${ya}, retain the records through at least 31 December ${endYear}.`;
++  if (disposal) {
++    const day = Number(disposal[1]), month = Number(disposal[2]), year = Number(disposal[3]);
++    const proposed = new Date(Date.UTC(year, month - 1, day));
++    if (!Number.isFinite(proposed.getTime()) || proposed.getUTCFullYear() !== year || proposed.getUTCMonth() !== month - 1 || proposed.getUTCDate() !== day) return undefined;
++    const limit = new Date(Date.UTC(endYear, 11, 31));
++    if (proposed <= limit) application += ` The proposed disposal date ${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year} is before the end of that period, so do not shred the records then.`;
++  }
++  if (/\b(?:tax return|return)\b[^.!?;]{0,50}\b(?:filed|filing|submitted|completed)\b|\b(?:filed|filing|submitted|completed)\b[^.!?;]{0,50}\b(?:tax return|return)\b/i.test(query)) {
++    application += ' Filing the tax return does not end the retention period.';
++  }
++  return application;
++}
++
++function cpfRefundDateApplication(query: string): string | undefined {
++  const datePattern = String.raw`(\d{1,2}[/-]\d{1,2}[/-]20\d{2}|20\d{2}-\d{2}-\d{2}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+20\d{2})`;
++  const conditional = /\b(?:conditional wages?|conditional bonus|joining bonus|repayable (?:wages?|bonus)|bonus[^.!?;\n]{0,60}\b(?:repayable|repayment)|(?:repayable|repayment)[^.!?;\n]{0,60}\bbonus|bonus subject to repayment|wages? subject to repayment)\b/i.test(query);
++  let suppliedDate: string | undefined;
++  if (conditional) {
++    const contractualDueDate = new RegExp(String.raw`(?:\bunder (?:the )?employment terms\b[^.!?;\n]{0,100}\b(?:had|has|have|was|were) to repay\b[^.!?;\n]{0,100}\bon\s+${datePattern}|\b(?:contractual|mutually agreed|agreed) repayment due date\b[^.!?;\n]{0,40}\b(?:is|was|of|:)?\s*${datePattern}|\b(?:employment terms|employment agreement|mutual agreement)\b[^.!?;\n]{0,100}\b(?:repayment|repay\w*|wages? due to be repaid)\b[^.!?;\n]{0,60}\b(?:due on|due date (?:is|as)|on)\s+${datePattern})`, 'gi');
++    const dueDates = [...query.matchAll(contractualDueDate)].map(match => match[1] || match[2] || match[3]);
++    if (dueDates.length !== 1) return undefined;
++    suppliedDate = dueDates[0];
++  } else {
++    suppliedDate = new RegExp(String.raw`\bPAYMENTS RECEIVED ON\b\s*:?\s*${datePattern}`, 'i').exec(query)?.[1];
++  }
++  if (!suppliedDate) return undefined;
++  const suppliedIso = strictSuppliedDateIso(suppliedDate);
++  if (!suppliedIso) return undefined;
++  const resolved = defaultTargetDateResolver.resolveTargetDate(suppliedDate);
++  if (!resolved.targetDate || resolved.confidence !== 'HIGH' || resolved.targetDate !== suppliedIso) return undefined;
++  const original = new Date(`${resolved.targetDate}T00:00:00Z`);
++  if (!Number.isFinite(original.getTime()) || original.toISOString().slice(0, 10) !== resolved.targetDate ||
++      resolved.targetDate.slice(5, 7) === '02' && resolved.targetDate.slice(8, 10) === '29') return undefined;
++  const deadline = new Date(`${resolved.targetDate}T00:00:00Z`);
++  deadline.setUTCFullYear(deadline.getUTCFullYear() + 1);
++  if (!Number.isFinite(deadline.getTime())) return undefined;
++  const deadlineIso = deadline.toISOString().slice(0, 10);
++  if (new Date(`${deadlineIso}T00:00:00Z`).toISOString().slice(0, 10) !== deadlineIso) return undefined;
++  const formatDate = (iso: string): string => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
++  return conditional
++    ? `For the supplied conditional-wage repayment due date of ${formatDate(resolved.targetDate)}, the one-year outer limit is ${formatDate(deadlineIso)}.`
++    : `The payment record’s “PAYMENTS RECEIVED ON” date is ${formatDate(resolved.targetDate)}, making the one-year outer limit ${formatDate(deadlineIso)}; discovery of the error does not restart that period.`;
++}
++
++function strictSuppliedDateIso(value: string): string | undefined {
++  let year: number, month: number, day: number;
++  let match = /^(\d{1,2})[/-](\d{1,2})[/-](20\d{2})$/.exec(value);
++  if (match) [, day, month, year] = match.map(Number);
++  else if ((match = /^(20\d{2})-(\d{2})-(\d{2})$/.exec(value))) {
++    [, year, month, day] = match.map(Number);
++  } else if ((match = /^(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(20\d{2})$/i.exec(value))) {
++    const monthNumber = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
++      .indexOf(match[2].slice(0, 3).toLowerCase()) + 1;
++    day = Number(match[1]);
++    year = Number(match[3]);
++    month = monthNumber;
++  } else return undefined;
++  const date = new Date(Date.UTC(year, month - 1, day));
++  if (!Number.isFinite(date.getTime()) || date.getUTCFullYear() !== year ||
++      date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return undefined;
++  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+ }
+ 
+ /** Renders a general explanation only from exact-URL, issue-bound quotes in one verified document revision. */
+@@ -374,5 +483,8 @@ export function getStatutoryWorkflowEvidence(
+       || !stream.issues.some(candidate => candidate.id === issue.id && candidate.evidenceStatus === 'VERIFIED')) return undefined;
+   const source = stream.sources.find(candidate => sourceFor(rule, candidate, issue.id));
+   if (!source) return undefined;
+-  return { authority: rule.authority, title: source.title || rule.title, officialUrl: rule.officialUrl, text: answerText(rule) };
++  const text = answerText(rule, query);
++  const dateApplication = rule.id === 'CPF_CONTRIBUTION_REFUND_DEADLINES' ? cpfRefundDateApplication(query) : undefined;
++  return { authority: rule.authority, title: source.title || rule.title, officialUrl: rule.officialUrl,
++    text: dateApplication ? `${text} ${dateApplication}` : text };
+ }
+diff --git a/src/retrieval/targetDateResolver.ts b/src/retrieval/targetDateResolver.ts
+index 78d9f06..b53966b 100644
+--- a/src/retrieval/targetDateResolver.ts
++++ b/src/retrieval/targetDateResolver.ts
+@@ -28,6 +28,11 @@ const MONTH_MAP: Record<string, string> = {
+ 
+ const EXPLICIT_DATE_PATTERN = String.raw`(?:\d{1,2}[/-]\d{1,2}[/-]20\d{2}|20\d{2}-\d{2}-\d{2}|\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+20\d{2})`;
+ 
++/** Identifies requests for the legal version governing an earlier period. */
++export function hasHistoricalStatutoryVersionIntent(query: string): boolean {
++  return /\b(?:historical|historic|back then|at that time|at that date|at the time|then|previous law|prior law|former rule|superseded|in force|governed|effective as of|effective during|as of|as at|which law|what law|what (?:law|rules?|requirements?) applied|which (?:law|rules?|requirements?) applied|law applicable in|rules? applicable in|requirements? applicable in|rules? applied|requirements? applied|used to|what deadline did we have|which rules? did[\s\S]{0,60}\bapply|did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what (?:was|were)[^.!?;]{0,50}\b(?:law|rules?|requirements?)\b|(?:requirements?|rules?|law) (?:in|for|applicable in|applied in) (?:19|20)\d{2})\b/i.test(query);
++}
++
+ function section13wDisposalDate(query: string): string | undefined {
+   const candidates: Array<{ date: string; distance: number }> = [];
+   for (const action of query.matchAll(/\b(?:dispos\w*|sold|sale)\b/gi)) {
+@@ -86,38 +91,60 @@ export class TargetDateResolver {
+   }
+ 
+   /** Recognises fact dates only within one current compliance workflow. */
+-  private static isCurrentWorkflowFactDate(query: string, currentDate: string): boolean {
+-    if (/\b(?:historical|historic|back then|at that time|at that date|at the time|then|previous law|prior law|former rule|superseded|in force|governed|effective|as of|as at|which law|what law|rules? applied|requirements? applied|used to)\b/i.test(query)) return false;
++  private static isCurrentWorkflowFactDate(query: string): boolean {
++    if (hasHistoricalStatutoryVersionIntent(query)) return false;
+     // These distinct requests must retain their date scope even without an authority acronym.
+-    if (/\b(?:gst|goods and services tax|withholding tax|wht|public holidays?|holiday pay|overtime|sick leave|annual leave|rates?|percentages?|journal|bookkeeping|ifrs|sfrs)\b/i.test(query)) return false;
+-    const years = [...new Set([...query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => match[0]))];
++    if (/\b(?:gst|goods and services tax|withholding tax|wht|public[- ]holidays?|holiday pay|overtime|sick leave|annual leave|rates?|percentages?|journal|bookkeeping|ifrs|sfrs)\b/i.test(query)) return false;
+     const dates = [...query.matchAll(new RegExp(EXPLICIT_DATE_PATTERN, 'gi'))];
+-    if (years.length !== 1) return false;
+-    if (dates.length === 0) {
+-      return Number(years[0]) <= Number(currentDate.slice(0, 4)) &&
+-        /\b(?:ya|year of assessment)\s*20\d{2}\b/i.test(query) &&
+-        /\b(?:company|corporate|business)\b/i.test(query) &&
+-        /\b(?:records?|documents?|books|record[- ]keeping)\b/i.test(query) &&
+-        /\b(?:retain|retention|keep|keeping|discard)\b/i.test(query) &&
+-        !/\b(?:acra|cpf|mom|mas|were|was|did)\b/i.test(query);
+-    }
+-    if (dates.length !== 1 || years[0] !== currentDate.slice(0, 4) ||
+-        (query.match(/\?/g) || []).length > 1) return false;
+-    const date = EXPLICIT_DATE_PATTERN;
+-    const nearDate = (role: string): boolean => new RegExp(`${role}[^.!?;\\n]{0,75}${date}`, 'i').test(query);
++    const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)];
++    if (dates.length === 0 && years.length === 0) return false;
++    const allYearsExplained = years.every(year => {
++      const insideDate = dates.some(date => year.index! >= date.index! &&
++        year.index! < date.index! + date[0].length);
++      if (insideDate) return true;
++      const nearby = query.slice(Math.max(0, year.index! - 35), year.index! + year[0].length + 30);
++      return /\b(?:ya|year of assessment|financial year|year ended|basis period|payment|paid|repayment|repay\w*|bonus|joining|applying|discovery|found|dissolution|date of change|payroll|salary|spr|permanent resident|conversion|became|obtained|contribution year|anniversary)\b/i.test(nearby);
++    });
++    if (!allYearsExplained) return false;
++
++    // Each explicit date must have a role in the relevant workflow. This lets
++    // users supply several facts (period end, YA, dissolution, payment, or
++    // repayment due date) without allowing an unrelated date to set the law.
++    const everyDateHasRole = (roles: RegExp): boolean => dates.every(date => {
++      const before = query.slice(0, date.index!);
++      const after = query.slice(date.index! + date[0].length);
++      const sentenceStart = Math.max(before.lastIndexOf('.'), before.lastIndexOf('?'), before.lastIndexOf('!'), before.lastIndexOf(';')) + 1;
++      const nextSentenceEnds = [after.indexOf('.'), after.indexOf('?'), after.indexOf('!'), after.indexOf(';')]
++        .filter(index => index >= 0);
++      const sentenceEnd = nextSentenceEnds.length ? date.index! + date[0].length + Math.min(...nextSentenceEnds) : query.length;
++      const context = query.slice(Math.max(sentenceStart, date.index! - 55),
++        Math.min(sentenceEnd, date.index! + date[0].length + 25));
++      return roles.test(context);
++    });
++    const hasRetentionSubject = /\b(?:company|corporate|business)\b/i.test(query) &&
++      /\b(?:records?|documents?|books|invoices?|record[- ]keeping|record retention)\b/i.test(query) &&
++      /\b(?:retain|retention|keep|keeping|shred|destroy|discard|dissolv\w*|struck off|wound up|how long)\b/i.test(query);
++    const hasRetentionWorkflowDates = hasRetentionSubject &&
++      everyDateHasRole(/\b(?:year ended|accounts? for|ya\s*20\d{2}|year of assessment|dissolv\w*|struck off|wound up|shred\w*|destroy\w*|discard\w*|retain\w*|keep\w*)\b/i);
+     const entityChange = /\b(?:acra|registered office|entity email|entity information|entity details)\b/i.test(query) &&
+-      nearDate(String.raw`\b(?:changed|updated|change occurred|date of (?:the )?change)\b`) &&
++      everyDateHasRole(/\b(?:changed|updated|change occurred|date of (?:the )?change|fil(?:e|ed|ing)|annual return)\b/i) &&
+       !/\b(?:cpf|mom|mas|income tax|employment act|fund management)\b/i.test(query);
+-    const cpfRefund = /\b(?:cpf|central provident fund)\b/i.test(query) && /\brefund\w*\b/i.test(query) &&
+-      nearDate(String.raw`\b(?:paid|payment|payments received on|repayment|wages? repayable)\b`) &&
++    const cpfRefund = /\b(?:cpf|central provident fund)\b/i.test(query) &&
++      /\b(?:refund\w*|overpaid|overpayment|mistaken|wrongly paid|money back|recover\w*)\b/i.test(query) &&
++      everyDateHasRole(/\b(?:paid|payment|payments received on|repayment|repay\w*|wages? repayable|discover\w*|found|mistake|error|conditional wages?)\b/i) &&
+       !/\b(?:acra|mom|mas|income tax|employment act|fund management)\b/i.test(query);
+     const payslip = /\b(?:itemi[sz]ed pay ?slips?|pay ?slips?)\b/i.test(query) &&
+-      nearDate(String.raw`\b(?:payment|paid|termination|dismissal|salary payment)\b`) &&
++      everyDateHasRole(/\b(?:payment|paid|termination|dismissal|salary payment|pay period|salary period)\b/i) &&
+       !/\b(?:acra|cpf|mas|income tax|fund management)\b/i.test(query);
+     const appointment = /\b(?:lfmc|licensed fund management company)\b/i.test(query) &&
+-      nearDate(String.raw`\b(?:appoint\w*|ceo|chief executive|director)\b`) &&
++      everyDateHasRole(/\b(?:appoint\w*|ceo|chief executive|director|executive|non.executive|role change)\b/i) &&
+       !/\b(?:acra|cpf|mom|income tax|employment act)\b/i.test(query);
+-    return entityChange || cpfRefund || payslip || appointment;
++    const prYearTiming = /\b(?:permanent resident|spr|pr)\b/i.test(query) &&
++      /\b(?:first|second|third|1st|2nd|3rd)\s+(?:pr\s+)?(?:cpf\s+)?contribution year\b/i.test(query) &&
++      /\b(?:when|what date|what day|move into|transition into|begin|start)\b/i.test(query) &&
++      dates.length > 0 && everyDateHasRole(/\b(?:obtained|became|conversion|converted|granted|anniversary|contribution year)\b/i);
++    const irasRecords = hasRetentionWorkflowDates && !/\b(?:gst|cpf|mom|mas|acra|employment act|fund management)\b/i.test(query);
++    return irasRecords || entityChange || cpfRefund || payslip || appointment || prYearTiming;
+   }
+ 
+   /** Resolves dates for statutory evidence separately from accounting transaction dates. */
+@@ -130,7 +157,7 @@ export class TargetDateResolver {
+     const versionContext = /\b(?:historical|historic|previous|prior|past|former|superseded|effective date|effective during|which law|which rules?|applicable law|year of assessment|\bya\s*20\d{2}|basis period|payroll year|rate table|legal|statutory|in force|governed|law|rules? applied|rate)\b/i.test(query);
+     const otherAuthorityOrDomain = /\b(?:gst|goods and services tax|cpf|central provident fund|mom|ministry of manpower|acra|mas|monetary authority|income tax|corporate tax|tax relief|accounting|journal|balance sheet|ifrs|sfrs\s*\(?i\)?)\b/i.test(query);
+     const unresolved = (): TargetDateResolution => ({ confidence: 'LOW', source: 'NONE', isHistorical: false });
+-    if (TargetDateResolver.isCurrentWorkflowFactDate(query, currentDate)) return { ...unresolved(), dateRole: 'CURRENT_WORKFLOW_FACT' };
++    if (TargetDateResolver.isCurrentWorkflowFactDate(query)) return { ...unresolved(), dateRole: 'CURRENT_WORKFLOW_FACT' };
+ 
+     const asksWhtDeadline = /\b(?:wht|withholding tax)\b/i.test(query) &&
+       /\b(?:filing|due date|deadline|when\b[^.!?;\n]{0,65}\b(?:file|filed|paid))\b/i.test(query) &&
+diff --git a/src/services/authorityEvidenceResponse.ts b/src/services/authorityEvidenceResponse.ts
+index ac82825..7da4113 100644
+--- a/src/services/authorityEvidenceResponse.ts
++++ b/src/services/authorityEvidenceResponse.ts
+@@ -26,10 +26,10 @@ function practicalRuleForIssue(
+   stream: AuthorityPresentedWorkstream,
+   issue: AuthorityEvidencePresentation['workstreams'][number]['issues'][number]
+ ) {
+-  return getAcraMomKnowledgeEvidence(query, stream, issue) ||
++  return getStatutoryWorkflowEvidence(query, stream, issue) ||
++    getAcraMomKnowledgeEvidence(query, stream, issue) ||
+     getIrasMasKnowledgeEvidence(query, stream, issue) ||
+     getCpfPayrollKnowledgeEvidence(query, stream, issue) ||
+-    getStatutoryWorkflowEvidence(query, stream, issue) ||
+     getAcraMomPracticalEvidence(query, stream, issue) ||
+     getIrasCpfMasPracticalEvidence(query, stream, issue) ||
+     getIrasCpfExpansionEvidence(query, stream, issue) ||
+@@ -59,7 +59,17 @@ export function renderAuthorityEvidenceResponseText(
+     issues.some(({ practicalRule, momSalaryRule }) => Boolean(practicalRule || momSalaryRule)));
+   const generalGuidancePrefix = hasVerifiedGeneralGuidance && presentation.status !== 'VERIFIED'
+     ? 'Verified general guidance is available. ' : '';
+-  const overall = presentation.status === 'INSUFFICIENT'
++  // A missing whole-request assessment is distinct from a missing source
++  // premise. This changes presentation only; it never upgrades evidence status.
++  const allListedGuidanceSupported = issueExplanations.length > 0 &&
++    issueExplanations.every(({ stream, issues }) => stream.evidenceStatus === 'VERIFIED' &&
++      stream.gaps.length === 0 && issues.length > 0 && issues.every(({ issue, practicalRule, momSalaryRule }) =>
++        issue.evidenceStatus === 'VERIFIED' && issue.gaps.length === 0 && Boolean(practicalRule || momSalaryRule)));
++  const onlyCoverageAssessmentMissing = !requestComplete && allListedGuidanceSupported &&
++    presentation.gaps.every(gap => gap === 'Issue plan: The reconciled issue plan does not establish coverage of the complete question.');
++  const overall = onlyCoverageAssessmentMissing
++    ? `${generalGuidancePrefix}Evidence verified for mapped issues; full request coverage unconfirmed${presentation.applicationStatus === 'UNRESOLVED' ? ', and application to the case remains unresolved.' : '.'}`
++    : presentation.status === 'INSUFFICIENT'
+     ? `${generalGuidancePrefix}Evidence is incomplete for one or more material issues.`
+     : !requestComplete && evidenceVerified
+       ? `${generalGuidancePrefix}Evidence verified for mapped issues; full request coverage unconfirmed${presentation.applicationStatus === 'UNRESOLVED' ? ', and application to the case remains unresolved' : '.'}`
+@@ -70,15 +80,23 @@ export function renderAuthorityEvidenceResponseText(
+     '### Statutory Compliance & Legal Authority',
+     '',
+     `**Whole-question status:** ${overall}`,
++    ...(hasVerifiedGeneralGuidance ? [
++      '',
++      `**General statutory guidance:** ${allListedGuidanceSupported ? 'Verified for all listed issues.' : 'Verified for the issues identified below; other issues remain incomplete.'}`,
++      `**Individual applicability:** ${presentation.applicationStatus === 'UNRESOLVED' ? 'Additional case facts or checks are required; see the issue-level limitations.' : 'General guidance does not by itself establish eligibility or compliance in an individual case.'}`,
++      `**Material evidence gaps:** ${onlyCoverageAssessmentMissing ? 'None identified within the listed guidance. Full request coverage still requires an independent assessment.' : 'See the evidence gaps and coverage limitations below.'}`
++    ] : []),
+     ...(hasBalancedJournal ? ['', 'The deterministic journal remains available in the Double Entry Journal tab.'] : [])
+   ];
+ 
+   const requestedYears = [...new Set([...presentation.query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => match[0]))]
+     .filter(year => year !== TargetDateResolver.CURRENT_SYSTEM_DATE.slice(0, 4));
+-  if (requestedYears.length > 0 && presentation.workstreams.length > 0 &&
++  const dateScope = new TargetDateResolver().resolveAuthorityEvidenceDate(presentation.query);
++  if (requestedYears.length > 0 && dateScope.dateRole !== 'CURRENT_WORKFLOW_FACT' && presentation.workstreams.length > 0 &&
+       presentation.workstreams.every(stream => stream.evidenceStatus === 'INSUFFICIENT')) {
+     lines.push('', `**Applicability limitation:** The available evidence does not establish the requested rule for ${requestedYears.join(', ')}. An official source whose legal applicability covers that period is needed. A current page, its retrieval date, or a document's original issue date alone cannot establish the requirements for an earlier or later period.`);
+-    if (presentation.workstreams.some(stream => stream.authority === 'CPF')) {
++    if (presentation.workstreams.some(stream => stream.authority === 'CPF') &&
++        /\b(?:rates?|percentage|calculate|computation|how much|contribution table)\b/i.test(presentation.query)) {
+       lines.push('A CPF amount would also require the contribution table applicable to that payroll period, citizenship or PR status and year, age, and relevant wages.');
+     }
+     if (presentation.workstreams.some(stream => stream.authority === 'ACRA')) {
+diff --git a/src/services/groundingContextBuilder.ts b/src/services/groundingContextBuilder.ts
+index 06bb07b..dd7d4ee 100644
+--- a/src/services/groundingContextBuilder.ts
++++ b/src/services/groundingContextBuilder.ts
+@@ -89,6 +89,7 @@ const APPROVED_ACCOUNTING_DISCOVERY_HOSTS = ['ifrs.org', 'www.ifrs.org', 'asc.ac
+ const APPROVED_IRAS_DISCOVERY_HOSTS = ['www.iras.gov.sg', 'iras.gov.sg', 'sso.agc.gov.sg'] as const;
+ const IRAS_GST_BASICS_EXEMPT_RULE = IRAS_CPF_MAS_PRACTICAL_RULES_20261027.find(rule => rule.id === 'IRAS_GST_EXEMPT');
+ const PRACTICAL_COVERAGE_CONTENT_ANCHORS: Readonly<Record<string, readonly string[]>> = {
++  'MAS:mas-lfmc': ['not exhaustive', 'outside the SFA', 'fund-level requirements'],
+   'IRAS:iras-gst-filing-deadlines': ['Your GST return and payment are due'],
+   'ACRA:acra-annual-return-officer-particulars': ['Companies filing annual returns will need to confirm'],
+   'IRAS:iras-wht-filing-payment-due-date': ['file and pay WHT', '15th of the second month'],
+diff --git a/src/services/semanticQuestionUnderstanding.ts b/src/services/semanticQuestionUnderstanding.ts
+index 7c3281d..b3cdcdc 100644
+--- a/src/services/semanticQuestionUnderstanding.ts
++++ b/src/services/semanticQuestionUnderstanding.ts
+@@ -2799,10 +2799,14 @@ function refineTaxonomyRuleIntent(
+ ): SemanticQuestionIssue & { contextualTopicIds?: string[] } {
+   const topicIds = new Set(issue.mappedTopicIds);
+   const text = query.toLowerCase().replace(/[-_]/g, ' ');
++  const boundedPublicHolidayRestDayComparison = topicIds.has('mom-public-holidays') &&
++    /\bpublic holidays?\b/i.test(text) &&
++    /\bnon working day\b/i.test(text) && /\b(?:contractual )?rest day\b/i.test(text) &&
++    /\b(?:falls?|difference|rather than|versus|compared)\b/i.test(text);
+   // Contextualization is a demotion: only do it when the query has one clear
+   // request. If another sentence, question, or coordinated instruction may
+   // independently ask about a topic, keep that topic mapped as requested.
+-  const mayDemoteToContext = !hasIndependentSemanticClause(query);
++  const mayDemoteToContext = !hasIndependentSemanticClause(query) || boundedPublicHolidayRestDayComparison;
+   const asksForAmount = /\b(?:calculate|compute|work\s+out|estimate|how much (?:cpf|tax|salary|wht|gst|money|will|do|does|would|should)|what amount (?:is|are|do|does|would|will))\b/i.test(query);
+   if (asksForAmount || /\b(?:prepare|post|journal entry|calculate my|calculate our)\b/i.test(query)) return issue;
+ 
+@@ -2837,25 +2841,33 @@ function refineTaxonomyRuleIntent(
+   };
+ 
+   if (issue.domain === 'CPF_PAYROLL') {
+-    const asksEmployerCpfRefund = topicIds.has('cpf-adjustments-refunds') &&
+-      /\b(?:cpf|central provident fund)\b/i.test(text) &&
+-      /\b(?:refund\w*|overpaid|excess contribution|wrongly paid|paid in error)\b/i.test(text) &&
+-      /\b(?:employer|payroll|company|business|our employee|we paid)\b/i.test(text) &&
+-      !/\b(?:individual|member|my own|my personal)\b/i.test(text);
++    const asksEmployerCpfRefund = topicIds.has('cpf-adjustments-refunds') && isCpfEmployerRefundContext(text);
+     if (asksEmployerCpfRefund) {
+       const asksSeparateRatesOrCalculation = /\b(?:rates?|percentages?|calculate|compute|contribution table|how much contribution)\b/i.test(text);
++      const incidentalRefundTopics = isCpfEmployerRefundContext(text) ? [
++        ...(!explicitlyAsksCpfWageClassification(text)
++          ? ['cpf-additional-wages', 'cpf-additional-wage-ceiling', 'cpf-bonus-backpay'] : []),
++        ...(!/\b(?:iras|income tax|taxable|tax treatment|tax reporting|tax relief)\b/i.test(text)
++          ? ['iras-individual-cpf-relief'] : [])
++      ] : [];
+       const asksSeparateContributionPayment = /\b(?:when|deadline|due date)\b[^?!;]{0,65}\b(?:pay|submit|remit)\b[^?!;]{0,35}\b(?:cpf|contributions?)\b/i.test(query) ||
+         query.split(/[.!?;]|\b(?:and|or|also|plus|additionally)\b/i).some(clause =>
+           !/\brefund\w*\b/i.test(clause) && /\bcontributions?\b[^?!;]{0,55}\b(?:due|payable)\b/i.test(clause));
+       const refundIssue = makeRuleIssue('CPF employer refund timing and application requirements', 'EMPLOYER',
+         asksSeparateRatesOrCalculation ? [] : ['cpf_contribution_rates', 'cpf-contribution-computation']);
++      const asksExplicitTaxQuestion = /\b(?:iras|income tax|taxable|tax treatment|tax reporting|tax withholding)\b/i.test(text);
++      const incidentalBonusTaxTopic = /\b(?:bonus|joining bonus|conditional wage)\b/i.test(text) && !asksExplicitTaxQuestion
++        ? ['iras-employee-bonus-timing'] : [];
+       if (!asksSeparateRatesOrCalculation) return {
+         ...refundIssue,
+         mappedTopicIds: refundIssue.mappedTopicIds.filter(topicId =>
+           !['cpf_contribution_rates', 'cpf-contribution-computation'].includes(topicId) &&
++          !incidentalRefundTopics.includes(topicId) &&
++          !incidentalBonusTaxTopic.includes(topicId) &&
+           (topicId !== 'cpf-contribution-due-dates' || asksSeparateContributionPayment)),
+         contextualTopicIds: [...new Set([...(refundIssue.contextualTopicIds || []),
+-          ...['cpf_contribution_rates', 'cpf-contribution-computation'].filter(topicId => topicIds.has(topicId))])]
++          ...['cpf_contribution_rates', 'cpf-contribution-computation', ...incidentalRefundTopics,
++            ...incidentalBonusTaxTopic].filter(topicId => topicIds.has(topicId))])]
+       };
+       return refundIssue;
+     }
+@@ -2906,7 +2918,8 @@ function refineTaxonomyRuleIntent(
+     if (asksAgeRate && (topicIds.has('cpf_contribution_rates') || topicIds.has('cpf-contribution-computation')) &&
+         /\b(?:age|birthday|percentages?|rates?|rate band|contribution table)\b/i.test(text)) {
+       const population: SemanticPopulation = /\bemployer\b/i.test(text) ? 'EMPLOYER'
+-        : /\b(?:employee|worker|staff member)\b/i.test(text) ? 'EMPLOYEE' : 'UNKNOWN';
++        : /\b(?:employee|worker|staff member)\b/i.test(text) ? 'EMPLOYEE'
++          : /\b(?:on|within) (?:our|the) payroll\b/i.test(text) ? 'EMPLOYER' : 'UNKNOWN';
+       if (population !== 'UNKNOWN') return makeRuleIssue('CPF contribution rates by age group', population);
+     }
+ 
+@@ -2994,9 +3007,16 @@ function refineTaxonomyRuleIntent(
+       return makeRuleIssue('Final salary payment deadlines by termination reason', population);
+     }
+     if (population !== 'UNKNOWN' && topicIds.has('mom-public-holidays') &&
+-        /\bpublic holidays?\b/i.test(text) &&
+-        /\b(?:pay|entitle\w*|non.work\w*|rest day|day off|absence|work\w* on)\b/i.test(text)) {
+-      return makeRuleIssue('Public holiday entitlement and pay', population);
++        /\bpublic[- ]holidays?\b/i.test(text) &&
++        /\b(?:pay|entitle\w*|non.work\w*|day off|absence|work\w* on|falls?|difference|compar\w*|treatment|eligib\w*)\b/i.test(text)) {
++      const asksRestDayWork = /\b(?:work|working|worked)\s+on\s+(?:the\s+)?(?:contractual\s+)?rest[- ]day\b|\brest[- ]day(?:\s+(?:work|working|pay|payment|compensation))\b|\b(?:swap|exchange)\b[^.!?;]{0,50}\brest[- ]day\b/i.test(text);
++      const asksOvertimeRule = /\b(?:overtime|extra hours|hours worked beyond|overtime limit)\b/i.test(text);
++      const contextualHolidayTopics = [
++        ...(topicIds.has('mom-rest-days') && !asksRestDayWork ? ['mom-rest-days'] : []),
++        ...(topicIds.has('mom_overtime') && !asksOvertimeRule ? ['mom_overtime'] : []),
++        ...(topicIds.has('mom-part-iv-overtime') && !asksOvertimeRule ? ['mom-part-iv-overtime'] : [])
++      ];
++      return makeRuleIssue('Public holiday entitlement and pay', population, contextualHolidayTopics);
+     }
+   }
+ 
+@@ -3052,11 +3072,15 @@ function refineTaxonomyRuleIntent(
+   }
+ 
+   if (issue.domain === 'MAS_FUNDS') {
++    const describesLfmcDirectorRoleTransition = /\bdirector\b/i.test(text) &&
++      /\bexecutive\b/i.test(text) && /\bnon[- ]executive\b/i.test(text) &&
++      /\b(?:take|takes|taking|move|moves|moving|change|changes|changing|become|becomes|becoming)\b/i.test(text);
+     const asksLfmcInitialAppointmentRule = topicIds.has('mas-lfmc-key-appointments') &&
+       /\b(?:lfmc|licensed fund management company|licensed fund manager)\b/i.test(text) &&
+       /\b(?:appoint\w*|appointment|form 11|prior approval)\b/i.test(text) &&
+       /\b(?:ceo|chief executive|director)\b/i.test(text) &&
+-      !/\b(?:vcfm|venture capital fund manager|row\s*17|resign\w*|resignation|change(?:d)?(?:\s+(?:of|in))?\s+particulars?|updated? particulars?|executive to non.executive)\b/i.test(text);
++      !describesLfmcDirectorRoleTransition &&
++      !/\b(?:vcfm|venture capital fund manager|row\s*17|resign\w*|resignation|change(?:d)?(?:\s+(?:of|in))?\s+particulars?|updated? particulars?|executive to non.executive|non[- ]executive director.{0,100}executive role|executive director.{0,100}non[- ]executive role)\b/i.test(text);
+     if (asksLfmcInitialAppointmentRule) {
+       const asksSeparateLicensingQuestion = hasSeparateMasLfmcLicensingAsk(query);
+       const appointmentIssue = makeRuleIssue('MAS LFMC CEO and Director appointment approval', 'COMPANY',
+@@ -3069,6 +3093,22 @@ function refineTaxonomyRuleIntent(
+       };
+       return appointmentIssue;
+     }
++
++    const asksLfmcDirectorRoleChange = topicIds.has('mas-lfmc-key-appointments') &&
++      /\b(?:lfmc|licensed fund management company|licensed fund manager)\b/i.test(text) &&
++      describesLfmcDirectorRoleTransition;
++    if (asksLfmcDirectorRoleChange) {
++      const asksSeparateLicensingQuestion = hasSeparateMasLfmcLicensingAsk(query);
++      const roleChangeIssue = makeRuleIssue('MAS LFMC Director Executive and Non-Executive role changes', 'COMPANY',
++        asksSeparateLicensingQuestion ? [] : ['mas-lfmc']);
++      if (!asksSeparateLicensingQuestion) return {
++        ...roleChangeIssue,
++        mappedTopicIds: roleChangeIssue.mappedTopicIds.filter(topicId => topicId !== 'mas-lfmc'),
++        contextualTopicIds: [...new Set([...(roleChangeIssue.contextualTopicIds || []),
++          ...issue.mappedTopicIds.filter(topicId => topicId === 'mas-lfmc')])]
++      };
++      return roleChangeIssue;
++    }
+   }
+ 
+   if (issue.domain === 'IRAS_INCOME_TAX' && topicIds.has('iras-company-record-retention') &&
+@@ -3096,7 +3136,7 @@ function refineTaxonomyRuleIntent(
+   const explicitBusinessScope = /\b(?:company|business|employer|our|we paid|we use|gst.registered business)\b/i.test(text);
+   if (issue.domain === 'IRAS_GST' &&
+       [...topicIds].some(id => ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(id)) &&
+-      /\b(?:motor cars?|passenger cars?|company cars?)\b/i.test(text) &&
++      /\b(?:motor cars?|passenger cars?|company cars?|subsidiar(?:y|ies)['’]?s? (?:motor )?cars?)\b/i.test(text) &&
+       /\b(?:gst|input tax|input gst)\b/i.test(text) && explicitBusinessScope) {
+     return makeRuleIssue('GST input tax on business motor cars', 'COMPANY');
+   }
+@@ -3182,13 +3222,36 @@ function refineTaxonomyRuleIntent(
+   return issue;
+ }
+ 
++function isCpfEmployerRefundContext(query: string): boolean {
++  const employerApplicantContext = /\b(?:we (?:paid|found|submitted|contributed|are applying|applied)|our (?:company|business|payroll|employee|employees|staff|payment|contribution|money back)|(?:an?|the) employer\b[^.!?;\n]{0,100}\b(?:paid|contributed|overpaid|submitted|appl\w*|request\w*|refund\w*)\b)\b/i.test(query);
++  const individualEmployeeVoice = /\b(?:my employer|to my employer|my (?:own |joining )?(?:bonus|wages?|cpf)|i (?:have|had|need|must|want|would) to repay)\b/i.test(query);
++  return /\b(?:cpf|central provident fund)\b/i.test(query) &&
++    /\b(?:refund\w*|overpaid|overpayment|excess (?:cpf )?contributions?|wrongly paid|mistaken (?:cpf )?contributions?|paid in error|recover\w*|money back)\b/i.test(query) &&
++    employerApplicantContext && !individualEmployeeVoice &&
++    !/\b(?:individual|member|my own|my personal)\b/i.test(query);
++}
++
++function explicitlyAsksCpfWageClassification(query: string): boolean {
++  return /\b(?:additional wages?|ordinary wages?|aw ceiling|ow ceiling|classif(?:y|ication)|which wage category|is .{0,40} a (?:ordinary|additional) wage|cpf rate on .{0,30}bonus)\b/i.test(query);
++}
++
+ function independentlyRecognizedTopics(query: string, classification: QuestionClassificationResult) {
+   const decomposition = defaultQueryTopicResolver.decomposeQuery(query);
+   const candidateIds = [...new Set([...decomposition.topics.map(topic => topic.id), ...classification.topicIds])];
++  const cpfRefundContext = isCpfEmployerRefundContext(query);
++  const incidentalCpfRefundTopics = cpfRefundContext
++    ? new Set([
++      ...(!explicitlyAsksCpfWageClassification(query)
++        ? ['cpf-additional-wages', 'cpf-additional-wage-ceiling', 'cpf-bonus-backpay'] : []),
++      ...(!/\b(?:iras|income tax|taxable|tax treatment|tax reporting|tax relief)\b/i.test(query)
++        ? ['iras-individual-cpf-relief'] : [])
++    ])
++    : new Set<string>();
+   const topics = defaultQueryTopicResolver.resolveTopicIds(candidateIds).filter(topic =>
+-    topic.domainId.startsWith('ACCOUNTING_') || topic.domainId.startsWith('IRAS_') ||
+-    topic.domainId.startsWith('CPF_') || topic.domainId.startsWith('MOM_') ||
+-    topic.domainId.startsWith('ACRA_') || topic.domainId.startsWith('MAS_'));
++    !incidentalCpfRefundTopics.has(topic.id) &&
++    (topic.domainId.startsWith('ACCOUNTING_') || topic.domainId.startsWith('IRAS_') ||
++      topic.domainId.startsWith('CPF_') || topic.domainId.startsWith('MOM_') ||
++      topic.domainId.startsWith('ACRA_') || topic.domainId.startsWith('MAS_')));
+   return {
+     topics,
+     rawTopicIds: [...new Set(decomposition.topics.map(topic => topic.id))],
+diff --git a/src/standards/coverageRegistry.ts b/src/standards/coverageRegistry.ts
+index 3e129ae..59c7fdb 100644
+--- a/src/standards/coverageRegistry.ts
++++ b/src/standards/coverageRegistry.ts
+@@ -648,7 +648,7 @@ const topicSpecs: TopicSpec[] = [
+   { id: 'mom-salary-payment', title: 'Salary Periods, Payment and Deductions', domainId: 'MOM_EMPLOYMENT', priority: 'P1', keywords: ['salary payment', 'salary period', 'salary deduction', 'salary deductions', 'deduct salary', 'when must salary be paid', 'final salary', 'salary on resignation', 'salary on dismissal', 'salary payment deadline', 'unauthorised salary deductions'], queryPatterns: [String.raw`\b(?:salary|wages)\b[\s\S]{0,100}\b(?:frequency|payment deadline|pay period|salary period)\b`, String.raw`\b(?:normal|regular|monthly)\s+(?:wages?|pay)\b[\s\S]{0,120}\b(?:period|paid|pay|deadline|after)\b`, String.raw`\bhow often\b[\s\S]{0,80}\b(?:employer|employers)\b[\s\S]{0,80}\bpay\b[\s\S]{0,40}\bsalar(?:y|ies)\b`, String.raw`\bsalar(?:y|ies)\b[\s\S]{0,80}\bpaid\b[\s\S]{0,100}\b(?:resign\w*|terminat\w*|dismiss\w*|without notice)\b`, String.raw`\b(?:final|last)\s+salar(?:y|ies)\b[\s\S]{0,120}\b(?:resign\w*|terminat\w*|dismiss\w*|notice)\b`, String.raw`\b(?:resign\w*|terminat\w*|dismiss\w*|notice)\b[\s\S]{0,120}\b(?:final|last)\s+salar(?:y|ies)\b`, String.raw`\bsalar(?:y|ies)\b[\s\S]{0,80}\b(?:deduct\w*|deduction\w*)\b[\s\S]{0,80}\b(?:shortage|damag\w*|lawful|permitted)\b`, String.raw`\b(?:deduct\w*|deduction\w*)\b[\s\S]{0,80}\bsalar(?:y|ies)\b[\s\S]{0,80}\b(?:shortage|damag\w*|lawful|permitted)\b`, String.raw`\b(?:employer|employers)\b[\s\S]{0,80}\bdeduct\w*\b[\s\S]{0,80}\b(?:shortage|damag\w*|loss)\b[\s\S]{0,80}\bsalar(?:y|ies)\b`, String.raw`\b(?:employee|staff)\b[\s\S]{0,80}\b(?:damag\w*|shortage|loss)\b[\s\S]{0,80}\b(?:payroll|deduct\w*)\b`] },
+   { id: 'mom-itemised-payslips', title: 'Itemised Payslip Requirements', domainId: 'MOM_EMPLOYMENT', priority: 'P1', status: 'IMPLEMENTING', pageTitle: "Itemised pay slips", requiredContentTerms: ["three working days"], keywords: ['itemised payslip requirements', 'itemized pay slip deadline', 'when to issue payslips'], queryPatterns: [String.raw`(?=[\s\S]*\b(?:itemi[sz]ed (?:pay ?slips?|statements?)|pay ?slips?|payslips?)\b)(?=[\s\S]*\b(?:when|within|issue|give|provide|receive|payment|termination|dismissal|working days)\b)`] },
+   { id: 'mom-rest-days', title: 'Rest Days and Rest-day Pay', domainId: 'MOM_EMPLOYMENT', priority: 'P1', keywords: ['rest day', 'rest-day pay', 'work on rest day'] },
+-  { id: 'mom-public-holidays', title: 'Public Holiday Entitlements and Pay', domainId: 'MOM_EMPLOYMENT', priority: 'P1', keywords: ['public holiday pay', 'public holiday entitlement', 'work on public holiday'] },
++  { id: 'mom-public-holidays', title: 'Public Holiday Entitlements and Pay', domainId: 'MOM_EMPLOYMENT', priority: 'P1', keywords: ['public holiday pay', 'public holiday entitlement', 'work on public holiday'], queryPatterns: [String.raw`^(?![\s\S]*\b(?:swap|exchange)\b[^.!?;]{0,80}\brest[- ]day\b[^.!?;]{0,80}\bwithout\s+(?:a\s+)?public[- ]holiday\b)(?=[\s\S]*\bpublic[- ]holidays?\b)(?=[\s\S]*\b(?:pay|entitle\w*|non.work\w*|day off|absence|work\w* on|falls?|difference|compar[a-z]*|treatment|eligib[a-z]*)\b)`] },
+   { id: 'mom-leave-entitlements', title: 'Employment Leave Entitlements', domainId: 'MOM_EMPLOYMENT', priority: 'P1', keywords: ['leave entitlement', 'annual leave progression', 'sick leave entitlement', 'hospitalisation leave', 'annual leave eligibility', 'unused annual leave on termination'], exclusionKeywords: ['annual leave', 'sick leave', 'hospitalisation leave'] },
+   { id: 'mom-maternity-leave', title: 'Maternity Leave', domainId: 'MOM_EMPLOYMENT', priority: 'P1', keywords: ['maternity leave', 'maternity benefit'] },
+   { id: 'mom-paternity-leave', title: 'Paternity Leave', domainId: 'MOM_EMPLOYMENT', priority: 'P1', keywords: ['paternity leave', 'government-paid paternity leave'] },
+@@ -676,7 +676,7 @@ const topicSpecs: TopicSpec[] = [
+   { id: 'cpf-contribution-due-dates', title: 'CPF Contribution Due Dates and Late Payment', domainId: 'CPF_CONTRIBUTIONS', priority: 'P1', keywords: ['cpf due date', 'late cpf payment', 'cpf payment deadline', 'when to pay cpf contributions', 'cpf payment due by the 14th'], queryPatterns: [String.raw`\bcpf\b[\s\S]{0,80}\b(?:contributions?|payment|remittance)\b[\s\S]{0,60}\b(?:due|deadline|remit|pay)\b`, String.raw`\b(?:deadline|remittance|due date)\b[\s\S]{0,80}\bcpf\b[\s\S]{0,50}\b(?:contributions?|payment|remit)\b`, String.raw`\b(?:when|by which date|by what date)\b[\s\S]{0,80}\b(?:employer|employers)\b[\s\S]{0,80}\b(?:pay|settle|remit)\b[\s\S]{0,50}\b(?:monthly\s+)?cpf\b`] },
+   { id: 'cpf-employee-coverage', title: 'CPF Employee Coverage and Exemptions', domainId: 'CPF_CONTRIBUTIONS', priority: 'P1', keywords: ['cpf employee coverage', 'who should receive cpf', 'who is covered by cpf', 'foreigner cpf', 'part-time cpf', 'cpf employment pass'], queryPatterns: [String.raw`(?=[\s\S]*\bcpf\b)(?=[\s\S]*\b(?:employee coverage|foreign employees?|employment pass|part.time|singaporean staff|who should receive|who is covered|coverage.*(?:citizen|resident)|(?:citizen|resident).*coverage)\b)`] },
+   { id: 'cpf-contribution-computation', title: 'CPF Contribution Computation and Low-wage Shares', domainId: 'CPF_CONTRIBUTIONS', priority: 'P1', keywords: ['cpf contribution computation', 'cpf contribution factors', 'cpf low-wage shares', 'low-wage employer and employee contribution shares', 'employee cpf deduction'], queryPatterns: [String.raw`(?=[\s\S]*\b(?:cpf|contributions?)\b)(?=[\s\S]*\b(?:low[- ]wage|employee.*(?:share|deduction)|(?:compute|computed|computation|rounding).*contributions?)\b)`] },
+-  { id: 'cpf-adjustments-refunds', title: 'CPF Adjustments and Refunds', domainId: 'CPF_CONTRIBUTIONS', priority: 'P2', pageTitle: "Applying for refund of CPF contributions", requiredContentTerms: ["refund of CPF contributions"], keywords: ['cpf contribution adjustment', 'cpf refund', 'refund cpf contribution'], queryPatterns: [String.raw`(?=[\s\S]*\b(?:cpf|central provident fund)\b)(?=[\s\S]*\b(?:refund\w*|overpaid|excess|wrongly paid|paid in error)\b)(?=[\s\S]*\b(?:employer|payroll|employee|contributions?)\b)`] },
++  { id: 'cpf-adjustments-refunds', title: 'CPF Adjustments and Refunds', domainId: 'CPF_CONTRIBUTIONS', priority: 'P2', pageTitle: "Applying for refund of CPF contributions", requiredContentTerms: ["refund of CPF contributions"], keywords: ['cpf contribution adjustment', 'cpf refund', 'refund cpf contribution', 'cpf mistaken contribution recovery', 'request cpf money back'], queryPatterns: [String.raw`(?=[\s\S]*\b(?:cpf|central provident fund)\b)(?=[\s\S]*\b(?:refund\w*|overpaid|overpayment|excess(?:\s+cpf)?\s+contributions?|wrongly paid|paid in error|mistaken(?:\s+cpf)?\s+contributions?|recover\w*|money back|ask for (?:our )?money back)\b)(?=[\s\S]*\b(?:employer|payroll|employee|contributions?|we|our)\b)`] },
+   { id: 'cpf-bonus-backpay', title: 'CPF Treatment of Bonus and Back-pay', domainId: 'CPF_CONTRIBUTIONS', priority: 'P1', keywords: ['bonus cpf', 'back-pay cpf', 'backpay cpf', 'cpf on bonus', 'cpf contributions for annual bonus'], queryPatterns: [String.raw`\b(?:annual|performance)\s+bonus(?:es)?\b[\s\S]{0,80}\b(?:aw|additional wages?)\b[\s\S]{0,50}\b(?:ow|ordinary wages?)\b`, String.raw`\b(?:aw|additional wages?)\b[\s\S]{0,80}\b(?:ow|ordinary wages?)\b[\s\S]{0,80}\b(?:annual|performance)\s+bonus(?:es)?\b`, String.raw`\b(?:annual|performance)?\s*bonus(?:es)?\b[\s\S]{0,100}\b(?:cpf|central provident fund)\b|\b(?:cpf|central provident fund)\b[\s\S]{0,100}\b(?:annual|performance)?\s*bonus(?:es)?\b`] },
+   { id: 'cpf-notice-pay-leave-encashment', title: 'CPF on Notice Pay and Leave Encashment', domainId: 'CPF_CONTRIBUTIONS', priority: 'P2', keywords: ['cpf notice pay', 'cpf leave encashment', 'cpf salary in lieu'] },
+   { id: 'cpf-allowances', title: 'CPF Treatment of Allowances', domainId: 'CPF_CONTRIBUTIONS', priority: 'P2', keywords: ['cpf on allowance', 'allowances cpf', 'cpf contributions allowances'] },
+@@ -691,7 +691,7 @@ const topicSpecs: TopicSpec[] = [
+   { id: 'mas-fund-management-licensing-admission-criteria', title: 'MAS Fund Management Licensing Admission Criteria', domainId: 'MAS_FUND_MANAGEMENT', priority: 'P1', status: 'MISSING', keywords: ['fund management licensing admission criteria', 'fund management licence admission criteria', 'what are admission criteria and applicable requirements', 'LFMC VCFM admission criteria'] },
+   { id: 'mas-vcc-substantive-fund-management-activity', title: 'VCC Managers and Substantive Fund Management Activity', domainId: 'MAS_FUND_MANAGEMENT', priority: 'P1', status: 'MISSING', keywords: ['VCC manager substantive fund management activity', 'substantive fund management activity for VCC managers', 'VCC manager substantive role in investment and risk management'] },
+   { id: 'mas-cms-licence', title: 'Capital Markets Services Licence', domainId: 'MAS_FUND_MANAGEMENT', priority: 'P1', keywords: ['cms licence', 'capital markets services licence', 'capital markets services license'] },
+-  { id: 'mas-lfmc-key-appointments', title: 'MAS LFMC CEO and Director Appointment Approval', domainId: 'MAS_FUND_MANAGEMENT', priority: 'P1', status: 'IMPLEMENTING', pageTitle: "Compliance Toolkit for Licensed Fund Management Companies", requiredContentTerms: ["Form 11"], keywords: ['lfmc ceo appointment approval', 'lfmc director appointment form 11', 'mas approval before director appointment'], queryPatterns: [String.raw`(?=[\s\S]*\b(?:lfmc|licensed fund management company)\b)(?=[\s\S]*\b(?:appoint\w*|appointment|form 11|prior approval)\b)(?=[\s\S]*\b(?:ceo|chief executive|director)\b)(?![\s\S]*\b(?:row\s*17|resign\w*|resignation|change(?:d)?(?:\s+(?:of|in))?\s+particulars?|updated? particulars?|executive to non.executive)\b)`] },
++  { id: 'mas-lfmc-key-appointments', title: 'MAS LFMC CEO and Director Appointment Approval', domainId: 'MAS_FUND_MANAGEMENT', priority: 'P1', status: 'IMPLEMENTING', pageTitle: "Compliance Toolkit for Licensed Fund Management Companies", requiredContentTerms: ["Form 11"], keywords: ['lfmc ceo appointment approval', 'lfmc director appointment form 11', 'mas approval before director appointment', 'lfmc executive director role change', 'lfmc non-executive director role change'], queryPatterns: [String.raw`(?=[\s\S]*\b(?:lfmc|licensed fund management company)\b)(?=[\s\S]*\b(?:appoint\w*|appointment|form 11|prior approval)\b)(?=[\s\S]*\b(?:ceo|chief executive|director)\b)`, String.raw`(?=[\s\S]*\b(?:lfmc|licensed fund management company)\b)(?=[\s\S]*\bdirector\b)(?=[\s\S]*\bexecutive\b)(?=[\s\S]*\bnon[- ]executive\b)(?=[\s\S]*\b(?:take|takes|taking|move|moves|moving|change|changes|changing|become|becomes|becoming)\b)`] },
+   { id: 'mas-lfmc', title: 'Licensed Fund Management Company', domainId: 'MAS_FUND_MANAGEMENT', priority: 'P1', keywords: ['lfmc', 'licensed fund management company', 'fund management licence', 'lfmc cms licence', 'fund manager cms licence'], queryPatterns: [String.raw`\b(?:firm|company|entity)\b[\s\S]{0,100}\bmanag\w*\s+(?:investment\s+)?funds?\b[\s\S]{0,100}\b(?:mas\s+)?licen[cs](?:e|ing)\b`, String.raw`\bfund management\b[\s\S]{0,120}\b(?:licensing rule|licensing requirement|licen[cs](?:e|ing)\s+required)\b`, String.raw`\blicensing rule\b[\s\S]{0,100}\bfund management\b`] },
+   { id: 'mas-vcfm', title: 'Venture Capital Fund Manager', domainId: 'MAS_FUND_MANAGEMENT', priority: 'P2', keywords: ['vcfm', 'venture capital fund manager', 'venture capital fund management', 'venture capital fund manager regime', 'vcfm licensing criteria'], queryPatterns: [String.raw`\b(?:firm|company|entity)\b[\s\S]{0,100}\bmanag\w*\s+(?:venture capital|vc)\s+funds?\b[\s\S]{0,120}\b(?:simplified|streamlined)\s+(?:licensing|licen[cs]e)\s+path\b`] },
+   { id: 'mas-fund-management-exemptions', title: 'Fund Management Licensing Exemptions', domainId: 'MAS_FUND_MANAGEMENT', priority: 'P1', keywords: ['fund manager exemption', 'fund management exemption', 'exempt fund manager', 'class exemption fund management', 'class exempt fund manager'], queryPatterns: [String.raw`\bclass\s+exemptions?\b[\s\S]{0,100}\bfund management\b[\s\S]{0,100}\blicen[cs](?:e|ing)\b`, String.raw`\bfund manager\b[\s\S]{0,100}\b(?:operate|manag\w*|carry out)\b[\s\S]{0,100}\bwithout\s+(?:an?\s+)?(?:mas\s+)?licen[cs]e\b`, String.raw`\bmanaging\s+(?:money|funds?)\b[\s\S]{0,100}\brelated corporation\b[\s\S]{0,80}\b(?:automatically|automatically exempt|exempt)\b`, String.raw`\bfund management activities\b[\s\S]{0,100}\b(?:class exempt|exempt by class)\b`] },
+diff --git a/tests/regression/test_authority_evidence_general_status_20261028.mjs b/tests/regression/test_authority_evidence_general_status_20261028.mjs
+index 44eafc6..bd05f29 100644
+--- a/tests/regression/test_authority_evidence_general_status_20261028.mjs
++++ b/tests/regression/test_authority_evidence_general_status_20261028.mjs
+@@ -58,6 +58,21 @@ assert.match(completeGeneralText, /MOM rule explanation:[\s\S]*case-specific con
+ assert.match(completeGeneralText, /Verified general guidance is available[\s\S]*full request coverage unconfirmed/);
+ assert.doesNotMatch(completeGeneralText, /Whole-question status: The resolved material issues have verified evidence/);
+ 
++const coverageOnly = presentation({
++  status: 'INSUFFICIENT', evidenceStatus: 'INSUFFICIENT', workstreams: [sickLeaveWorkstream()],
++  gaps: ['Issue plan: The reconciled issue plan does not establish coverage of the complete question.']
++});
++const coverageOnlyText = renderAuthorityEvidenceResponseText(coverageOnly, false);
++assert.equal(coverageOnly.status, 'INSUFFICIENT', 'Rendering never upgrades whole-question status.');
++assert.match(coverageOnlyText, /General statutory guidance:\*\* Verified for all listed issues/);
++assert.match(coverageOnlyText, /full request coverage unconfirmed/);
++assert.doesNotMatch(coverageOnlyText, /Evidence is incomplete for one or more material issues/,
++  'An unperformed whole-request assessment is distinct from a missing statutory premise.');
++assert.match(renderAuthorityEvidenceResponseText({ ...coverageOnly,
++  gaps: [...coverageOnly.gaps, 'A separate requested issue has no evidence.'] }, false),
++  /Evidence is incomplete for one or more material issues/,
++  'An additional material gap retains the incomplete warning.');
++
+ const generalWithMissingFacts = presentation({
+   status: 'CONDITIONAL', applicationStatus: 'UNRESOLVED',
+   workstreams: [sickLeaveWorkstream({ population: 'Not established', operation: 'CHECK_ELIGIBILITY', applicationStatus: 'UNRESOLVED' })]
+diff --git a/tests/regression/test_statutory_priority3_source_expansions_20261030.mjs b/tests/regression/test_statutory_priority3_source_expansions_20261030.mjs
+new file mode 100644
+index 0000000..3014476
+--- /dev/null
++++ b/tests/regression/test_statutory_priority3_source_expansions_20261030.mjs
+@@ -0,0 +1,142 @@
++import assert from 'node:assert/strict';
++import { createHash } from 'node:crypto';
++import { readFile } from 'node:fs/promises';
++import { fileURLToPath } from 'node:url';
++import { processAccountingQuery } from '../../src/services/geminiService.ts';
++import { OFFICIAL_SOURCE_DISCOVERY_PROVIDERS } from '../../src/retrieval/officialSitemapDiscovery.ts';
++import { getIrasMasKnowledgeEvidence, selectIrasMasKnowledgeQuotes,
++  supportIrasMasKnowledgeRule } from '../../src/retrieval/irasMasKnowledge20261027b.ts';
++import { loadStatutoryKnowledgeSources } from '../../scripts/load_statutory_knowledge_sources.mjs';
++import { STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES } from '../fixtures/statutoryCoverageOfficialPages.mjs';
++
++const masQuery = 'Can a licensed investment manager use the MAS LFMC compliance toolkit as a complete checklist for the funds it manages, including duties outside the Securities and Futures Act?';
++const irasQuery = "We paid expenses for a subsidiary's car and recovered only half. Is every dollar of its input GST recoverable?";
++const masUrl = 'https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf';
++
++const developmentRoot = new URL('../fixtures/statutoryDevelopment20261027/', import.meta.url);
++const developmentManifest = JSON.parse(await readFile(new URL('iras-cpf-mas-source-manifest.json', developmentRoot), 'utf8'));
++const masManifest = developmentManifest.sources.find(source => source.authority === 'MAS' && source.nativePdfFixture === 'mas-lfmc-toolkit.pdf');
++assert.ok(masManifest, 'the retained native MAS LFMC toolkit capture is available');
++assert.equal(masManifest.url, masUrl, 'the MAS source pointer identifies the canonical toolkit URL');
++const masPdf = await readFile(new URL(masManifest.nativePdfFixture, developmentRoot));
++assert.equal(createHash('sha256').update(masPdf).digest('hex'), masManifest.sourceDocumentSha256.toLowerCase(),
++  'the MAS PDF bytes match the retained source manifest');
++const masExtract = await readFile(new URL('mas-lfmc-native-extract.txt', developmentRoot), 'utf8');
++const masInput = { authority: 'MAS', topicId: 'mas-lfmc', query: masQuery,
++  subject: 'MAS LFMC toolkit scope and fund-level requirements', sourceText: masExtract, officialUrl: masUrl };
++assert.equal(supportIrasMasKnowledgeRule(masInput), true,
++  'the native PDF extraction proves all LFMC scope premises');
++assert.equal(supportIrasMasKnowledgeRule({ ...masInput, officialUrl: `${masUrl}?revision=other` }), false,
++  'a noncanonical MAS URL fails closed');
++assert.equal(supportIrasMasKnowledgeRule({ ...masInput,
++  sourceText: masExtract.replace('However, it is not exhaustive', 'However, it is exhaustive') }), false,
++  'a reversed scope passage cannot prove the MAS conclusion');
++assert.equal(supportIrasMasKnowledgeRule({ ...masInput,
++  query: 'Can a VCFM use its toolkit as a complete checklist including fund-level duties?' }), undefined,
++  'the LFMC rule does not claim VCFM toolkit requirements');
++
++const masQuotes = selectIrasMasKnowledgeQuotes(masInput);
++assert.equal(masQuotes.length, 3, 'all native scope premises are selected as full source passages');
++const masIssueId = 'mas-toolkit-scope-issue';
++const masRevision = {
++  recordId: 'mas-lfmc-toolkit-record', documentHash: masManifest.sourceDocumentSha256.toLowerCase(),
++  canonicalUrl: masUrl, retrievedAt: '2026-10-30T00:00:00.000Z'
++};
++const masPresentedIssue = {
++  id: masIssueId, subject: 'MAS LFMC toolkit scope and fund-level requirements', population: 'Company',
++  operation: 'EXPLAIN_RULE', evidenceStatus: 'VERIFIED', applicationStatus: 'NOT_REQUIRED'
++};
++const masPresentedSource = {
++  key: masRevision.recordId, title: masManifest.title, publisher: 'Monetary Authority of Singapore',
++  documentTitle: masManifest.title, officialUrl: masUrl, provenance: 'LIVE_EXTERNAL',
++  claims: masQuotes.map(text => ({ text, supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [masIssueId],
++    provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: { ...masRevision } }))
++};
++const masPresentedStream = {
++  id: 'MAS:MAS_FUNDS', authority: 'MAS', domain: 'MAS_FUNDS', evidenceStatus: 'VERIFIED',
++  issues: [masPresentedIssue], sources: [masPresentedSource]
++};
++assert.match(getIrasMasKnowledgeEvidence(masQuery, masPresentedStream, masPresentedIssue)?.text || '', /not exhaustive/i,
++  'the full issue-bound scope quotes from one fetched PDF revision allow the LFMC rule explanation');
++assert.equal(getIrasMasKnowledgeEvidence(masQuery, { ...masPresentedStream,
++  sources: [{ ...masPresentedSource, officialUrl: `${masUrl}?revision=other` }] }, masPresentedIssue), undefined,
++  'a noncanonical displayed source URL cannot render the LFMC rule');
++assert.equal(getIrasMasKnowledgeEvidence(masQuery, { ...masPresentedStream,
++  sources: [{ ...masPresentedSource, claims: masPresentedSource.claims.slice(0, 2) }] }, masPresentedIssue), undefined,
++  'missing the outside-SFA/fund-level exclusion passage blocks rendering');
++const splitRevisionSource = structuredClone(masPresentedSource);
++splitRevisionSource.claims[2].fetchedSourceBinding.documentHash = 'a'.repeat(64);
++assert.equal(getIrasMasKnowledgeEvidence(masQuery, { ...masPresentedStream, sources: [splitRevisionSource] }, masPresentedIssue), undefined,
++  'scope passages split across fetched PDF revisions cannot be combined');
++const otherIssueSource = structuredClone(masPresentedSource);
++otherIssueSource.claims[2].issueIds = ['another-issue'];
++assert.equal(getIrasMasKnowledgeEvidence(masQuery, { ...masPresentedStream, sources: [otherIssueSource] }, masPresentedIssue), undefined,
++  'a scope exclusion quote assigned to another issue cannot support this answer');
++assert.equal(getIrasMasKnowledgeEvidence('Can a VCFM use its toolkit as a complete checklist including fund-level duties?',
++  masPresentedStream, masPresentedIssue), undefined, 'the rendered LFMC scope explanation does not generalize to VCFMs');
++
++const statutoryPages = await loadStatutoryKnowledgeSources(fileURLToPath(new URL('../fixtures/statutoryKnowledge20261027b', import.meta.url)));
++const irasPage = statutoryPages.find(page => page.filename === 'iras-mas-input-tax-native.html');
++assert.ok(irasPage, 'the IRAS native input-tax page capture is available');
++const irasBytes = Buffer.isBuffer(irasPage.body) ? irasPage.body : Buffer.from(String(irasPage.body));
++const irasManifest = JSON.parse(await readFile(new URL('../fixtures/statutoryKnowledge20261027b/iras-mas-source-manifest.json', import.meta.url), 'utf8'));
++const irasSource = irasManifest.sources.find(source => source.fixture === 'iras-mas-input-tax-native.html');
++assert.ok(irasSource, 'the IRAS source digest is retained');
++assert.equal(createHash('sha256').update(irasBytes).digest('hex'), irasSource.sha256,
++  'the IRAS native response matches its retained digest');
++
++const pages = new Map(STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES.map(page => [page.sourceUrl,
++  { authority: page.authority, body: page.html, type: 'text/html' }]));
++for (const page of statutoryPages) pages.set(page.sourceUrl, {
++  authority: page.authority, body: page.body, type: page.contentType
++});
++pages.set(masUrl, { authority: 'MAS', body: masPdf, type: 'application/pdf' });
++const modelEndpoint = /(?:generativelanguage\.googleapis\.com|api\.openai\.com|openai\.azure\.com|\/generateContent(?:\?|$)|\/chat\/completions(?:\?|$))/i;
++const fetchAttempts = [];
++const offlineFetch = async input => {
++  const url = input && typeof input === 'object' && typeof input.url === 'string' ? input.url : String(input);
++  fetchAttempts.push(url);
++  if (modelEndpoint.test(url)) throw new Error(`Unexpected provider/model request: ${url}`);
++  const page = pages.get(url);
++  if (page) return new Response(page.body, { headers: { 'content-type': page.type } });
++  const provider = Object.values(OFFICIAL_SOURCE_DISCOVERY_PROVIDERS).find(candidate => candidate.sitemapUrls?.includes(url));
++  if (provider) {
++    const entries = [...pages].filter(([, item]) => item.authority === provider.authority)
++      .map(([sourceUrl]) => `<url><loc>${sourceUrl.replaceAll('&', '&amp;')}</loc></url>`).join('');
++    return new Response(`<urlset>${entries}</urlset>`, { headers: { 'content-type': 'application/xml' } });
++  }
++  return new Response('Unavailable in frozen offline source set', { status: 404 });
++};
++
++const previousFetch = globalThis.fetch;
++const responses = new Map();
++try {
++  globalThis.fetch = offlineFetch;
++  for (const [id, query] of [['mas-scope', masQuery], ['iras-partial-recovery', irasQuery]]) {
++    responses.set(id, await processAccountingQuery(query, null, 'IFRS', undefined, undefined, [], undefined));
++  }
++} finally {
++  globalThis.fetch = previousFetch;
++}
++
++assert.equal(fetchAttempts.some(url => modelEndpoint.test(url)), false, 'the offline full application uses no model endpoint');
++assert.ok(fetchAttempts.includes(masUrl), 'the full MAS answer retrieves the exact toolkit PDF');
++const irasAnswer = responses.get('iras-partial-recovery');
++assert.equal(irasAnswer.scenarioState.queryIntent, 'STATUTORY_ADVISORY');
++assert.deepEqual(irasAnswer.scenarioState.directGroups || [], [], 'the IRAS question creates no accounting journal');
++assert.match(irasAnswer.messageText, /IRAS rule explanation/i);
++assert.match(irasAnswer.messageText, /only to the extent of that half|only the recovered portion|portion recovered/i);
++assert.match(irasAnswer.messageText, /not (?:be )?ancillary to (?:a primary supply|any primary supply)/i);
++assert.match(irasAnswer.messageText, /ordinary claim conditions/i);
++assert.match(irasAnswer.messageText, /not.*unrecovered half|not.*all/i);
++
++const masAnswer = responses.get('mas-scope');
++assert.equal(masAnswer.scenarioState.queryIntent, 'STATUTORY_ADVISORY');
++assert.deepEqual(masAnswer.scenarioState.directGroups || [], [], 'the MAS scope question creates no accounting journal');
++assert.match(masAnswer.messageText, /MAS rule explanation/i);
++assert.match(masAnswer.messageText, /not exhaustive/i);
++assert.match(masAnswer.messageText, /outside the SFA/i);
++assert.match(masAnswer.messageText, /fund-level requirements/i);
++assert.match(masAnswer.messageText, /not a complete checklist/i);
++
++console.log('Full application MAS toolkit scope and IRAS connected-person partial recovery checks passed.');
+diff --git a/tests/regression/test_statutory_review_application_existing_rule_mappings_20261029.mjs b/tests/regression/test_statutory_review_application_existing_rule_mappings_20261029.mjs
+index 62148c0..b8519bd 100644
+--- a/tests/regression/test_statutory_review_application_existing_rule_mappings_20261029.mjs
++++ b/tests/regression/test_statutory_review_application_existing_rule_mappings_20261029.mjs
+@@ -115,7 +115,7 @@ const previousFetch = globalThis.fetch;
+ const applicationResults = new Map();
+ try {
+   globalThis.fetch = strictOfflineFetch;
+-  for (const [id, question] of [...cases, ['separate-ihc-tax', separateIhcTaxQuestion]]) {
++for (const [id, question] of [...cases, ['separate-ihc-tax', separateIhcTaxQuestion]]) {
+     const response = await processAccountingQuery(question, null, 'IFRS', undefined, undefined, [], undefined);
+     applicationResults.set(id, response);
+   }
+@@ -134,7 +134,9 @@ for (const [id] of cases) {
+   assert.deepEqual(response.scenarioState.directGroups || [], [], `${id} does not create accounting journals`);
+   assert.match(response.messageText, /Verified general guidance is available/i,
+     `${id} identifies verified general rule evidence`);
+-  assert.match(response.messageText, /Evidence is incomplete for one or more material issues/i,
++  assert.equal(response.scenarioState.authorityEvidencePresentation.status, 'INSUFFICIENT',
++    `${id} does not upgrade whole-question verification when only mapped guidance is supported`);
++  assert.match(response.messageText, /full request coverage unconfirmed|Evidence is incomplete for one or more material issues/i,
+     `${id} preserves the distinction between verified rule evidence and whole-question coverage`);
+ }
+ 
+@@ -156,6 +158,7 @@ assert.match(whtAnswer, /only the payment attributable to the services rendered
+ assert.match(whtAnswer, /17%/i, 'the WHT answer states the existing prevailing rate for Singapore-work fees');
+ assert.match(whtAnswer, /DTA/i, 'the WHT answer preserves treaty qualifications');
+ 
++
+ assert.doesNotMatch(applicationResults.get('separate-ihc-tax').messageText, /ECI filing waiver|nil ECI|\$5 million/i,
+   'a separate IHC tax question does not receive the ECI waiver answer');
+ 
+diff --git a/tests/regression/test_statutory_review_topic_routing_20261028.mjs b/tests/regression/test_statutory_review_topic_routing_20261028.mjs
+index f162717..a710ca5 100644
+--- a/tests/regression/test_statutory_review_topic_routing_20261028.mjs
++++ b/tests/regression/test_statutory_review_topic_routing_20261028.mjs
+@@ -1,6 +1,7 @@
+ import assert from 'node:assert/strict';
+ import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
+ import { defaultQueryTopicResolver } from '../../src/retrieval/queryTopicResolver.ts';
++import { reconcileQuestionUnderstanding } from '../../src/services/semanticQuestionUnderstanding.ts';
+ 
+ const cases = [
+   ['cpf_contribution_rates', 'What are the employer and employee CPF percentages in 2026 for a Singapore citizen aged over 60 to 65 earning more than S$750 per month?'],
+@@ -9,6 +10,7 @@ const cases = [
+   ['mom-salary-payment', 'What general salary-payment rule applies when the employer dismisses an employee, rather than the employee resigning?'],
+   ['mom-public-holidays', 'Do public holidays always entitle every employee to a day off with pay even after an unauthorised absence immediately before the holiday?'],
+   ['mom-public-holidays', 'For a five-day-week Employment Act employee, what is the difference if a public holiday falls on the non-working Saturday rather than the rest-day Sunday?'],
++  ['mom-public-holidays', 'An Employment Act employee has Tuesday as a non-working day and Wednesday as the contractual rest day. What is the public-holiday entitlement if the holiday falls on Tuesday rather than Wednesday?'],
+   ['mas-regulatory-reporting', 'Does MAS’s LFMC compliance toolkit cover every return owed by the investment funds a licensed manager manages?'],
+   ['acra-annual-return-officer-particulars', 'Does the October 2026 annual-return change ask whether somebody actually performs the CEO role?'],
+   ['acra-annual-return-officer-particulars', 'Our return was filed on 19 October 2026. Did the officer-confirmation change that commenced on 20 October already govern that filing?']
+@@ -21,6 +23,16 @@ for (const [topicId, question] of cases) {
+     `${topicId} should be independently found by the topic resolver: ${question}`);
+ }
+ 
++const holidayComparison = 'An Employment Act employee has Tuesday as a non-working day and Wednesday as the contractual rest day. What is the public-holiday entitlement if the holiday falls on Tuesday rather than Wednesday?';
++const holidayPlan = reconcileQuestionUnderstanding(holidayComparison, classifyQuestion(holidayComparison),
++  { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' }).issuePlan;
++assert.ok(holidayPlan.issues.some(issue => issue.mappedTopicIds.includes('mom-public-holidays')),
++  'The holiday-versus-nonworking-day comparison retains its public-holiday issue.');
++assert.ok(holidayPlan.issues.some(issue => issue.contextualTopicIds?.includes('mom-rest-days')),
++  'The rest-day mention is contextual unless the employee asks about work or pay on a rest day.');
++assert.ok(!holidayPlan.issues.some(issue => issue.mappedTopicIds.includes('mom-rest-days')),
++  'A comparison does not request a separate rest-day work rule.');
++
+ for (const question of [
+   'Does a CEO birthday affect corporate tax residency?',
+   'Can an employee swap a rest day without a public holiday?',
+diff --git a/tests/regression/test_statutory_workflows_20261029.mjs b/tests/regression/test_statutory_workflows_20261029.mjs
+index 26b3e7b..15bad16 100644
+--- a/tests/regression/test_statutory_workflows_20261029.mjs
++++ b/tests/regression/test_statutory_workflows_20261029.mjs
+@@ -79,7 +79,7 @@ const cases = [
+     id: 'mas-lfmc-appointment', authority: 'MAS', topic: 'mas-lfmc-key-appointments',
+     query: 'For our LFMC, is MAS prior approval on Form 11 needed before appointing a CEO or director, and how is this different from row 17 notifications?',
+     subject: 'LFMC CEO and director appointment prior approval under Form 11', fixture: 'mas-lfmc-toolkit.pdf',
+-    rendered: /prior MAS approval.*Form 11.*before appointing.*row 17.*separate subsequent notification.*Executive-to-Non-Executive/i
++    rendered: /prior MAS approval.*Form 11.*before appointing.*row 17.*separate subsequent notification.*Executive-to-Non-Executive.*as soon as practicable.*14.days.*resignation/i
+   }
+ ];
+ 
+@@ -184,6 +184,49 @@ for (const sample of cases) {
+   assert.match(explanation.text, new RegExp(sample.rendered.source, 'i'),
+     `${sample.id}: substantive source-backed rule content is returned.`);
+ 
++  if (sample.id === 'cpf-refund') {
++    const dateApplications = [
++      ['CPF refund deadline: CPF was paid on a conditional joining bonus in 2024. Under the employment terms, the employee had to repay the bonus on 15/09/2026.', 'MATCH', /one-year outer limit is 15\/09\/2027/i],
++      ['CPF refund deadline: CPF was paid on a conditional bonus. Under the employment terms, the employee had to repay it on 31/02/2026.', 'NO_MATCH', /one-year outer limit is/i],
++      ['CPF refund deadline: CPF was paid on a conditional bonus. Under the employment terms, the employee had to repay it on 29/02/2024.', 'NO_MATCH', /one-year outer limit is/i],
++      ['CPF refund deadline: CPF was paid on a conditional bonus. Under the employment terms, the employee had to repay it on 15/09/2026; a mutual agreement set the repayment due date as 20/09/2026.', 'NO_MATCH', /one-year outer limit is/i],
++      ['We received a mistaken CPF contribution; what is the refund deadline? PAYMENTS RECEIVED ON 6 November 2025.', 'MATCH', /one-year outer limit 06\/11\/2026/i]
++    ];
++    for (const [query, outcome, pattern] of dateApplications) {
++      const dateExplanation = getStatutoryWorkflowEvidence(query, stream, issue);
++      assert.ok(dateExplanation, 'A date variant in the same refund family retains a verified general explanation.');
++      if (outcome === 'MATCH') assert.match(dateExplanation.text, pattern);
++      else assert.doesNotMatch(dateExplanation.text, pattern,
++        'Invalid, leap-day, or competing dates do not produce a calculated deadline.');
++    }
++  }
++  if (sample.id === 'iras-record-retention') {
++    const ya2025Query = 'Our company has a September year-end. Its accounts for the year ended 30/09/2024 relate to YA 2025, and the tax return has been filed. Can we shred the supporting invoices on 01/10/2029?';
++    const application = getStatutoryWorkflowEvidence(ya2025Query, stream, issue);
++    assert.ok(application, 'The frozen non-December-FYE question matches the company-record workflow.');
++    assert.match(application.text, /For YA 2025, retain the records through at least 31 December 2029\./i);
++    assert.match(application.text, /proposed disposal date 01\/10\/2029 is before the end of that period, so do not shred/i);
++    assert.match(application.text, /filing the tax return does not end the retention period/i);
++  }
++  if (sample.id === 'acra-entity-changes') {
++    const negatedForeign = 'We are a Singapore company, not a foreign company. Our registered office changed 20 days ago. Are we late?';
++    const irrelevantElapsedDays = 'We are an overseas-incorporated company registered in Singapore as a foreign company. Our registered office update is pending, but an employee resigned 20 days ago. What ACRA deadline applies?';
++    const overDeadlineElapsedDays = [
++      'We are an overseas-incorporated company registered in Singapore as a foreign company. Our registered office changed 35 days ago. Are we late?',
++      'We are an overseas-incorporated company registered in Singapore as a foreign company. Our registered office changed thirty-five days ago. Are we late?',
++      'We are an overseas-incorporated company registered in Singapore as a foreign company. Our registered office changed thirty five days ago. Are we late?',
++      'We are an overseas-incorporated company registered in Singapore as a foreign company. An employee resigned 20 days ago; our registered office changed thirty-five days ago. Are we late?'
++    ];
++    for (const query of [negatedForeign, irrelevantElapsedDays, ...overDeadlineElapsedDays]) {
++      const application = getStatutoryWorkflowEvidence(query, stream, issue);
++      assert.ok(application, 'An uncertain or unrelated elapsed period still receives general ACRA guidance.');
++      assert.doesNotMatch(application.text, /20 days is within the foreign-company 30-day period/i,
++        'A date is applied only to an affirmatively stated foreign-company information change.');
++      assert.doesNotMatch(application.text, /not yet late/i,
++        'An elapsed period above the stated 30-day limit cannot be described as timely.');
++    }
++  }
++
+   if (sample.dateRoleQuery) {
+     const date = resolver.resolveAuthorityEvidenceDate(sample.dateRoleQuery, '2026-10-29');
+     assert.equal(date.source, 'NONE', `${sample.id}: fact date does not select a different legal version.`);
+@@ -221,6 +264,11 @@ for (const question of [
+   assert.equal(supportStatutoryWorkflowRule({ ...sourceOf(cpf).input, query: question }), false,
+     'Unresolved bare years and retrospective wording cannot be proved by current guidance.');
+ }
++const historicalIrasQuestion = 'For our company accounting records for YA 2015, what retention period did the law require?';
++assert.notEqual(resolver.resolveAuthorityEvidenceDate(historicalIrasQuestion, '2026-10-29').dateRole, 'CURRENT_WORKFLOW_FACT',
++  'Past-tense statutory-duty wording preserves the historical YA scope.');
++assert.equal(supportStatutoryWorkflowRule({ ...sourceOf(iras).input, query: historicalIrasQuestion }), false,
++  'Current IRAS guidance cannot answer what the law required for the earlier YA.');
+ assert.equal(resolver.resolveAuthorityEvidenceDate(
+   'We paid CPF contributions on 1 October 2026. What is the refund deadline and what CPF contribution rate applies?',
+   '2026-10-29').source, 'EXPLICIT', 'A separate rate request keeps its period even within the same authority.');
+@@ -241,6 +289,19 @@ for (const [sample, original, incorrect] of [
+   assert.equal(hasStatutoryWorkflowContradiction(mutated), true, `${sample.id}: the explicit changed premise is exposed to fallback veto.`);
+ }
+ 
++const { input: masInput } = sourceOf(mas);
++for (const [before, incorrect] of [
++  ['As soon as practicable', 'At a later date'],
++  ['14 days from the date of', '30 days from the date of']
++]) {
++  assert.ok(masInput.sourceText.includes(before), `MAS row 17 timing premise exists: ${before}`);
++  const changed = { ...masInput, sourceText: masInput.sourceText.replace(before, incorrect) };
++  assert.equal(supportStatutoryWorkflowRule(changed), false,
++    'MAS row 17 must prove the practical deadline and the resignation-only 14-day period.');
++  assert.deepEqual(selectStatutoryWorkflowQuotes(changed), [],
++    'A changed row 17 time limit cannot be displayed as source-backed guidance.');
++}
++
+ for (const [query, expectedDate] of [
+   [acra.dateRoleQuery, '2026-10-12'],
+   [cpf.dateRoleQuery, '2026-10-01']
+@@ -250,6 +311,24 @@ for (const [query, expectedDate] of [
+ }
+ assert.equal(resolver.resolveAuthorityEvidenceDate(iras.query, '2026-10-29').source, 'NONE',
+   'An explicitly supplied YA can be applied to the current company-record guidance.');
++for (const query of [
++  'Our company has a September year-end. Its accounts for the year ended 30/09/2024 relate to YA 2025, and the tax return has been filed. Can we shred the supporting invoices on 01/10/2029?',
++  'A company was struck off and dissolved on 15/08/2026. Its former director thinks the old YA retention periods have expired, so nobody needs to keep its books now. Is that right, and would responsibility differ if it had been wound up?',
++  'We found an ordinary CPF overpayment on 01/10/2026. The payment record says PAYMENTS RECEIVED ON 06/11/2025. Do we have a year from discovering the mistake to request our money back?',
++  'CPF was paid on a conditional joining bonus in 2024. Under the employment terms, the employee had to repay the bonus on 15/09/2026. We are applying in October 2026. Is the claim too old, and can we wait for CPF Board’s refund before returning the employee’s contribution share?',
++  'An employee obtained SPR status on 7 August 2025. Is the move into the second CPF contribution year on 7 August 2026, or at the start of September?'
++]) {
++  assert.equal(resolver.resolveAuthorityEvidenceDate(query, '2026-10-29').dateRole, 'CURRENT_WORKFLOW_FACT',
++    'Multiple dated facts remain current-rule inputs when their workflow roles are identified.');
++}
++for (const query of [
++  'What deadline did we have under the ACRA rule for a change on 12 October 2010?',
++  'Which rules did ACRA apply to an address change on 12 October 2010?',
++  'What were the company record-retention requirements in YA 2010?'
++]) {
++  assert.notEqual(resolver.resolveAuthorityEvidenceDate(query, '2026-10-29').dateRole, 'CURRENT_WORKFLOW_FACT',
++    'Past-law and historical applicability wording cannot be treated as a current-workflow fact date.');
++}
+ assert.equal(resolver.resolveAuthorityEvidenceDate('What rules were in force for company record retention in YA 2023?', '2026-10-29').targetDate,
+   '2023-01-01', 'An explicit historical legal-version request keeps its prior target date.');
+ assert.equal(resolver.resolveAuthorityEvidenceDate('What was the ACRA rule in force when our address changed on 12 October 2025?', '2026-10-29').targetDate,
+@@ -273,6 +352,12 @@ for (const sample of cases) {
+ // No semantic fixture, mapped-topic injection, live source call or model call:
+ // the ordinary application entry must route and render each natural question.
+ const appCases = [
++  { authority: 'ACRA', topic: 'acra-entity-information-changes', url: manifest.sources.find(item => item.fixture === 'acra-entity-updates.html').url,
++    query: 'We are an overseas-incorporated company registered in Singapore as a foreign company. We changed our registered office twenty days ago. A colleague says every ACRA entity has only fourteen days. Are we already late?',
++    expected: /foreign companies have 30 days.*20 days is within the foreign-company 30-day period.*not yet late/i },
++  { authority: 'IRAS', topic: 'iras-company-record-retention', url: manifest.sources.find(item => item.fixture === 'iras-company-records.html').url,
++    query: 'Our company has a September year-end. Its accounts for the year ended 30/09/2024 relate to YA 2025, and the tax return has been filed. Can we shred the supporting invoices on 01/10/2029?',
++    expected: /YA 2025.*31 December 2029.*01\/10\/2029.*before the end of that period, so do not shred.*filing the tax return does not end the retention period/i },
+   { authority: 'ACRA', topic: 'acra-entity-information-changes', url: manifest.sources.find(item => item.fixture === 'acra-entity-updates.html').url,
+     query: 'Our company changed its registered office address on 12 October 2026. By when must we notify ACRA?',
+     expected: /14 days from the date of change|14 days from the date of the change/i },
+@@ -287,7 +372,22 @@ const appCases = [
+     expected: /together with payment.*three working days.*soft or hard copy/i },
+   { authority: 'MAS', topic: 'mas-lfmc-key-appointments', url: manifest.sources.find(item => item.fixture === 'mas-lfmc-toolkit.pdf').url,
+     query: 'Our LFMC plans to appoint a director. Does Form 11 require prior MAS approval?',
+-    expected: /prior MAS approval.*Form 11.*before appointing.*row 17.*separate subsequent notification/i }
++    expected: /prior MAS approval.*Form 11.*before appointing.*row 17.*separate subsequent notification/i },
++  { authority: 'IRAS', topic: 'iras-company-record-retention', url: manifest.sources.find(item => item.fixture === 'iras-company-records.html').url,
++    query: 'A company was struck off and dissolved on 15/08/2026. Its former director thinks the old YA retention periods have expired, so nobody needs to keep its books now. Is that right, and would responsibility differ if it had been wound up?',
++    expected: /officer immediately before dissolution.*five years after dissolution.*liquidator/i },
++  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
++    query: 'We found an ordinary CPF overpayment on 01/10/2026. The payment record says PAYMENTS RECEIVED ON 06/11/2025. Do we have a year from discovering the mistake to request our money back?',
++    expected: /06\/11\/2026.*discovery of the error does not restart/i },
++  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
++    query: 'CPF was paid on a conditional joining bonus in 2024. Under the employment terms, the employee had to repay the bonus on 15/09/2026. We are applying in October 2026. Is the claim too old, and can we wait for CPF Board’s refund before returning the employee’s contribution share?',
++    expected: /^(?=[\s\S]*15\/09\/2027)(?=[\s\S]*before applying, the employer must return the employee share directly to the employee)[\s\S]*$/i },
++  { authority: 'MAS', topic: 'mas-lfmc-key-appointments', url: manifest.sources.find(item => item.fixture === 'mas-lfmc-toolkit.pdf').url,
++    query: 'At our LFMC, an existing non-executive director will take an executive role. Since he is already on the board, can we simply notify MAS afterwards? Would moving an executive director into a non-executive role follow the same process?',
++    expected: /prior MAS approval using Form 11.*Non-Executive to Executive.*already being on the board does not remove approval.*Executive-to-Non-Executive.*as soon as practicable.*14.days.*specifically attached to the resignation/i },
++  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
++    query: 'We paid wrongly submitted CPF contributions on 6 November 2025. The payment record says PAYMENTS RECEIVED ON 6 November 2025. When is the refund request due?',
++    expected: /PAYMENTS RECEIVED ON.*06\/11\/2025.*one-year outer limit 06\/11\/2026/i }
+ ];
+ const appFixtureBodies = new Map(manifest.sources.map(item => [item.url,
+   readFileSync(new URL(item.fixture, fixtureRoot))]));
+@@ -316,9 +416,11 @@ try {
+   for (const sample of appCases) {
+     let workstreams;
+     let stream;
++    let answerText = '';
+     try {
+       const response = await processAccountingQuery(sample.query, null, 'SFRS_I', undefined, undefined, [], undefined,
+         { onAuthorityWorkstreams: result => { workstreams = result; } });
++      answerText = response.messageText;
+       assert.ok(workstreams, `${sample.authority}: processAccountingQuery reached authority workstreams.`);
+       assert.equal(response.scenarioState.scenarioType, 'AUTHORITY_ADVISORY', `${sample.authority}: the normal entry kept statutory advice on the advisory path.`);
+       const presentation = createAuthorityEvidencePresentation(workstreams);
+@@ -339,6 +441,13 @@ try {
+     } catch (error) {
+       appResults.push({ authority: sample.authority, topic: sample.topic, ok: false,
+         failure: String(error?.message || error).slice(0, 240),
++        answer: (() => {
++          const marker = `${sample.authority} rule explanation:`;
++          const start = answerText.toLowerCase().indexOf(marker.toLowerCase());
++          if (start < 0) return answerText.slice(-1_200);
++          const end = answerText.indexOf('\n\n**Source:', start);
++          return answerText.slice(start, end >= 0 ? end : start + 4_000);
++        })(),
+         issues: (stream?.issues || []).map(issue => ({
+           subject: issue.subject, topicIds: issue.topicIds, operation: issue.operation,
+           status: issue.evidenceStatus,
+@@ -346,6 +455,23 @@ try {
+         })) });
+     }
+   }
++  const employeeVoicedCpfQueries = [
++    'I have to repay my joining bonus to my employer. Can I request a CPF refund?',
++    'My employer made mistaken CPF contributions on my joining bonus; can I request money back?'
++  ];
++  for (const query of employeeVoicedCpfQueries) {
++    const { issuePlan } = reconcileQuestionUnderstanding(query, classifyQuestion(query),
++      { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' });
++    assert.ok(!issuePlan.issues.some(issue => issue.population === 'EMPLOYER' &&
++      /CPF employer refund timing/i.test(issue.subject)),
++    'An employee asking about their own bonus cannot be interpreted as the employer applicant.');
++    const response = await processAccountingQuery(query, null, 'SFRS_I', undefined, undefined, [], undefined, {});
++    assert.doesNotMatch(response.messageText, /CPF rule explanation:/i,
++      'Employee-voiced refund requests do not invent employer-only employee-share duties.');
++  }
++  const historicalResponse = await processAccountingQuery(historicalIrasQuestion, null, 'SFRS_I', undefined, undefined, [], undefined, {});
++  assert.doesNotMatch(historicalResponse.messageText, /IRAS rule explanation:[\s\S]{0,500}at least five years from the relevant Year of Assessment/i,
++    'The full application does not answer a historical legal-duty question with current guidance.');
+ } finally {
+   globalThis.fetch = previousFetch;
+ }

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   buildGroundedReasoningContext,
 } from '../../src/services/groundingContextBuilder.ts';
@@ -16,6 +17,17 @@ import {
 } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { classifyQuestion, isExplicitForeignTaxOnlyQuestion } from '../../src/classification/questionClassifier.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
+import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
+import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
+import { selectAccountingScenarioForRequest, updateCommittedJournalScenario } from '../../src/services/committedJournal.ts';
+import {
+  assessConversationRelation,
+  hasAffirmativeResetDirective,
+  hasConflictingPriorSubject,
+  hasExplicitPriorFactReference,
+  startsNewAccountingScenario
+} from '../../src/services/conversationBoundary.ts';
+import { buildAdvisoryConversation } from '../../src/services/aiFirstAdvisory.ts';
 import { usesIrasEvidencePolicy } from '../../src/services/irasEvidencePolicy.ts';
 import { RequestProfiler } from '../../src/services/telemetry.ts';
 
@@ -37,6 +49,138 @@ const interpretation = (overrides = {}) => ({
 
 const semantic = (overrides = {}) => ({ mode: 'SEMANTIC_INTERPRETATION', interpretation: interpretation(overrides) });
 const reconcile = (query, meaning) => reconcileQuestionUnderstanding(query, classifyQuestion(query), semantic(meaning));
+const taxonomyPlan = query => reconcileQuestionUnderstanding(query, classifyQuestion(query), {
+  mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER'
+}).issuePlan;
+
+const cpfRoundedTotalQuery = 'Can payroll deduct the rounded total CPF contribution from the employee and then add an employer share on top?';
+const cpfRoundedTotalPlan = taxonomyPlan(cpfRoundedTotalQuery);
+assert.equal(cpfRoundedTotalPlan.issues.length, 1);
+assert.equal(cpfRoundedTotalPlan.issues[0].operation, 'EXPLAIN_RULE');
+assert.deepEqual(cpfRoundedTotalPlan.issues[0].mappedTopicIds, ['cpf-contribution-computation']);
+assert.ok(cpfRoundedTotalPlan.issues[0].contextualTopicIds.includes('cpf-contribution-rounding'));
+assert.equal(cpfRoundedTotalPlan.coverageEstablished, false,
+  'Source-backed CPF rounding interpretation does not claim whole-question completeness.');
+assert.equal(cpfRoundedTotalPlan.hasUnmappedResidual, true);
+const cpfRoundedTotalSeparateQuery = `${cpfRoundedTotalQuery} Also, what contribution rates apply by age?`;
+const cpfRoundedTotalSeparatePlan = taxonomyPlan(cpfRoundedTotalSeparateQuery);
+assert.ok(cpfRoundedTotalSeparatePlan.issues.some(item => item.mappedTopicIds.includes('cpf-contribution-computation')));
+assert.ok(cpfRoundedTotalSeparatePlan.issues.some(item => item.mappedTopicIds.includes('cpf_contribution_rates')),
+  'An independent age-rate question remains mapped beside CPF rounding.');
+
+const momSickLeaveMonthQuery = 'After four completed months with the employer, is statutory paid sick leave already the full 14 outpatient and 60 hospitalisation days?';
+const momSickLeavePlan = taxonomyPlan(momSickLeaveMonthQuery);
+assert.equal(momSickLeavePlan.issues.length, 1);
+assert.equal(momSickLeavePlan.issues[0].operation, 'EXPLAIN_RULE');
+assert.ok(momSickLeavePlan.issues[0].mappedTopicIds.includes('mom_sick_leave'));
+const momSickLeaveOverlapQuery = 'Is the 60-day hospitalisation leave entitlement in addition to the 14 days of outpatient sick leave?';
+const momSickLeaveOverlapPlan = taxonomyPlan(momSickLeaveOverlapQuery);
+assert.equal(momSickLeaveOverlapPlan.issues[0].operation, 'EXPLAIN_RULE');
+assert.ok(momSickLeaveOverlapPlan.issues[0].mappedTopicIds.includes('mom_sick_leave'));
+const momSickLeaveSeparatePlan = taxonomyPlan(`${momSickLeaveOverlapQuery} Also, when is final salary due?`);
+assert.ok(momSickLeaveSeparatePlan.issues.some(item => item.mappedTopicIds.includes('mom_sick_leave')));
+assert.ok(momSickLeaveSeparatePlan.issues.some(item => item.mappedTopicIds.includes('mom-salary-payment')),
+  'A separate final-salary question remains independent of the sick-leave answer.');
+
+const acraAgmProcessQuery = 'When filing an annual return in Bizfile, do we still need to declare AGM details if our company was exempt from holding the meeting?';
+const acraAgmProcessPlan = taxonomyPlan(acraAgmProcessQuery);
+assert.equal(acraAgmProcessPlan.issues.length, 1);
+assert.equal(acraAgmProcessPlan.issues[0].operation, 'EXPLAIN_RULE');
+assert.deepEqual(acraAgmProcessPlan.issues[0].mappedTopicIds, ['acra_annual-returns']);
+assert.ok(acraAgmProcessPlan.issues[0].contextualTopicIds.includes('acra_agm'));
+assert.equal(acraAgmProcessPlan.coverageEstablished, false,
+  'The ACRA process rule does not claim completeness for the full user request.');
+assert.equal(acraAgmProcessPlan.hasUnmappedResidual, true);
+const acraAgmWithSeparateDeadlinePlan = taxonomyPlan(`${acraAgmProcessQuery} Also, when are annual returns due?`);
+assert.ok(acraAgmWithSeparateDeadlinePlan.issues.some(item => item.mappedTopicIds.includes('acra_annual-returns')),
+  'A separate annual-return filing deadline remains mapped.');
+assert.ok(acraAgmWithSeparateDeadlinePlan.issues.some(item => item.contextualTopicIds?.includes('acra_agm')),
+  'The AGM declaration remains context for the annual-return process ask.');
+const acraAgmWithSeparateCompliancePlan = taxonomyPlan(`${acraAgmProcessQuery} Also, when must the AGM be held?`);
+assert.ok(acraAgmWithSeparateCompliancePlan.issues.some(item => item.mappedTopicIds.includes('acra_agm')),
+  'An independent AGM compliance or date question remains mapped.');
+
+const masToolkitQuery = 'Does MAS\'s LFMC compliance toolkit cover every return owed by the investment funds a licensed manager manages?';
+const masToolkitPlan = taxonomyPlan(masToolkitQuery);
+assert.equal(masToolkitPlan.issues.length, 1);
+assert.equal(masToolkitPlan.issues[0].operation, 'EXPLAIN_RULE');
+assert.deepEqual(masToolkitPlan.issues[0].mappedTopicIds, ['mas-regulatory-reporting']);
+assert.equal(masToolkitPlan.coverageEstablished, false,
+  'The toolkit disclaimer does not establish complete coverage of fund-level duties.');
+assert.equal(masToolkitPlan.hasUnmappedResidual, true);
+const masToolkitWithSeparateLicencePlan = taxonomyPlan(`${masToolkitQuery} Also, does the manager need a CMS licence?`);
+assert.ok(masToolkitWithSeparateLicencePlan.issues.some(item => item.mappedTopicIds.includes('mas-regulatory-reporting')));
+assert.ok(masToolkitWithSeparateLicencePlan.issues.some(item => item.mappedTopicIds.includes('mas-lfmc')),
+  'A separate manager licensing question remains mapped independently.');
+
+const acraEntityChangeQuery = 'Our Singapore company\'s registered office address and entity email changed on 12 October. When must we notify ACRA, and can we wait until the annual return?';
+const acraEntityChangePlan = taxonomyPlan(acraEntityChangeQuery);
+assert.ok(acraEntityChangePlan.issues.some(item => item.mappedTopicIds.includes('acra-entity-information-changes')));
+const acraEntityChangeIssue = acraEntityChangePlan.issues.find(item => item.mappedTopicIds.includes('acra-entity-information-changes'));
+assert.equal(acraEntityChangeIssue?.operation, 'EXPLAIN_RULE');
+assert.ok(acraEntityChangeIssue?.contextualTopicIds?.includes('acra_annual-returns'),
+  'Waiting until the annual return is context for the entity-update deadline question.');
+const acraEntityUpdatesAcrossCompanyTypesQuery = 'Our group has a Singapore-incorporated subsidiary and a foreign company registered in Singapore. Both changed their entity email addresses twelve days ago. Do they have the same ACRA notification deadline, and can either wait until its annual return?';
+const acraEntityUpdatesAcrossCompanyTypesPlan = taxonomyPlan(acraEntityUpdatesAcrossCompanyTypesQuery);
+assert.equal(acraEntityUpdatesAcrossCompanyTypesPlan.issues.length, 1);
+assert.deepEqual(acraEntityUpdatesAcrossCompanyTypesPlan.issues[0].mappedTopicIds, ['acra-entity-information-changes']);
+assert.ok(acraEntityUpdatesAcrossCompanyTypesPlan.issues[0].contextualTopicIds?.includes('acra_annual-returns'),
+  'An annual-return deferral mention does not become an independent filing-deadline request.');
+const acraEntityUpdatesWithSeparateReturnDeadlinePlan = taxonomyPlan(`${acraEntityUpdatesAcrossCompanyTypesQuery} Separately, what is the annual return filing deadline?`);
+assert.ok(acraEntityUpdatesWithSeparateReturnDeadlinePlan.issues.some(item => item.mappedTopicIds.includes('acra-entity-information-changes')));
+assert.ok(acraEntityUpdatesWithSeparateReturnDeadlinePlan.issues.some(item => item.mappedTopicIds.includes('acra_annual-returns')),
+  'A separately requested annual-return deadline remains mapped.');
+const acraBusinessEmailDeferralQuery = 'Our Singapore-incorporated private company changed its business email ten days ago. Can the secretary wait until the next annual return to tell ACRA?';
+const acraBusinessEmailDeferralPlan = taxonomyPlan(acraBusinessEmailDeferralQuery);
+assert.equal(acraBusinessEmailDeferralPlan.issues.length, 1);
+assert.deepEqual(acraBusinessEmailDeferralPlan.issues[0].mappedTopicIds, ['acra-entity-information-changes']);
+assert.ok(acraBusinessEmailDeferralPlan.issues[0].contextualTopicIds?.includes('acra_annual-returns'),
+  'The annual-return mention is proposed delay context for the company email update.');
+assert.equal(acraEntityChangePlan.coverageEstablished, false);
+assert.equal(acraEntityChangePlan.hasUnmappedResidual, true);
+const acraEntityAndOfficeRequirementsPlan = taxonomyPlan(`${acraEntityChangeQuery} Also, what must the registered office address be?`);
+assert.ok(acraEntityAndOfficeRequirementsPlan.issues.some(item => item.mappedTopicIds.includes('acra-entity-information-changes')));
+assert.ok(acraEntityAndOfficeRequirementsPlan.issues.some(item => item.mappedTopicIds.includes('acra_registered-office')),
+  'A separate registered-office requirement remains mapped beside the entity-update rule.');
+
+const irasRecordRetentionQuery = 'For YA 2023, how long must a company keep its source documents, accounting records and bank statements, and what changes after dissolution?';
+const irasRecordRetentionPlan = taxonomyPlan(irasRecordRetentionQuery);
+assert.ok(irasRecordRetentionPlan.issues.some(item => item.mappedTopicIds.includes('iras-company-record-retention')));
+assert.equal(irasRecordRetentionPlan.issues.find(item => item.mappedTopicIds.includes('iras-company-record-retention'))?.operation, 'EXPLAIN_RULE');
+assert.equal(irasRecordRetentionPlan.issues.find(item => item.mappedTopicIds.includes('iras-company-record-retention'))?.population, 'COMPANY');
+assert.equal(taxonomyPlan('How long must a GST-registered company keep GST records?').issues
+  .some(item => item.mappedTopicIds.includes('iras-company-record-retention')), false,
+  'Corporate income-tax retention mapping does not absorb GST record retention.');
+
+const cpfRefundQuery = 'When should an employer request a refund of wrongly paid CPF contributions, including for conditional wages, and should the employee share be returned first?';
+const cpfRefundPlan = taxonomyPlan(cpfRefundQuery);
+assert.ok(cpfRefundPlan.issues.some(item => item.mappedTopicIds.includes('cpf-adjustments-refunds')));
+assert.equal(cpfRefundPlan.issues.find(item => item.mappedTopicIds.includes('cpf-adjustments-refunds'))?.operation, 'EXPLAIN_RULE');
+assert.equal(cpfRefundPlan.issues.find(item => item.mappedTopicIds.includes('cpf-adjustments-refunds'))?.population, 'EMPLOYER');
+const personalCpfRefundPlan = taxonomyPlan('Can I request a refund of my personal CPF contributions?');
+assert.notEqual(personalCpfRefundPlan.issues.find(item => item.mappedTopicIds.includes('cpf-adjustments-refunds'))?.population, 'EMPLOYER',
+  'The employer refund rule does not reclassify a personal CPF question as employer guidance.');
+
+const momPayslipQuery = 'Must an employer give an itemised payslip with payment or within three working days if unable, and with outstanding salary on dismissal? Is soft copy allowed?';
+const momPayslipPlan = taxonomyPlan(momPayslipQuery);
+assert.ok(momPayslipPlan.issues.some(item => item.mappedTopicIds.includes('mom-itemised-payslips')));
+assert.equal(momPayslipPlan.issues.find(item => item.mappedTopicIds.includes('mom-itemised-payslips'))?.operation, 'EXPLAIN_RULE');
+assert.equal(momPayslipPlan.issues.find(item => item.mappedTopicIds.includes('mom-itemised-payslips'))?.population, 'EMPLOYER');
+const momPayslipEmployeePerspective = taxonomyPlan('Must my employer give me an itemised payslip together with payment?');
+assert.equal(momPayslipEmployeePerspective.issues.find(item => item.mappedTopicIds.includes('mom-itemised-payslips'))?.population, 'EMPLOYEE');
+
+const masAppointmentQuery = 'For an LFMC, must the company get prior MAS approval on Form 11 before appointing a CEO or director?';
+const masAppointmentPlan = taxonomyPlan(masAppointmentQuery);
+assert.ok(masAppointmentPlan.issues.some(item => item.mappedTopicIds.includes('mas-lfmc-key-appointments')));
+assert.equal(masAppointmentPlan.issues.find(item => item.mappedTopicIds.includes('mas-lfmc-key-appointments'))?.operation, 'EXPLAIN_RULE');
+assert.equal(masAppointmentPlan.issues.find(item => item.mappedTopicIds.includes('mas-lfmc-key-appointments'))?.population, 'COMPANY');
+const masRow17Plan = taxonomyPlan('For an LFMC, does row 17 require notification when director particulars change?');
+assert.equal(masRow17Plan.issues.some(item => item.mappedTopicIds.includes('mas-lfmc-key-appointments')), false,
+  'Row 17 change notifications do not select the prior-appointment approval rule.');
+const masAppointmentSeparatePlan = taxonomyPlan(`${masAppointmentQuery} Also, what reporting returns does an LFMC file each quarter?`);
+assert.ok(masAppointmentSeparatePlan.issues.some(item => item.mappedTopicIds.includes('mas-lfmc-key-appointments')));
+assert.ok(masAppointmentSeparatePlan.issues.some(item => item.mappedTopicIds.includes('mas-regulatory-reporting')),
+  'A separate LFMC reporting question remains mapped beside the appointment rule.');
 
 assert.ok(validateSemanticQuestionInterpretation(interpretation()), 'Accept the complete semantic contract.');
 for (const invalid of [
@@ -244,6 +388,20 @@ const generalMealEligibility = reconcile('What are the general conditions for a 
 });
 assert.deepEqual(generalMealEligibility.classification.missingFacts, [],
   'Explicit general-conditions questions remain conceptual without relying on illustration markers.');
+const provisionIllustrationQuery = 'Outline the general measurement rules for provisions under SFRS(I), using SGD 500 only as an illustration.';
+const provisionIllustrationMeaning = validateSemanticQuestionInterpretation(interpretation({
+  authorityCandidates: ['ACCOUNTING_STANDARDS'], domain: 'ACCOUNTING', population: 'UNKNOWN',
+  primarySubject: 'general provision measurement',
+  concepts: [{ concept: 'provision measurement', role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: 'general provision measurement', population: 'UNKNOWN', domain: 'ACCOUNTING',
+    governingAuthorities: ['ACCOUNTING_STANDARDS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+}), provisionIllustrationQuery);
+assert.ok(provisionIllustrationMeaning);
+assert.equal(provisionIllustrationMeaning.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE',
+  'A number confined to an illustration clause does not make the general provisions rule case-specific.');
+assert.equal(provisionIllustrationMeaning.requiresUserSpecificFacts, false);
 
 const caregiverLexical = classifyQuestion('Can caregiver relief reduce the personal income tax I owe?');
 assert.equal(caregiverLexical.missingFacts.some(fact => /vehicle registration|S-plate passenger car/i.test(fact)), false,
@@ -562,6 +720,63 @@ assert.equal(ambiguousRecipient.classification.domains.some(domain => ['IRAS_IND
 
 const promptCalls = [];
 const provider = { activeProvider: 'gemini', gemini: { apiKey: '0123456789012345', model: 'gemini-3.5-flash-lite' } };
+const mixedCpfMomQuestion = 'We are hiring our first employee in Singapore. Explain how CPF registration and contribution duties differ from MOM salary-payment duties, and what facts you need from us before applying the rules. Please cover both authorities. Do not calculate payroll or create journal entries.';
+const validMixedIssue = (subject, domain, population, authority) => ({
+  subject, population, domain, governingAuthorities: [authority], contextualAuthorities: [],
+  operation: 'EXPLAIN_RULE', mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95
+});
+const mixedCpfMomMeaning = {
+  schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['CPF', 'MOM'], contextualAuthorities: [],
+  domain: 'UNKNOWN', population: 'UNKNOWN',
+  primarySubject: 'employer CPF duties and MOM salary-payment duties',
+  concepts: [{ concept: 'CPF registration and contributions', role: 'PRIMARY' },
+    { concept: 'MOM salary-payment duties', role: 'RELATED' }],
+  requestedOperation: 'OTHER', factsExplicitlyProvided: [], confidence: 0.95,
+  issues: [
+    validMixedIssue('employer CPF registration and contribution duties', 'CPF_PAYROLL', 'EMPLOYER', 'CPF'),
+    validMixedIssue('MOM salary-payment duties', 'MOM_EMPLOYMENT', 'EMPLOYER', 'MOM'),
+    { subject: 'relationship between CPF contribution duties and MOM salary-payment duties',
+      population: 'EMPLOYER', domain: 'UNKNOWN', governingAuthorities: ['MOM'], contextualAuthorities: ['CPF'],
+      operation: 'EXPLAIN_INTERACTION', mappedTopicIds: [], evidenceRequirement: 'UNRESOLVED', confidence: 0.95 }
+  ]
+};
+assert.equal(validateSemanticQuestionInterpretation(mixedCpfMomMeaning, mixedCpfMomQuestion), undefined,
+  'The strict exported validator continues rejecting an UNKNOWN-domain issue with a known governor.');
+const recoveredMixedCpfMom = await interpretSemanticQuestion(mixedCpfMomQuestion, provider,
+  async () => JSON.stringify(mixedCpfMomMeaning));
+assert.equal(recoveredMixedCpfMom.assessmentStatus, 'PASSED');
+assert.equal(recoveredMixedCpfMom.recoveredIssueCount, 1);
+assert.deepEqual(recoveredMixedCpfMom.interpretation.issues.slice(0, 2).map(item => item.governingAuthorities[0]), ['CPF', 'MOM'],
+  'Independently valid CPF and MOM obligations survive issue-level recovery.');
+const recoveredInteraction = recoveredMixedCpfMom.interpretation.issues[2];
+assert.equal(recoveredInteraction.domain, 'UNKNOWN');
+assert.deepEqual(recoveredInteraction.governingAuthorities, ['UNKNOWN']);
+assert.deepEqual(recoveredInteraction.contextualAuthorities, ['CPF', 'MOM']);
+assert.equal(recoveredInteraction.population, 'EMPLOYER');
+assert.equal(recoveredInteraction.operation, 'EXPLAIN_INTERACTION');
+const recoveredMixedRoute = reconcileQuestionUnderstanding(mixedCpfMomQuestion, classifyQuestion(mixedCpfMomQuestion), recoveredMixedCpfMom);
+assert.ok(recoveredMixedRoute.issuePlan.issues.some(item => item.domain === 'CPF_PAYROLL' && item.governingAuthorities.includes('CPF')),
+  'The CPF workstream survives reconciliation beside the unresolved issue.');
+assert.ok(recoveredMixedRoute.issuePlan.issues.some(item => item.domain === 'MOM_EMPLOYMENT' && item.governingAuthorities.includes('MOM')),
+  'The MOM workstream survives reconciliation beside the unresolved issue.');
+assert.ok(recoveredMixedRoute.issuePlan.issues.some(item => item.domain === 'UNKNOWN' && item.operation === 'EXPLAIN_INTERACTION' && item.status === 'UNRESOLVED'),
+  'The unresolved interaction remains beside both supported sibling workstreams.');
+for (const [label, invalidField] of [
+  ['population', { population: 'TAXPAYER' }],
+  ['operation', { operation: 'UNSAFE_OPERATION' }],
+  ['mapped topics', { mappedTopicIds: 'cpf_contribution_rates' }],
+  ['evidence requirement', { evidenceRequirement: 'REVIEWED_RULE' }]
+]) {
+  const malformed = structuredClone(mixedCpfMomMeaning);
+  Object.assign(malformed.issues[2], invalidField);
+  const result = await interpretSemanticQuestion(mixedCpfMomQuestion, provider, async () => JSON.stringify(malformed));
+  assert.equal(result.assessmentStatus, 'FAILED', `Recovery must not hide malformed original ${label}.`);
+}
+const noValidSiblingMeaning = structuredClone(mixedCpfMomMeaning);
+noValidSiblingMeaning.issues = [mixedCpfMomMeaning.issues[2], { ...mixedCpfMomMeaning.issues[2], subject: 'another contradictory unknown interaction' }];
+assert.equal((await interpretSemanticQuestion(mixedCpfMomQuestion, provider,
+  async () => JSON.stringify(noValidSiblingMeaning))).assessmentStatus, 'FAILED',
+  'Recovery requires at least one independently valid original child.');
 const modelResponse = JSON.stringify(interpretation());
 const interpreted = await interpretSemanticQuestion('How does personal income tax relief work?', provider, async (prompt, system, activeProvider, options) => {
   promptCalls.push({ prompt, system, activeProvider, options });
@@ -572,12 +787,118 @@ assert.equal(promptCalls.length, 1);
 assert.equal(promptCalls[0].options.timeoutMs, SEMANTIC_QUESTION_TIMEOUT_MS);
 assert.match(promptCalls[0].system, /do not answer/i);
 assert.doesNotMatch(promptCalls[0].prompt, /retrieved evidence|conversation history/i);
+
+const momSalaryOvertimeParent = 'Our employee is covered by the Employment Act and the overtime provisions. Do ordinary salary and overtime have the same payment deadline after the salary period ends? Explain the practical payroll steps and cite the relevant official guidance. No journal is required.';
+const momSalaryOvertimeFollowUp = 'Does that change if the employee is not covered by the overtime provisions? Please keep ordinary salary and overtime separate. No journal is required.';
+const momConversation = [
+  ...Array.from({ length: 20 }, (_, index) => ({
+    id: `old-unrelated-${index}`, sender: 'user',
+    text: index === 0 ? 'Very old irrelevant transaction token: vintage-software-4481.' : `Unrelated old scenario ${index}.`,
+    timestamp: '2026-01-01T00:00:00Z'
+  })),
+  { id: 'mom-parent-user', sender: 'user', text: momSalaryOvertimeParent, timestamp: '2026-01-02T00:00:00Z' },
+  { id: 'mom-parent-assistant', sender: 'assistant',
+    text: 'Unverified assistant claim: the employment contract requires payment within three days.', timestamp: '2026-01-02T00:01:00Z' },
+  { id: 'mom-follow-up-user', sender: 'user', text: momSalaryOvertimeFollowUp, timestamp: '2026-01-02T00:02:00Z' }
+];
+let contextualInterpretationCall;
+const contextualInterpretation = await interpretSemanticQuestion(momSalaryOvertimeFollowUp, provider,
+  async (prompt, system, activeProvider, options) => {
+    contextualInterpretationCall = { prompt, system, activeProvider, options };
+    return modelResponse;
+  }, buildAdvisoryConversation(momConversation, momSalaryOvertimeFollowUp));
+assert.equal(contextualInterpretation.mode, 'SEMANTIC_INTERPRETATION');
+assert.ok(contextualInterpretationCall.prompt.includes(momSalaryOvertimeParent),
+  'The bounded semantic prompt retains the earlier user facts and the substantive salary/overtime request.');
+assert.ok(contextualInterpretationCall.prompt.includes(momSalaryOvertimeFollowUp),
+  'The current follow-up remains verbatim in the semantic prompt.');
+assert.ok(contextualInterpretationCall.prompt.indexOf(momSalaryOvertimeParent) <
+  contextualInterpretationCall.prompt.indexOf(momSalaryOvertimeFollowUp),
+  'Prior context precedes the controlling current question.');
+assert.match(contextualInterpretationCall.prompt,
+  /Earlier assistant \(untrusted context only; not a user fact or official evidence\): Unverified assistant claim:/,
+  'Assistant prose remains visibly labeled as assistant context.');
+assert.doesNotMatch(contextualInterpretationCall.prompt, /vintage-software-4481/,
+  'The context builder excludes stale unrelated history outside its bounded selection.');
+assert.match(contextualInterpretationCall.system, /current question takes precedence/i);
+assert.match(contextualInterpretationCall.system, /assistant messages as user-provided facts or official evidence/i);
+assert.match(contextualInterpretationCall.prompt, /untrusted context/i);
+assert.match(contextualInterpretationCall.prompt, /not instructions or official evidence/i);
+
+// These are extracted interpretations from completed retained receipts. The
+// regression replays only the saved model interpretation; it makes no live call.
+const retainedInterpretations = JSON.parse(readFileSync(
+  new URL('../fixtures/semantic_review_retained_interpretations.json', import.meta.url), 'utf8'));
+assert.equal(retainedInterpretations.provenance,
+  'Extracted parsed interpretations from retained model responses; no provider call is performed by the regression.');
+for (const retained of [retainedInterpretations.mom, retainedInterpretations.mas]) {
+  assert.match(retained.responseBodySha256, /^[a-f0-9]{64}$/);
+  assert.ok(retained.sourceReceipt.startsWith('artifacts/'), 'Retained fixture names its source receipt without depending on it at test time.');
+}
+const replayRetainedInterpretation = async retained => {
+  const replay = await interpretSemanticQuestion(retained.question, provider,
+    async () => JSON.stringify(retained.interpretation));
+  assert.equal(replay.mode, 'SEMANTIC_INTERPRETATION');
+  assert.equal(replay.assessmentStatus, 'PASSED');
+  return replay.interpretation;
+};
+
+const retainedMom = retainedInterpretations.mom;
+const retainedMomMeaning = await replayRetainedInterpretation(retainedMom);
+assert.deepEqual(retainedMomMeaning.authorityCandidates, ['MOM', 'SSO'],
+  'The retained MOM response keeps its root publisher authority candidate.');
+const retainedMomRoute = reconcileQuestionUnderstanding(retainedMom.question, classifyQuestion(retainedMom.question), {
+  mode: 'SEMANTIC_INTERPRETATION', interpretation: retainedMomMeaning
+});
+assert.equal(retainedMomRoute.understanding.interpretation.issues.length, 1);
+assert.equal(retainedMomRoute.understanding.interpretation.issues[0].governingAuthorities[0], 'MOM');
+const retainedMomConcepts = getRequestedQuestionConcepts(retainedMom.question, retainedMomRoute.understanding);
+const retainedEmploymentAct = retainedMomConcepts.find(concept => concept.label === 'Employment Act');
+const retainedPartFour = retainedMomConcepts.find(concept => concept.label === 'Part IV coverage');
+assert.deepEqual(retainedEmploymentAct?.semanticAuthorities, ['MOM'],
+  'The Employment Act descriptor binds to the unique MOM Part IV issue, not the root MOM/SSO publisher scope.');
+assert.deepEqual(retainedPartFour?.semanticAuthorities, ['MOM']);
+assert.equal(retainedMomConcepts.some(concept => ['working hours', 'overtime'].includes(concept.label)), false,
+  'Separate working-hours and overtime labels remain coverage context when the user asks only for Part IV coverage.');
+const publisherOnlyMomQuestion = 'Under MOM guidance, which employees are covered by Part IV of the Employment Act published on Singapore Statutes Online for working hours and overtime? Explain the general coverage using official MOM guidance. Do not calculate pay or create journal entries.';
+assert.deepEqual(getRequestedQuestionConcepts(publisherOnlyMomQuestion, retainedMomMeaning)
+  .find(concept => concept.label === 'Employment Act')?.semanticAuthorities, ['MOM'],
+  'A publisher reference attached to the Employment Act coverage clause remains contextual to the MOM issue.');
+
+const independentSsoQuestion = `${retainedMom.question} Separately, explain how Singapore Statutes Online publishes other statutes and legal requirements.`;
+const independentSsoConcepts = getRequestedQuestionConcepts(independentSsoQuestion, retainedMomMeaning);
+assert.deepEqual(independentSsoConcepts.find(concept => concept.label === 'Employment Act')?.semanticAuthorities, ['MOM', 'SSO'],
+  'A full-name independent Singapore Statutes Online request prevents publisher-only rebinding.');
+const conflictingMomMeaning = { ...retainedMomMeaning, population: 'COMPANY' };
+assert.deepEqual(getRequestedQuestionConcepts(retainedMom.question, conflictingMomMeaning)
+  .find(concept => concept.label === 'Employment Act')?.semanticAuthorities, ['MOM', 'SSO'],
+  'A conflicting single-issue root population is preserved instead of silently rebinding the descriptor to the child.');
+assert.equal(getRequestedQuestionConcepts(retainedMom.question, conflictingMomMeaning)
+  .find(concept => concept.label === 'Employment Act')?.semanticPopulation, 'COMPANY');
+const independentOvertimeQuestion = `${retainedMom.question} Separately, what overtime rates apply?`;
+assert.ok(getRequestedQuestionConcepts(independentOvertimeQuestion, retainedMomMeaning)
+  .some(concept => concept.id === 'semantic_overtime'),
+  'A separate request for overtime rates remains a material concept beside MOM coverage.');
+
+const retainedMas = retainedInterpretations.mas;
+const retainedMasMeaning = await replayRetainedInterpretation(retainedMas);
+assert.equal(retainedMasMeaning.population, 'UNKNOWN', 'The retained MAS interpretation does not invent a company population.');
+const retainedMasRoute = reconcileQuestionUnderstanding(retainedMas.question, classifyQuestion(retainedMas.question), {
+  mode: 'SEMANTIC_INTERPRETATION', interpretation: retainedMasMeaning
+});
+assert.equal(retainedMasRoute.understanding.interpretation.issues[0].population, 'UNKNOWN');
+const retainedMasConcepts = getRequestedQuestionConcepts(retainedMas.question, retainedMasRoute.understanding);
+assert.deepEqual(retainedMasConcepts.find(concept => concept.id === 'mas_cms_licence_definition')?.semanticAuthorities, ['MAS']);
+assert.deepEqual(retainedMasConcepts.find(concept => concept.label === 'licensing requirement')?.semanticAuthorities, ['MAS']);
+assert.equal(retainedMasConcepts.find(concept => concept.label === 'licensing requirement')?.semanticPopulation, 'UNKNOWN');
+
 const generalCompanyResidencyQuery = 'How do Singapore tax rules determine whether a company is tax resident here?';
 const generalCompanyResidencyMeaning = interpretation({
   domain: 'IRAS_INCOME_TAX', population: 'COMPANY',
   primarySubject: 'corporate tax residence determination',
   concepts: [
     { concept: 'tax residence', role: 'PRIMARY' },
+    { concept: 'control and management test', role: 'PRIMARY' },
     { concept: 'control and management', role: 'RELATED' }
   ],
   requestedOperation: 'DETERMINE_TREATMENT', requiresUserSpecificFacts: true,
@@ -594,6 +915,592 @@ assert.equal(normalizedCompanyResidency.interpretation.issues[0].evidenceRequire
 const normalizedResidencyConcepts = getRequestedQuestionConcepts(generalCompanyResidencyQuery, normalizedCompanyResidency);
 assert.deepEqual(normalizedResidencyConcepts.map(concept => concept.id), ['company_tax_residency_rule']);
 assert.deepEqual(normalizedResidencyConcepts[0].topicIds, ['iras-corporate-tax-residency']);
+const incorporationResidencyQuery = 'For Singapore corporate income tax, is incorporation in Singapore alone enough to make a company tax resident? Explain the general control-and-management test using IRAS guidance. Do not calculate tax or create journal entries.';
+const incorporationResidencyMeaning = interpretation({
+  domain: 'IRAS_INCOME_TAX', population: 'COMPANY', primarySubject: 'corporate tax residence determination',
+  concepts: [
+    { concept: 'tax residence', role: 'PRIMARY' },
+    { concept: 'incorporation', role: 'RELATED' },
+    { concept: 'place of incorporation', role: 'RELATED' }
+  ],
+  requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true,
+  issues: [{ subject: 'corporate tax residence determination', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'CHECK_ELIGIBILITY', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }]
+});
+const normalizedIncorporationResidency = await interpretSemanticQuestion(incorporationResidencyQuery, provider,
+  async () => JSON.stringify(incorporationResidencyMeaning));
+assert.equal(normalizedIncorporationResidency.interpretation.requestedOperation, 'EXPLAIN_RULE');
+assert.equal(normalizedIncorporationResidency.interpretation.issues[0].operation, 'EXPLAIN_RULE');
+assert.equal(normalizedIncorporationResidency.interpretation.requiresUserSpecificFacts, false);
+assert.deepEqual(getRequestedQuestionConcepts(incorporationResidencyQuery, normalizedIncorporationResidency)
+  .map(concept => concept.id), ['company_tax_residency_rule', 'company_tax_residency_incorporation'],
+  'The same-issue place-of-incorporation alias stays covered alongside the general residency and incorporation propositions.');
+
+const qualifiedControlTestLabel = 'control and management test for foreign pension offsets';
+assert.ok(getRequestedQuestionConcepts(`${incorporationResidencyQuery} Explain ${qualifiedControlTestLabel}.`, {
+  ...normalizedIncorporationResidency.interpretation,
+  concepts: [...normalizedIncorporationResidency.interpretation.concepts,
+    { concept: qualifiedControlTestLabel, role: 'PRIMARY' }]
+}).some(concept => concept.label === qualifiedControlTestLabel),
+'An unknown qualification cannot alias the exact retained control-and-management-test concept.');
+
+const mixedAcraIncorporationQuery = `${incorporationResidencyQuery} Separately, explain ACRA incorporation requirements.`;
+const mixedAcraIncorporationMeaning = interpretation({
+  authorityCandidates: ['UNKNOWN'], contextualAuthorities: [], domain: 'UNKNOWN', population: 'UNKNOWN',
+  primarySubject: 'company tax residency and ACRA incorporation requirements',
+  concepts: [
+    { concept: 'place of incorporation', role: 'RELATED' },
+    { concept: 'ACRA incorporation requirements', role: 'PRIMARY' }
+  ],
+  requestedOperation: 'OTHER', requiresUserSpecificFacts: false,
+  issues: [
+    { subject: 'corporate tax residence determination', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 },
+    { subject: 'ACRA company incorporation requirements', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+      governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }
+  ]
+});
+const mixedAcraIncorporationConcepts = getRequestedQuestionConcepts(mixedAcraIncorporationQuery, mixedAcraIncorporationMeaning);
+assert.ok(mixedAcraIncorporationConcepts.some(concept => concept.id === 'company_tax_residency_incorporation'));
+assert.ok(mixedAcraIncorporationConcepts.some(concept => concept.id === 'semantic_place_of_incorporation'),
+  'An ACRA incorporation concept cannot alias the separate IRAS company-residency qualification.');
+assert.ok(mixedAcraIncorporationConcepts.some(concept => concept.id === 'semantic_acra_incorporation_requirements'));
+
+const mixedIncorporationResidencyQuery = `${incorporationResidencyQuery} Separately, how should Acme Pte Ltd’s tax residency be assessed?`;
+const mixedIncorporationResidencyMeaning = interpretation({
+  domain: 'IRAS_INCOME_TAX', population: 'COMPANY',
+  primarySubject: 'general company tax residency rule and Acme Pte Ltd residency assessment',
+  requestedOperation: 'OTHER', requiresUserSpecificFacts: true,
+  issues: [
+    { subject: 'corporate tax residence determination', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'CHECK_ELIGIBILITY', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 },
+    { subject: 'Acme Pte Ltd corporate tax residence assessment', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'CHECK_ELIGIBILITY', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }
+  ]
+});
+const normalizedMixedIncorporationResidency = await interpretSemanticQuestion(mixedIncorporationResidencyQuery, provider,
+  async () => JSON.stringify(mixedIncorporationResidencyMeaning));
+assert.equal(normalizedMixedIncorporationResidency.interpretation.issues[0].operation, 'EXPLAIN_RULE',
+  'The incorporation-alone rule remains source-only when a named-company request follows it.');
+assert.equal(normalizedMixedIncorporationResidency.interpretation.issues[1].operation, 'CHECK_ELIGIBILITY',
+  'The named-company request retains its original case-specific operation.');
+assert.equal(normalizedMixedIncorporationResidency.interpretation.requiresUserSpecificFacts, true,
+  'The named-company sibling keeps the mixed request facts-dependent.');
+assert.deepEqual(getRequestedQuestionConcepts(mixedIncorporationResidencyQuery, normalizedMixedIncorporationResidency)
+  .map(concept => concept.id).filter(id => id.startsWith('company_tax_residency_')),
+['company_tax_residency_rule', 'company_tax_residency_incorporation'],
+  'A named-company sibling does not erase either general residency proposition.');
+
+const mixedCompanyResidencyQuery = `${generalCompanyResidencyQuery} Separately, how should Acme Pte Ltd’s tax residency be assessed?`;
+const mixedCompanyResidencyMeaning = interpretation({
+  domain: 'IRAS_INCOME_TAX', population: 'COMPANY', primarySubject: 'company tax residency and named company assessment',
+  requestedOperation: 'OTHER', requiresUserSpecificFacts: true,
+  issues: [
+    { subject: 'corporate tax residence determination', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'CHECK_ELIGIBILITY', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 },
+    { subject: 'Acme Pte Ltd corporate tax residence assessment', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'CHECK_ELIGIBILITY', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }
+  ]
+});
+const normalizedMixedCompanyResidency = await interpretSemanticQuestion(mixedCompanyResidencyQuery, provider,
+  async () => JSON.stringify(mixedCompanyResidencyMeaning));
+assert.equal(normalizedMixedCompanyResidency.interpretation.issues[0].operation, 'EXPLAIN_RULE',
+  'A named-company sibling does not prevent normalization of the general residency issue.');
+assert.equal(normalizedMixedCompanyResidency.interpretation.issues[1].operation, 'CHECK_ELIGIBILITY');
+assert.equal(normalizedMixedCompanyResidency.interpretation.requiresUserSpecificFacts, true,
+  'The named-company sibling retains its facts requirement.');
+assert.ok(getRequestedQuestionConcepts(mixedCompanyResidencyQuery, normalizedMixedCompanyResidency)
+  .some(concept => concept.id === 'company_tax_residency_rule'),
+  'A named-company application sibling does not erase the general child proposition.');
+
+const cpfCashTopUpQuery = 'Under IRAS rules, can cash top-ups to my own CPF Special Account or Retirement Account qualify for tax relief? Explain the general eligibility conditions and relief limits using official IRAS guidance. This is a general rules question; do not calculate my personal tax or create journal entries.';
+const cpfCashTopUpIssue = {
+  subject: 'CPF cash top-up tax relief eligibility and limits', population: 'UNKNOWN', domain: 'CPF_PAYROLL',
+  governingAuthorities: ['CPF'], contextualAuthorities: [], operation: 'CHECK_ELIGIBILITY', mappedTopicIds: [],
+  evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95
+};
+const cpfCashTopUpMeaning = interpretation({
+  authorityCandidates: ['CPF'], contextualAuthorities: [], domain: 'CPF_PAYROLL', population: 'UNKNOWN',
+  primarySubject: cpfCashTopUpIssue.subject,
+  concepts: [{ concept: 'CPF cash top-up tax relief', role: 'PRIMARY' }],
+  requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true, issues: [cpfCashTopUpIssue]
+});
+const normalizedCpfCashTopUp = await interpretSemanticQuestion(cpfCashTopUpQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedCpfCashTopUp.interpretation.issues[0].domain, 'IRAS_INCOME_TAX');
+assert.equal(normalizedCpfCashTopUp.interpretation.issues[0].population, 'INDIVIDUAL',
+  'The individual claimant scope is inferred only from the explicit own-CPF wording.');
+assert.deepEqual(normalizedCpfCashTopUp.interpretation.issues[0].contextualAuthorities, ['CPF']);
+assert.equal(normalizedCpfCashTopUp.interpretation.issues[0].operation, 'EXPLAIN_RULE');
+assert.equal(normalizedCpfCashTopUp.interpretation.requiresUserSpecificFacts, false,
+  'The bounded general eligibility and limits follow-ons make the requested outcome rule-only.');
+assert.deepEqual(getRequestedQuestionConcepts(cpfCashTopUpQuery, normalizedCpfCashTopUp).map(concept => concept.id), [
+  'cpf_cash_top_up_relief', 'cpf_cash_top_up_relief_eligibility', 'cpf_cash_top_up_relief_limits'
+]);
+
+const noAuthorityPrefaceCpfQuery = 'Can cash top-ups to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits.';
+const normalizedNoAuthorityPrefaceCpf = await interpretSemanticQuestion(noAuthorityPrefaceCpfQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedNoAuthorityPrefaceCpf.interpretation.issues[0].operation, 'EXPLAIN_RULE',
+  'A qualifying sole CPF relief group keeps its attached general-rule follow-on without an authority preface.');
+assert.equal(normalizedNoAuthorityPrefaceCpf.interpretation.requiresUserSpecificFacts, false,
+  'A sole group with a general eligibility and limits follow-on does not retain case-fact requirements.');
+const personalCpfAmountQuery = 'Can cash top-ups to my CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits. Do not calculate my tax. Calculate my relief amount.';
+const normalizedPersonalCpfAmount = await interpretSemanticQuestion(personalCpfAmountQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedPersonalCpfAmount.interpretation.requiresUserSpecificFacts, true,
+  'A separate positive amount request remains case-specific even beside a negative instruction.');
+assert.equal(normalizedPersonalCpfAmount.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY',
+  'A positive relief amount request is not normalized into a general-rule answer.');
+const commaSeparatedCpfAmountQuery = 'Can cash top-ups to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits. Do not calculate my tax, but calculate my relief amount.';
+const normalizedCommaSeparatedCpfAmount = await interpretSemanticQuestion(commaSeparatedCpfAmountQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedCommaSeparatedCpfAmount.interpretation.requiresUserSpecificFacts, true,
+  'A positive relief calculation after a comma remains case-specific despite an adjacent negative instruction.');
+assert.equal(normalizedCommaSeparatedCpfAmount.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY');
+for (const conjunction of ['but calculate', 'and compute', 'rather than estimate', 'instead calculate']) {
+  const conjunctionCpfAmountQuery = `Can cash top-ups to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits. Do not calculate my tax ${conjunction} my relief amount.`;
+  const normalizedConjunctionCpfAmount = await interpretSemanticQuestion(conjunctionCpfAmountQuery, provider,
+    async () => JSON.stringify(cpfCashTopUpMeaning));
+  assert.equal(normalizedConjunctionCpfAmount.interpretation.requiresUserSpecificFacts, true,
+    `The affirmative request after “${conjunction}” remains case-specific.`);
+  assert.equal(normalizedConjunctionCpfAmount.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY');
+}
+const negativeReliefControl = 'Can cash top-ups to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits. Do not calculate my tax or relief.';
+const normalizedNegativeReliefControl = await interpretSemanticQuestion(negativeReliefControl, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedNegativeReliefControl.interpretation.issues[0].operation, 'EXPLAIN_RULE',
+  'A prohibitive reference to relief without an affirmative calculation remains a general-rule request.');
+assert.equal(normalizedNegativeReliefControl.interpretation.requiresUserSpecificFacts, false);
+const factSpecificCpfQuery = 'I topped up SGD 8,000 to my CPF Special Account. Explain the general eligibility conditions and relief limits.';
+const normalizedFactSpecificCpf = await interpretSemanticQuestion(factSpecificCpfQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedFactSpecificCpf.interpretation.requiresUserSpecificFacts, true,
+  'Stated contribution facts keep the question on a case-specific path.');
+const amountBeforeCpfQuery = 'Can cash top-ups of SGD 8,000 to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits.';
+const normalizedAmountBeforeCpf = await interpretSemanticQuestion(amountBeforeCpfQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedAmountBeforeCpf.interpretation.requiresUserSpecificFacts, true,
+  'A stated personal top-up amount remains case-specific when it precedes the CPF account wording.');
+const personalCpfEligibilityQuery = 'Can I qualify for tax relief on my CPF cash top-up? Explain the general eligibility conditions and relief limits.';
+const normalizedPersonalCpfEligibility = await interpretSemanticQuestion(personalCpfEligibilityQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedPersonalCpfEligibility.interpretation.requiresUserSpecificFacts, true,
+  'A direct request to decide the individual’s own eligibility remains case-specific.');
+const repeatedCpfPrompt = 'Can cash top-ups to my own CPF qualify for tax relief? Explain the general eligibility conditions and relief limits for Special Account top-ups. Can cash top-ups to my own CPF qualify for tax relief? Explain the general eligibility conditions for Retirement Account top-ups.';
+const repeatedCpfMeaning = structuredClone(cpfCashTopUpMeaning);
+repeatedCpfMeaning.primarySubject = 'CPF Retirement Account cash top-up tax relief eligibility';
+repeatedCpfMeaning.issues[0].subject = repeatedCpfMeaning.primarySubject;
+const normalizedRepeatedCpfPrompt = await interpretSemanticQuestion(repeatedCpfPrompt, provider,
+  async () => JSON.stringify(repeatedCpfMeaning));
+assert.equal(normalizedRepeatedCpfPrompt.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY',
+  'Repeated identical request wording binds the Retirement Account issue to its own follow-on, not the earlier Special Account limits.');
+assert.equal(normalizedRepeatedCpfPrompt.interpretation.requiresUserSpecificFacts, true,
+  'The first question’s relief-limit follow-on cannot erase the second request’s distinct context.');
+
+const mixedCpfPayrollQuery = `${cpfCashTopUpQuery} Separately, how much must the employer contribute to CPF?`;
+const mixedCpfMeaning = interpretation({
+  authorityCandidates: ['UNKNOWN'], contextualAuthorities: [], domain: 'UNKNOWN', population: 'UNKNOWN',
+  primarySubject: 'CPF cash top-up relief and employer contribution amount',
+  requestedOperation: 'OTHER', requiresUserSpecificFacts: true,
+  issues: [cpfCashTopUpIssue, {
+    subject: 'employer CPF contribution amount', population: 'EMPLOYER', domain: 'CPF_PAYROLL',
+    governingAuthorities: ['CPF'], contextualAuthorities: [], operation: 'CALCULATE', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95
+  }]
+});
+const normalizedMixedCpf = await interpretSemanticQuestion(mixedCpfPayrollQuery, provider,
+  async () => JSON.stringify(mixedCpfMeaning));
+assert.equal(normalizedMixedCpf.interpretation.issues[0].domain, 'IRAS_INCOME_TAX');
+assert.equal(normalizedMixedCpf.interpretation.issues[0].operation, 'EXPLAIN_RULE');
+assert.equal(normalizedMixedCpf.interpretation.issues[1].domain, 'CPF_PAYROLL');
+assert.equal(normalizedMixedCpf.interpretation.issues[1].operation, 'CALCULATE',
+  'A distinct employer contribution outcome stays a CPF payroll issue.');
+
+const cpfWithMomCalculationQuery = 'Can cash top-ups to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits. Separately, calculate MOM overtime pay for an employee.';
+const cpfWithMomCalculationMeaning = interpretation({
+  authorityCandidates: ['CPF', 'MOM'], contextualAuthorities: [], domain: 'UNKNOWN', population: 'UNKNOWN',
+  primarySubject: 'CPF cash top-up relief and MOM overtime pay', requestedOperation: 'OTHER',
+  issues: [cpfCashTopUpIssue, {
+    subject: 'MOM employee overtime pay calculation', population: 'EMPLOYEE', domain: 'MOM_EMPLOYMENT',
+    governingAuthorities: ['MOM'], contextualAuthorities: [], operation: 'CALCULATE', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95
+  }]
+});
+const normalizedCpfWithMomCalculation = await interpretSemanticQuestion(cpfWithMomCalculationQuery, provider,
+  async () => JSON.stringify(cpfWithMomCalculationMeaning));
+assert.equal(normalizedCpfWithMomCalculation.interpretation.issues[0].domain, 'IRAS_INCOME_TAX',
+  'CPF cash top-up tax relief is governed by IRAS even beside a separate MOM calculation.');
+assert.equal(normalizedCpfWithMomCalculation.interpretation.issues[0].operation, 'EXPLAIN_RULE',
+  'A separately owned MOM calculation cannot make the general IRAS relief issue case-specific.');
+assert.equal(normalizedCpfWithMomCalculation.interpretation.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE',
+  'The general IRAS relief issue remains source-only.');
+assert.equal(normalizedCpfWithMomCalculation.interpretation.issues[1].domain, 'MOM_EMPLOYMENT');
+assert.equal(normalizedCpfWithMomCalculation.interpretation.issues[1].operation, 'CALCULATE');
+assert.equal(normalizedCpfWithMomCalculation.interpretation.issues[1].evidenceRequirement, 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',
+  'The independent MOM overtime calculation retains its own case-fact requirement.');
+
+const cpfWithMomThenReliefCalculationQuery = `${cpfWithMomCalculationQuery} Calculate my CPF relief amount.`;
+const cpfWithMomThenReliefCalculationMeaning = structuredClone(cpfWithMomCalculationMeaning);
+const normalizedCpfWithMomThenReliefCalculation = await interpretSemanticQuestion(cpfWithMomThenReliefCalculationQuery, provider,
+  async () => JSON.stringify(cpfWithMomThenReliefCalculationMeaning));
+assert.equal(normalizedCpfWithMomThenReliefCalculation.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY',
+  'A later affirmative CPF relief calculation remains owned by CPF even after a separate MOM calculation.');
+assert.equal(normalizedCpfWithMomThenReliefCalculation.interpretation.issues[1].operation, 'CALCULATE');
+const cpfWithMomNegativeThenReliefCalculationQuery = `${cpfWithMomCalculationQuery} Do not calculate my tax, but calculate my CPF relief amount.`;
+const normalizedCpfWithMomNegativeThenReliefCalculation = await interpretSemanticQuestion(
+  cpfWithMomNegativeThenReliefCalculationQuery, provider,
+  async () => JSON.stringify(cpfWithMomCalculationMeaning));
+assert.equal(normalizedCpfWithMomNegativeThenReliefCalculation.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY',
+  'An affirmative CPF relief calculation remains owned by the CPF issue after negative wording and a separate MOM calculation.');
+assert.equal(normalizedCpfWithMomNegativeThenReliefCalculation.interpretation.issues[1].operation, 'CALCULATE');
+
+for (const [numericCpfQuestion, description, retainedScope] of [
+  ['Can cash top-ups for Year of Assessment 2026 to my own CPF Special Account qualify for tax relief?', 'an assessment year', 'Year of Assessment 2026'],
+  ['Can cash top-ups for YA 2026 to my own CPF Special Account qualify for tax relief?', 'an abbreviated assessment year', 'YA 2026'],
+  ['Can cash top-ups in calendar year 2026 to my own CPF Special Account qualify for tax relief?', 'a calendar year', 'calendar year 2026'],
+  ['Can cash top-ups to my own CPF Special Account for members under 55 or aged 55 and older qualify for tax relief?', 'general age thresholds', 'members under 55 or aged 55 and older'],
+  ['Can cash top-ups effective from 1 January 2026 to my own CPF Special Account qualify for tax relief?', 'an effective date', 'effective from 1 January 2026']
+]) {
+  const numericContextQuery = `${numericCpfQuestion} Explain the general eligibility conditions and relief limits.`;
+  const scopedCpfMeaning = structuredClone(cpfCashTopUpMeaning);
+  scopedCpfMeaning.issues[0].subject = `CPF cash top-up tax relief eligibility ${retainedScope}`;
+  const normalizedNumericContext = await interpretSemanticQuestion(numericContextQuery, provider,
+    async () => JSON.stringify(scopedCpfMeaning));
+  assert.equal(normalizedNumericContext.interpretation.issues[0].operation, 'EXPLAIN_RULE',
+    `A number in ${description} is not a personal top-up amount.`);
+  assert.equal(normalizedNumericContext.interpretation.requiresUserSpecificFacts, false,
+    `A general ${description} keeps the CPF relief question source-only.`);
+  assert.equal(normalizedNumericContext.interpretation.issues[0].subject, scopedCpfMeaning.issues[0].subject,
+    `The issue retains ${description} scope through interpretation normalization.`);
+}
+const currencyTopUpAmountQuery = 'Can cash top-ups of SGD 2,026 to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits.';
+const normalizedCurrencyTopUpAmount = await interpretSemanticQuestion(currencyTopUpAmountQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedCurrencyTopUpAmount.interpretation.requiresUserSpecificFacts, true,
+  'A currency-qualified numeric top-up remains a personal case fact.');
+const datedCurrencyTopUpAmountQuery = 'Can cash top-ups for Year of Assessment 2026 amounting to SGD 8,000 to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits.';
+const normalizedDatedCurrencyTopUpAmount = await interpretSemanticQuestion(datedCurrencyTopUpAmountQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedDatedCurrencyTopUpAmount.interpretation.requiresUserSpecificFacts, true,
+  'An explicit monetary top-up amount remains case-specific when the same clause also names an assessment year.');
+for (const monetaryPhrase of ['$8,000', '8,000 dollars']) {
+  const currencyFormQuery = `Can cash top-ups for YA 2026 amounting to ${monetaryPhrase} to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits.`;
+  const normalizedCurrencyForm = await interpretSemanticQuestion(currencyFormQuery, provider,
+    async () => JSON.stringify(cpfCashTopUpMeaning));
+  assert.equal(normalizedCurrencyForm.interpretation.requiresUserSpecificFacts, true,
+    `Explicit currency ${monetaryPhrase} remains monetary beside an assessment year.`);
+}
+for (const assessmentPeriod of ['YA 2026', 'Year of Assessment 2026']) {
+  const datedBareTopUpAmountQuery = `Can cash top-ups for ${assessmentPeriod} amounting to 8,000 to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits.`;
+  const normalizedDatedBareTopUpAmount = await interpretSemanticQuestion(datedBareTopUpAmountQuery, provider,
+    async () => JSON.stringify(cpfCashTopUpMeaning));
+  assert.equal(normalizedDatedBareTopUpAmount.interpretation.requiresUserSpecificFacts, true,
+    `A bare monetary amount remains case-specific beside ${assessmentPeriod}.`);
+  assert.equal(normalizedDatedBareTopUpAmount.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY',
+    `The relief calculation safeguard remains active beside ${assessmentPeriod}.`);
+}
+const barePersonalTopUpAmountQuery = 'Can cash top-ups of 8,000 to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits.';
+const normalizedBarePersonalTopUpAmount = await interpretSemanticQuestion(barePersonalTopUpAmountQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedBarePersonalTopUpAmount.interpretation.requiresUserSpecificFacts, true,
+  'A bare numeric amount explicitly attached to the user’s top-up remains case-specific.');
+assert.equal(normalizedBarePersonalTopUpAmount.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY');
+const amountBeforeTopUpQuery = 'Can an 8,000 cash top-up to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits.';
+const normalizedAmountBeforeTopUp = await interpretSemanticQuestion(amountBeforeTopUpQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedAmountBeforeTopUp.interpretation.requiresUserSpecificFacts, true,
+  'A bare monetary amount immediately before the user’s cash top-up remains case-specific.');
+assert.equal(normalizedAmountBeforeTopUp.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY');
+
+const separateCpfEligibilityQuery = 'Explain CPF cash top-up tax relief eligibility and limits. Separately, explain CPF contribution eligibility.';
+const separateCpfEligibilityMeaning = interpretation({
+  authorityCandidates: ['UNKNOWN'], contextualAuthorities: [], domain: 'UNKNOWN', population: 'UNKNOWN',
+  primarySubject: 'CPF contribution eligibility',
+  concepts: [
+    { concept: 'CPF cash top-up relief eligibility and limits', role: 'RELATED' },
+    { concept: 'CPF contribution eligibility', role: 'PRIMARY' },
+    { concept: 'Eligibility conditions', role: 'RELATED' }
+  ],
+  requestedOperation: 'OTHER', requiresUserSpecificFacts: true,
+  issues: [
+    { subject: 'CPF cash top-up tax relief eligibility and limits', population: 'INDIVIDUAL', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 },
+    { subject: 'CPF contribution eligibility', population: 'EMPLOYEE', domain: 'CPF_PAYROLL',
+      governingAuthorities: ['CPF'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }
+  ]
+});
+const separateCpfEligibilityConcepts = getRequestedQuestionConcepts(separateCpfEligibilityQuery, separateCpfEligibilityMeaning);
+assert.ok(separateCpfEligibilityConcepts.some(concept => concept.id === 'semantic_cpf_contribution_eligibility'),
+  'A separate CPF contribution eligibility proposition cannot alias the cash top-up relief owner.');
+assert.ok(separateCpfEligibilityConcepts.some(concept => concept.id === 'semantic_eligibility_conditions'),
+  `A generic eligibility label remains material when cash top-up relief and CPF payroll are both plausible owners: ${separateCpfEligibilityConcepts.map(concept => concept.id).join(', ')}`);
+assert.deepEqual(separateCpfEligibilityConcepts.filter(concept => concept.id.startsWith('cpf_cash_top_up_relief'))
+  .map(concept => concept.id), [
+    'cpf_cash_top_up_relief', 'cpf_cash_top_up_relief_eligibility', 'cpf_cash_top_up_relief_limits'
+  ]);
+
+const sameIssueCpfEligibilityMeaning = interpretation({
+  domain: 'IRAS_INCOME_TAX', population: 'INDIVIDUAL', primarySubject: 'CPF cash top-up tax relief eligibility and limits',
+  concepts: [
+    { concept: 'Eligibility conditions', role: 'RELATED' },
+    { concept: 'Relief limits', role: 'RELATED' }
+  ],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: 'CPF cash top-up tax relief eligibility and limits', population: 'INDIVIDUAL', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+});
+const sameIssueCpfEligibilityConcepts = getRequestedQuestionConcepts(
+  'Explain CPF cash top-up tax relief eligibility and limits.', sameIssueCpfEligibilityMeaning);
+assert.deepEqual(sameIssueCpfEligibilityConcepts.map(concept => concept.id), [
+  'cpf_cash_top_up_relief', 'cpf_cash_top_up_relief_eligibility', 'cpf_cash_top_up_relief_limits'
+], 'Generic eligibility and relief-limit aliases stay covered when one compatible cash top-up issue owns them.');
+
+const foreignPensionOffsetQuery = 'Explain the general CPF cash top-up tax relief interaction with foreign pension offsets.';
+const foreignPensionOffsetLabel = 'CPF cash top-up tax relief interaction with foreign pension offsets';
+const foreignPensionOffsetMeaning = interpretation({
+  domain: 'IRAS_INCOME_TAX', population: 'INDIVIDUAL', primarySubject: foreignPensionOffsetLabel,
+  concepts: [{ concept: foreignPensionOffsetLabel, role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: foreignPensionOffsetLabel, population: 'INDIVIDUAL', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+});
+const foreignPensionOffsetConcepts = getRequestedQuestionConcepts(foreignPensionOffsetQuery, foreignPensionOffsetMeaning);
+assert.ok(foreignPensionOffsetConcepts.some(concept => concept.label === foreignPensionOffsetLabel),
+  'A same-owner CPF label with foreign pension offset anchors remains material beyond the known canonical vocabulary.');
+assert.ok(foreignPensionOffsetConcepts.some(concept => concept.id === 'cpf_cash_top_up_relief'));
+
+const motorCarExceptionQuery = 'Can a GST-registered company claim input tax on a passenger motor car, and what exceptions apply?';
+assert.deepEqual(getRequestedQuestionConcepts(motorCarExceptionQuery).map(concept => concept.id), [
+  'gst_blocked_motor_car_input_tax', 'gst_motor_car_input_tax_exceptions'
+]);
+const motorCarRestrictionQuery = 'Can a GST-registered company claim input tax on a passenger motor car?';
+assert.deepEqual(getRequestedQuestionConcepts(motorCarRestrictionQuery).map(concept => concept.id), [
+  'gst_blocked_motor_car_input_tax'
+], 'The exception proposition is added only when the question asks for it.');
+const mixedMotorCarSrsExceptionQuery = `${motorCarExceptionQuery} Separately, explain SRS withdrawal exceptions.`;
+const mixedMotorCarSrsExceptionMeaning = interpretation({
+  authorityCandidates: ['IRAS'], contextualAuthorities: [], domain: 'UNKNOWN', population: 'UNKNOWN',
+  primarySubject: 'SRS withdrawal exceptions',
+  concepts: [
+    { concept: 'Passenger motor car input-tax exceptions', role: 'RELATED' },
+    { concept: 'SRS withdrawal exceptions', role: 'PRIMARY' }
+  ],
+  requestedOperation: 'OTHER', requiresUserSpecificFacts: false,
+  issues: [
+    { subject: 'passenger motor car input tax restriction and exceptions', population: 'COMPANY', domain: 'IRAS_GST',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 },
+    { subject: 'SRS withdrawal exceptions', population: 'INDIVIDUAL', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }
+  ]
+});
+const mixedMotorCarSrsExceptionConcepts = getRequestedQuestionConcepts(
+  mixedMotorCarSrsExceptionQuery, mixedMotorCarSrsExceptionMeaning);
+assert.ok(mixedMotorCarSrsExceptionConcepts.some(concept => concept.id === 'semantic_srs_withdrawal_exceptions'),
+  'SRS withdrawal exceptions stay material beside passenger motor-car input-tax exceptions.');
+assert.ok(mixedMotorCarSrsExceptionConcepts.some(concept => concept.id === 'gst_motor_car_input_tax_exceptions'));
+
+const sameIssueMotorCarExceptionMeaning = interpretation({
+  authorityCandidates: ['IRAS'], domain: 'IRAS_GST', population: 'COMPANY',
+  primarySubject: 'passenger motor car input tax restriction and exceptions',
+  concepts: [{ concept: 'Input tax exceptions', role: 'RELATED' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: 'passenger motor car input tax restriction and exceptions', population: 'COMPANY', domain: 'IRAS_GST',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+});
+assert.deepEqual(getRequestedQuestionConcepts(motorCarExceptionQuery, sameIssueMotorCarExceptionMeaning)
+  .map(concept => concept.id), ['gst_blocked_motor_car_input_tax', 'gst_motor_car_input_tax_exceptions'],
+  'A motor-car input-tax exception label aliases the canonical exception concept when the unique GST issue owns it.');
+const diplomaticMissionMotorCarQuery = 'Can a GST-registered company claim input tax on a passenger motor car for diplomatic missions?';
+const diplomaticMissionMotorCarLabel = 'Blocked input tax on passenger motor cars for diplomatic missions';
+const diplomaticMissionMotorCarMeaning = interpretation({
+  authorityCandidates: ['IRAS'], domain: 'IRAS_GST', population: 'COMPANY',
+  primarySubject: diplomaticMissionMotorCarLabel,
+  concepts: [{ concept: diplomaticMissionMotorCarLabel, role: 'PRIMARY' }],
+  requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true,
+  issues: [{ subject: diplomaticMissionMotorCarLabel, population: 'COMPANY', domain: 'IRAS_GST',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'CHECK_ELIGIBILITY', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }]
+});
+const diplomaticMissionMotorCarConcepts = getRequestedQuestionConcepts(
+  diplomaticMissionMotorCarQuery, diplomaticMissionMotorCarMeaning);
+assert.ok(diplomaticMissionMotorCarConcepts.some(concept => concept.label === diplomaticMissionMotorCarLabel),
+  'A same-owner GST label with diplomatic-mission qualifiers remains material beyond the canonical vehicle restriction.');
+const generalAcraAnnualFilingQuery = 'Under ACRA guidance, must Singapore-incorporated companies file annual returns? Explain the general filing duty using official ACRA guidance. Do not calculate a deadline or create journal entries.';
+const generalAcraAnnualFilingMeaning = validateSemanticQuestionInterpretation(interpretation({
+  authorityCandidates: ['ACRA'], domain: 'ACRA_CORPORATE', population: 'COMPANY',
+  primarySubject: 'annual return filing requirements',
+  concepts: [{ concept: 'annual return filing duty', role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: 'annual return filing requirements', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+    governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+}), generalAcraAnnualFilingQuery);
+assert.ok(generalAcraAnnualFilingMeaning);
+assert.equal(generalAcraAnnualFilingMeaning.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE',
+  'Plural annual-return wording binds the ACRA filing rule to its raw general-duty clause.');
+assert.equal(generalAcraAnnualFilingMeaning.requiresUserSpecificFacts, false);
+const shortSubjectAcraAnnualFilingMeaning = validateSemanticQuestionInterpretation(interpretation({
+  authorityCandidates: ['ACRA'], domain: 'ACRA_CORPORATE', population: 'COMPANY',
+  primarySubject: 'annual return filing duty',
+  concepts: [{ concept: 'annual return filing duty', role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: 'annual return filing duty', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+    governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+}), generalAcraAnnualFilingQuery);
+assert.equal(shortSubjectAcraAnnualFilingMeaning?.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE',
+  'A short annual-return subject includes its attached general-duty explanation before matching clauses are scored.');
+assert.equal(shortSubjectAcraAnnualFilingMeaning?.requiresUserSpecificFacts, false,
+  'The short general filing-duty subject remains a rule question rather than a case application.');
+const filingDutyOnlyAcraMeaning = validateSemanticQuestionInterpretation(interpretation({
+  authorityCandidates: ['ACRA'], domain: 'ACRA_CORPORATE', population: 'COMPANY',
+  primarySubject: 'filing duty', concepts: [{ concept: 'filing duty', role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: 'filing duty', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+    governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+}), generalAcraAnnualFilingQuery);
+assert.equal(filingDutyOnlyAcraMeaning?.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE',
+  'Terms from an attached ACRA explanation contribute to its preceding filing-duty request before uniqueness scoring.');
+assert.equal(filingDutyOnlyAcraMeaning?.requiresUserSpecificFacts, false);
+const acraDutyWithIrAsQuestion = [
+  'Under ACRA guidance, must Singapore-incorporated companies file annual returns?',
+  'Explain the general filing duty.',
+  'Explain the general IRAS rules for whether my company can claim tax deductions.'
+].join(' ');
+const acraAndIrasMeaning = interpretation({
+  authorityCandidates: ['ACRA', 'IRAS'], domain: 'UNKNOWN', population: 'UNKNOWN',
+  primarySubject: 'annual return filing duty and tax deduction eligibility',
+  concepts: [
+    { concept: 'annual return filing duty', role: 'PRIMARY' },
+    { concept: 'tax deduction eligibility', role: 'PRIMARY' }
+  ],
+  requestedOperation: 'OTHER', requiresUserSpecificFacts: true,
+  issues: [
+    { subject: 'annual return filing duty', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+      governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+      mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 },
+    { subject: 'tax deduction eligibility', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+      mappedTopicIds: ['iras-cit-deductibility'], evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }
+  ]
+});
+const normalizedAcraAndIras = validateSemanticQuestionInterpretation(acraAndIrasMeaning, acraDutyWithIrAsQuestion);
+assert.equal(normalizedAcraAndIras?.issues.find(issue => issue.governingAuthorities[0] === 'ACRA')?.evidenceRequirement,
+  'AUTHORITATIVE_SOURCE', 'An untagged ACRA explanation stays with the ACRA request across a later IRAS question.');
+assert.equal(normalizedAcraAndIras?.issues.find(issue => issue.governingAuthorities[0] === 'IRAS')?.evidenceRequirement,
+  'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', 'The separate IRAS company-specific deduction question retains its fact requirement.');
+assert.equal(normalizedAcraAndIras?.requiresUserSpecificFacts, true);
+const acraDutyWithIrAsQuestionAfterNegative = [
+  'Under ACRA guidance, must Singapore-incorporated companies file annual returns?',
+  'Explain the general filing duty.',
+  'Do not calculate a deadline or create journal entries.',
+  'Explain the general IRAS rules for whether my company can claim tax deductions.'
+].join(' ');
+const normalizedAcraAndIrasAfterNegative = validateSemanticQuestionInterpretation(acraAndIrasMeaning,
+  acraDutyWithIrAsQuestionAfterNegative);
+assert.equal(normalizedAcraAndIrasAfterNegative?.issues.find(issue => issue.governingAuthorities[0] === 'ACRA')?.evidenceRequirement,
+  'AUTHORITATIVE_SOURCE', 'An attached ACRA non-calculation instruction preserves the source-only ACRA requirement.');
+assert.equal(normalizedAcraAndIrasAfterNegative?.issues.find(issue => issue.governingAuthorities[0] === 'IRAS')?.evidenceRequirement,
+  'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', 'An ACRA negative instruction cannot absorb the later IRAS fact-specific question.');
+const repeatedAcraDutyQuestion = `${generalAcraAnnualFilingQuery} ${generalAcraAnnualFilingQuery}`;
+const repeatedAcraDutyMeaning = validateSemanticQuestionInterpretation(interpretation({
+  authorityCandidates: ['ACRA'], domain: 'ACRA_CORPORATE', population: 'COMPANY',
+  primarySubject: 'annual return filing duty', concepts: [{ concept: 'annual return filing duty', role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: 'annual return filing duty', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+    governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+}), repeatedAcraDutyQuestion);
+assert.equal(repeatedAcraDutyMeaning?.requiresUserSpecificFacts, true,
+  'Repeated same-topic requests remain unresolved under the conservative fallback.');
+const acraDeadlineRuleQuery = 'Under current ACRA rules, how many months after financial year end must a non-listed Singapore company without an overseas branch register file its annual return? Cite the official rule.';
+const acraDeadlineRuleMeaning = interpretation({
+  authorityCandidates: ['ACRA'], domain: 'ACRA_CORPORATE', population: 'COMPANY',
+  primarySubject: 'annual return filing deadline',
+  concepts: [
+    { concept: 'financial year end', role: 'RELATED' },
+    { concept: 'non-listed company', role: 'RELATED' },
+    { concept: 'overseas branch register', role: 'RELATED' },
+    { concept: 'financial year end change approval', role: 'RELATED' }
+  ],
+  requestedOperation: 'DETERMINE_TREATMENT', requiresUserSpecificFacts: true,
+  issues: [{ subject: 'annual return filing deadline', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+    governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'DETERMINE_TREATMENT',
+    mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }]
+});
+const normalizedAcraDeadlineRule = await interpretSemanticQuestion(acraDeadlineRuleQuery, provider,
+  async () => JSON.stringify(acraDeadlineRuleMeaning));
+assert.equal(normalizedAcraDeadlineRule.interpretation.requestedOperation, 'EXPLAIN_RULE');
+assert.equal(normalizedAcraDeadlineRule.interpretation.requiresUserSpecificFacts, false);
+assert.equal(normalizedAcraDeadlineRule.interpretation.issues[0].operation, 'EXPLAIN_RULE');
+assert.equal(normalizedAcraDeadlineRule.interpretation.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE');
+const acraDeadlineConcepts = getRequestedQuestionConcepts(acraDeadlineRuleQuery, normalizedAcraDeadlineRule);
+assert.ok(acraDeadlineConcepts.some(concept => concept.id === 'acra_annual_return_financial_year_end'));
+assert.ok(acraDeadlineConcepts.some(concept => concept.id === 'acra_annual_return_listing_status'));
+assert.ok(acraDeadlineConcepts.some(concept => concept.id === 'acra_annual_return_branch_register_qualification'));
+assert.equal(acraDeadlineConcepts.some(concept => concept.id === 'semantic_non_listed_company'), false,
+  'An exact ACRA listing qualifier does not duplicate its canonical requested concept.');
+assert.ok(acraDeadlineConcepts.some(concept => concept.id === 'semantic_financial_year_end_change_approval'),
+  'An unrelated material label mentioning financial year end remains an uncovered concept.');
+assert.equal(getRequestedQuestionConcepts('How many months after FYE are annual returns due for corporate income tax?',
+  interpretation()).some(concept => concept.id.startsWith('acra_annual_return_')), false,
+'An IRAS interpretation does not inherit ACRA annual-return deadline concepts from shared timing words.');
+const mixedRootDeadlineMeaning = {
+  ...acraDeadlineRuleMeaning,
+  authorityCandidates: ['IRAS', 'ACRA'], domain: 'IRAS_INCOME_TAX',
+  primarySubject: 'company income-tax treatment and annual return deadline',
+  requestedOperation: 'OTHER', requiresUserSpecificFacts: false, calculationRequested: false,
+  issues: [acraDeadlineRuleMeaning.issues[0], {
+    subject: 'corporate income-tax treatment', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: ['iras-cit-deductibility'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95
+  }]
+};
+const mixedRootDeadlineConcepts = getRequestedQuestionConcepts(
+  'How many months after FYE must a non-listed company without an overseas branch register file annual returns, and what is its corporate income tax treatment?',
+  mixedRootDeadlineMeaning
+);
+assert.ok(mixedRootDeadlineConcepts.some(concept => concept.id === 'acra_annual_return_listing_status'),
+  'An explicit mapped ACRA issue retains its concepts when the root semantic domain is IRAS.');
+assert.equal(mixedRootDeadlineConcepts.some(concept => concept.id === 'semantic_non_listed_company'), false,
+  'An exact ACRA qualifier remains canonical in a mixed-authority interpretation.');
+const caseSpecificAcraDeadline = await interpretSemanticQuestion(
+  'How many months after FYE is our annual return due for FYE ending 31 March 2025?', provider,
+  async () => JSON.stringify(acraDeadlineRuleMeaning));
+assert.equal(caseSpecificAcraDeadline.interpretation.requestedOperation, 'DETERMINE_TREATMENT',
+  'A date-specific company question remains case-specific.');
+assert.equal(caseSpecificAcraDeadline.interpretation.requiresUserSpecificFacts, true);
+const explicitAcraCalculationMeaning = {
+  ...acraDeadlineRuleMeaning,
+  requestedOperation: 'CALCULATE', calculationRequested: true, requiresUserSpecificFacts: true,
+  issues: [{ ...acraDeadlineRuleMeaning.issues[0], operation: 'CALCULATE', evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS' }]
+};
+const explicitAcraCalculation = await interpretSemanticQuestion(
+  'Calculate how many months after FYE our annual return is due.', provider,
+  async () => JSON.stringify(explicitAcraCalculationMeaning));
+assert.equal(explicitAcraCalculation.interpretation.requestedOperation, 'CALCULATE',
+  'An explicit calculation request is not normalized into a rule-only explanation.');
+const mixedAcraDeadline = await interpretSemanticQuestion(
+  'How many months after FYE must annual returns be filed, and when is our income tax due?', provider,
+  async () => JSON.stringify(acraDeadlineRuleMeaning));
+assert.equal(mixedAcraDeadline.interpretation.requestedOperation, 'DETERMINE_TREATMENT',
+  'A separate mixed issue clause prevents month-count rule normalization.');
 const conditionalCompanyResidencyQuery = 'How do Singapore tax rules determine whether a company is tax resident here if its board meetings are held in Thailand?';
 const conditionalCompanyResidencyMeaning = interpretation({
   domain: 'IRAS_INCOME_TAX', population: 'COMPANY', primarySubject: 'corporate tax residence determination',
@@ -633,6 +1540,28 @@ const namedCompanyResidency = await interpretSemanticQuestion(namedCompanyReside
   async () => JSON.stringify(generalCompanyResidencyMeaning));
 assert.equal(namedCompanyResidency.interpretation.requestedOperation, 'DETERMINE_TREATMENT',
   'A named-company question remains case-dependent even with general-rule wording.');
+const explainNamedCompanyResidencyQuery = 'Explain whether Acme Pte Ltd is tax resident in Singapore.';
+const explainNamedCompanyResidencyMeaning = interpretation({
+  domain: 'IRAS_INCOME_TAX', population: 'COMPANY', primarySubject: 'Acme Pte Ltd corporate tax residence determination',
+  concepts: [{ concept: 'tax residence', role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: 'Acme Pte Ltd corporate tax residence determination', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+});
+const explainNamedCompanyResidency = await interpretSemanticQuestion(explainNamedCompanyResidencyQuery, provider,
+  async () => JSON.stringify(explainNamedCompanyResidencyMeaning));
+assert.equal(explainNamedCompanyResidency.interpretation.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',
+  'An EXPLAIN_RULE request to determine a named company’s residency still needs case facts.');
+assert.equal(explainNamedCompanyResidency.interpretation.requiresUserSpecificFacts, true,
+  'The named-company residency outcome remains facts-dependent when phrased as “explain whether”.');
+const directNamedCompanyResidencyQuery = 'Is Acme Pte Ltd tax resident in Singapore?';
+const directNamedCompanyResidency = await interpretSemanticQuestion(directNamedCompanyResidencyQuery, provider,
+  async () => JSON.stringify(explainNamedCompanyResidencyMeaning));
+assert.equal(directNamedCompanyResidency.interpretation.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',
+  'A direct named-company residency question needs case facts even when the model labels it EXPLAIN_RULE.');
+assert.equal(directNamedCompanyResidency.interpretation.requiresUserSpecificFacts, true,
+  'A direct named-company residency question remains facts-dependent.');
 assert.equal((await interpretSemanticQuestion('Question?', provider, async () => '{bad json')).failure, 'INVALID_RESPONSE');
 assert.equal((await interpretSemanticQuestion('Question?', provider, async () => JSON.stringify(interpretation({ confidence: 0.2 })))).failure, 'LOW_CONFIDENCE');
 assert.equal((await interpretSemanticQuestion('Question?', provider, async () => { throw new Error('request timed out'); })).failure, 'TIMEOUT');
@@ -706,6 +1635,503 @@ assert.ok(boundaryContext.missingFacts.some(fact => /individual eligibility/i.te
 const shortAnaphoricFollowUp = 'Can I claim input tax on it?';
 assert.equal(isShortSemanticFollowUp(shortAnaphoricFollowUp), true,
   'A short question with explicit transaction anaphora continues the active case.');
+assert.equal(isShortSemanticFollowUp(momSalaryOvertimeFollowUp), true,
+  'A long explicit-anaphora question remains a follow-up when later text adds response instructions.');
+const longUnrelatedRequest = 'Does that apply? Please disregard the earlier case and explain a new situation. ' +
+  'The employee has different facts and duties. '.repeat(9);
+assert.ok(longUnrelatedRequest.length > 400, 'the unrelated multi-question control exceeds the full-message follow-up limit');
+assert.equal(isShortSemanticFollowUp(longUnrelatedRequest), false,
+  'explicitly replacing the earlier case prevents a long request from retaining its history');
+assert.equal(isShortSemanticFollowUp('Does that apply? Ignore the earlier case and explain a new situation. Please use bullet points.'), false,
+  'a short request to disregard prior facts starts a separate analysis');
+assert.equal(isShortSemanticFollowUp(momSalaryOvertimeFollowUp + ' Please answer in bullet points.'), true,
+  'a legitimate follow-up retains context when it adds response-formatting instructions');
+assert.equal(isShortSemanticFollowUp('Can I claim Parent Relief for my mother? Please answer in bullet points and include a citation.'), false,
+  'Output instructions after a standalone question do not make it a follow-up.');
+assert.equal(isShortSemanticFollowUp('What is the reporting deadline? Does that change if the employee is not covered? Please answer briefly.'), false,
+  'Anaphora in a later question does not reattach a preceding standalone question to the prior case.');
+assert.equal(isShortSemanticFollowUp(`And what about it? ${'Please explain this further. '.repeat(6)}`), false,
+  'The existing length limit still applies to additive continuation prefixes.');
+assert.equal(isShortSemanticFollowUp('What CPF rates apply to the employee we just discussed?'), true,
+  'A follow-up referencing the employee we just discussed retains context.');
+assert.equal(isShortSemanticFollowUp('What CPF rates apply to the employee we discussed?'), true,
+  'A follow-up referencing the employee we discussed retains context.');
+assert.equal(isShortSemanticFollowUp('What CPF rates apply to these employees?'), true,
+  'A follow-up referencing these employees retains context.');
+assert.equal(isShortSemanticFollowUp('How does GST apply to the above transaction?'), true,
+  'A follow-up referencing the above transaction retains context.');
+assert.equal(isShortSemanticFollowUp('What is the tax treatment in our earlier example?'), true,
+  'A follow-up referencing our earlier example retains context.');
+assert.equal(isShortSemanticFollowUp('What CPF rates apply to a 58-year-old employee? Ignore the employee we discussed earlier.'), false,
+  'An explicit instruction to ignore the employee discussed earlier starts a new boundary.');
+assert.equal(isShortSemanticFollowUp('Does that apply? Forget what we discussed.'), false,
+  'An explicit instruction to forget what was discussed starts a new boundary.');
+assert.equal(isShortSemanticFollowUp('Unrelated: how does that apply?'), false,
+  'Bare "unrelated" starts a new boundary even with anaphora.');
+
+// Finding 1: Negated reset directives must not clear follow-up context; affirmative reset directives must.
+const negatedForgetFollowUp = "Does that CPF rule apply? Don't forget that she is a second-year Singapore PR.";
+const negatedWantForgetFollowUp = "Does that CPF rule apply? I don't want you to forget the earlier employee details.";
+const quotedForgetFollowUp = 'Does that CPF rule apply? Do not say "forget the earlier employee details".';
+const negatedDisregardFollowUp = 'Does that apply? Please do not disregard the earlier employee details.';
+const negatedCoordinatedResetFollowUp = 'Does that CPF rule apply? Please do not ignore or disregard the earlier employee details.';
+const negatedAdverbResetFollowUp = "Does that CPF rule apply? Don't ever forget that she is a second-year Singapore PR.";
+const negatedInfinitiveResetFollowUp = 'Does that CPF rule apply? Remember not to forget that she is a second-year Singapore PR.';
+const negatedWithoutForgettingFollowUp = 'Does that CPF rule apply? Please proceed without forgetting the earlier employee details.';
+const affirmativeForgetReset = 'Does that CPF rule apply? Forget that she is a second-year Singapore PR.';
+const withoutDiscussionForgetReset = 'Without further discussion please forget the previous transaction.';
+const conditionalClauseForgetReset = 'If that is not relevant please forget the previous transaction.';
+const employeeCpfScenario = {
+  scenarioType: 'PAYROLL_CPF_SALARY',
+  rawQuery: 'For an employee aged 58 years old who is a second-year Singapore PR in 2026, what CPF rules apply?',
+  transactionTitle: 'Employee CPF facts (58 years old, second-year Singapore PR, 2026)',
+  amount: 5000,
+  functionalCurrency: 'SGD',
+  transactionCurrency: 'SGD',
+  directGroups: [],
+  missingFields: [],
+  isComplete: true
+};
+assert.equal(hasAffirmativeResetDirective(negatedForgetFollowUp), false);
+assert.equal(hasAffirmativeResetDirective(negatedWantForgetFollowUp), false);
+assert.equal(hasAffirmativeResetDirective(quotedForgetFollowUp), false);
+assert.equal(hasAffirmativeResetDirective(negatedDisregardFollowUp), false);
+assert.equal(hasAffirmativeResetDirective(negatedCoordinatedResetFollowUp), false);
+assert.equal(hasAffirmativeResetDirective(negatedAdverbResetFollowUp), false);
+assert.equal(hasAffirmativeResetDirective(negatedInfinitiveResetFollowUp), false);
+assert.equal(hasAffirmativeResetDirective(negatedWithoutForgettingFollowUp), false);
+assert.equal(hasAffirmativeResetDirective(affirmativeForgetReset), true);
+assert.equal(hasAffirmativeResetDirective(withoutDiscussionForgetReset), true);
+assert.equal(hasAffirmativeResetDirective(conditionalClauseForgetReset), false);
+assert.equal(hasAffirmativeResetDirective('If we ignore the previous employee details, what CPF rate applies?'), false);
+assert.equal(assessConversationRelation('If we ignore the previous employee details, what CPF rate applies?', employeeCpfScenario), 'RELATED');
+assert.equal(isShortSemanticFollowUp(negatedForgetFollowUp), true,
+  'Negated forget instruction preserves short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(negatedWantForgetFollowUp), true,
+  'Negated want-to-forget instruction preserves short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(quotedForgetFollowUp), true,
+  'Quoted reset phrase preserves short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(negatedDisregardFollowUp), true,
+  'Negated disregard instruction preserves short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(negatedCoordinatedResetFollowUp), true,
+  'Negated coordinated ignore/disregard instruction preserves short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(negatedAdverbResetFollowUp), true,
+  'Negated adverbial forget instruction preserves short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(negatedInfinitiveResetFollowUp), true,
+  'Infinitive negation (not to forget) preserves short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(negatedWithoutForgettingFollowUp), true,
+  'Proceeding without forgetting preserves short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(affirmativeForgetReset), false,
+  'Affirmative forget instruction resets short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(withoutDiscussionForgetReset), false,
+  'Affirmative forget instruction after "without further discussion" resets short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(conditionalClauseForgetReset), true,
+  'Conditional forget instruction preserves short semantic follow-up retention.');
+assert.equal(assessConversationRelation(negatedForgetFollowUp, employeeCpfScenario), 'RELATED');
+assert.equal(assessConversationRelation(negatedWantForgetFollowUp, employeeCpfScenario), 'RELATED');
+assert.equal(assessConversationRelation(quotedForgetFollowUp, employeeCpfScenario), 'RELATED');
+assert.equal(assessConversationRelation(negatedDisregardFollowUp, employeeCpfScenario), 'RELATED');
+assert.equal(assessConversationRelation(negatedCoordinatedResetFollowUp, employeeCpfScenario), 'RELATED');
+assert.equal(assessConversationRelation(negatedAdverbResetFollowUp, employeeCpfScenario), 'RELATED');
+assert.equal(assessConversationRelation(negatedInfinitiveResetFollowUp, employeeCpfScenario), 'RELATED');
+assert.equal(assessConversationRelation(negatedWithoutForgettingFollowUp, employeeCpfScenario), 'RELATED');
+assert.equal(assessConversationRelation(affirmativeForgetReset, employeeCpfScenario), 'NEW');
+assert.equal(assessConversationRelation(withoutDiscussionForgetReset, employeeCpfScenario), 'NEW');
+assert.equal(assessConversationRelation(conditionalClauseForgetReset, employeeCpfScenario), 'RELATED');
+
+// Finding 2 & 3: Independent transactions and historical-period statutory questions must not attach as conversation references.
+const priorYearInvoiceTx = 'We received SGD 5,000 from a customer for a prior-year invoice. What accounting entry is required?';
+const previousYearInvoiceTx = 'We received SGD 5,000 from a customer for a previous-year invoice. What accounting entry is required?';
+const unhyphenatedPriorYearInvoiceTx = 'We received SGD 5,000 from a customer for the prior year invoice. What accounting entry is required?';
+const earlierPeriodUtilityTx = 'We paid SGD 3,000 for an earlier-period utility bill. What journal entry is required?';
+const earlierThisYearInvoiceQuestion = 'What accounting entry is required for the invoice earlier this year?';
+const priorUnpaidExpensesYa2026 = 'What IRAS deduction rules apply to prior unpaid expenses for YA 2026?';
+const thePriorUnpaidExpensesYa2026 = 'What IRAS deduction rules apply to the prior unpaid expenses for YA 2026?';
+const thePriorSalaryExpensesYa2026 = 'What IRAS deduction rules apply to the prior salary expenses for YA 2026?';
+const previousDirectorSalaryFollowUp = 'How should we correct our previous director salary calculation?';
+const previousCarRentalFollowUp = 'What is the GST treatment for our previous car rental expense?';
+const earlierVehicleRepairFollowUp = 'Can we claim a deduction for the earlier vehicle repair expense?';
+assert.equal(hasExplicitPriorFactReference(priorYearInvoiceTx), false);
+assert.equal(hasExplicitPriorFactReference(previousYearInvoiceTx), false);
+assert.equal(isShortSemanticFollowUp(unhyphenatedPriorYearInvoiceTx), false);
+assert.equal(hasExplicitPriorFactReference(unhyphenatedPriorYearInvoiceTx), false);
+assert.equal(hasExplicitPriorFactReference(earlierPeriodUtilityTx), false);
+assert.equal(isShortSemanticFollowUp(earlierThisYearInvoiceQuestion), false);
+assert.equal(hasExplicitPriorFactReference(earlierThisYearInvoiceQuestion), false);
+assert.equal(hasExplicitPriorFactReference(priorUnpaidExpensesYa2026), false);
+assert.equal(isShortSemanticFollowUp(priorUnpaidExpensesYa2026), false);
+assert.equal(hasExplicitPriorFactReference(thePriorUnpaidExpensesYa2026), false);
+assert.equal(isShortSemanticFollowUp(thePriorUnpaidExpensesYa2026), false);
+assert.equal(hasExplicitPriorFactReference(thePriorSalaryExpensesYa2026), false);
+assert.equal(isShortSemanticFollowUp(thePriorSalaryExpensesYa2026), false);
+assert.equal(isShortSemanticFollowUp('What is the treatment for this invoice, separate from the earlier case?'), false);
+const carExpenseScenario = {
+  scenarioType: 'GENERAL_EXPENSE',
+  rawQuery: 'We paid SGD 1,200 for car rental and vehicle repair expenses.',
+  transactionTitle: 'Car rental and vehicle repair expenses',
+  amount: 1200,
+  functionalCurrency: 'SGD',
+  transactionCurrency: 'SGD',
+  directGroups: [],
+  missingFields: [],
+  isComplete: true
+};
+const ppeMachineScenario = {
+  scenarioType: 'PPE_ASSET_PURCHASE',
+  rawQuery: 'We bought a machine for SGD 50,000.',
+  transactionTitle: 'Machine purchase',
+  amount: 50000,
+  functionalCurrency: 'SGD',
+  transactionCurrency: 'SGD',
+  directGroups: [],
+  missingFields: [],
+  isComplete: true
+};
+
+// Finding 4 (review fixes): Historical-period phrases and unrelated prior subjects must not attach to employeeCpfScenario,
+// while compatible prior-subject references remain RELATED.
+for (const historicalPeriodQuery of [
+  'What is the GST treatment for the previous March expenses?',
+  'Can we claim a deduction for the earlier Q1 repair expense?',
+  'How should we account for our previous 2025 car rental expenses?',
+  'What is the treatment for our prior January payroll expenses?'
+]) {
+  assert.equal(hasExplicitPriorFactReference(historicalPeriodQuery), false,
+    `historical-period query is not an explicit prior-fact reference: ${historicalPeriodQuery}`);
+  assert.equal(isShortSemanticFollowUp(historicalPeriodQuery), false,
+    `historical-period query is not a short semantic follow-up: ${historicalPeriodQuery}`);
+}
+
+assert.equal(hasExplicitPriorFactReference(previousDirectorSalaryFollowUp, employeeCpfScenario), true);
+assert.equal(isShortSemanticFollowUp(previousDirectorSalaryFollowUp, employeeCpfScenario), true);
+assert.equal(assessConversationRelation(previousDirectorSalaryFollowUp, employeeCpfScenario), 'RELATED');
+
+for (const unrelatedVehicleFollowUp of [
+  previousCarRentalFollowUp,
+  earlierVehicleRepairFollowUp,
+  'What is the GST treatment for our previous consulting invoice?'
+]) {
+  assert.equal(hasExplicitPriorFactReference(unrelatedVehicleFollowUp, employeeCpfScenario), false,
+    `unrelated subject is rejected against employeeCpfScenario (prior-fact): ${unrelatedVehicleFollowUp}`);
+  assert.equal(isShortSemanticFollowUp(unrelatedVehicleFollowUp, employeeCpfScenario), false,
+    `unrelated subject is rejected against employeeCpfScenario (short follow-up): ${unrelatedVehicleFollowUp}`);
+  assert.equal(assessConversationRelation(unrelatedVehicleFollowUp, employeeCpfScenario), 'AMBIGUOUS',
+    `unrelated subject does not stay RELATED against employeeCpfScenario: ${unrelatedVehicleFollowUp}`);
+}
+
+for (const compatibleVehicleFollowUp of [
+  previousCarRentalFollowUp,
+  earlierVehicleRepairFollowUp
+]) {
+  assert.equal(hasExplicitPriorFactReference(compatibleVehicleFollowUp, carExpenseScenario), true,
+    `compatible subject attaches against carExpenseScenario (prior-fact): ${compatibleVehicleFollowUp}`);
+  assert.equal(isShortSemanticFollowUp(compatibleVehicleFollowUp, carExpenseScenario), true,
+    `compatible subject attaches against carExpenseScenario (short follow-up): ${compatibleVehicleFollowUp}`);
+  assert.equal(assessConversationRelation(compatibleVehicleFollowUp, carExpenseScenario), 'RELATED',
+    `compatible subject stays RELATED against carExpenseScenario: ${compatibleVehicleFollowUp}`);
+}
+
+for (const { turn1, turn2New, turn2Ambiguous } of [
+  {
+    turn1: await parseAccountingQuery('We bought a staff laptop for SGD 2,000.'),
+    turn2New: 'What if we hired an employee for SGD 5,000?',
+    turn2Ambiguous: 'What is the CPF treatment for our previous employee?'
+  },
+  {
+    turn1: await parseAccountingQuery('We purchased a payroll software licence for SGD 3,000.'),
+    turn2New: 'What if we hired an employee for SGD 5,000?',
+    turn2Ambiguous: 'What is the CPF treatment for our previous employee?'
+  },
+  {
+    turn1: await parseAccountingQuery('We leased a laptop for SGD 2,000.'),
+    turn2New: 'What if we bought a new machine for SGD 5,000?',
+    turn2Ambiguous: 'What is the depreciation on our previous machine?'
+  }
+]) {
+  assert.equal(startsNewAccountingScenario(turn2New, turn1), true,
+    `Turn 2 starts new scenario after "${turn1.rawQuery}": ${turn2New}`);
+  assert.equal(assessConversationRelation(turn2New, turn1, turn1), 'NEW',
+    `Turn 2 relation is NEW after "${turn1.rawQuery}": ${turn2New}`);
+  assert.equal(assessConversationRelation(turn2Ambiguous, turn1, turn1), 'AMBIGUOUS',
+    `Turn 2 conflicting prior subject is AMBIGUOUS after "${turn1.rawQuery}": ${turn2Ambiguous}`);
+}
+assert.equal(assessConversationRelation(priorYearInvoiceTx, employeeCpfScenario), 'AMBIGUOUS');
+assert.equal(assessConversationRelation(previousYearInvoiceTx, employeeCpfScenario), 'AMBIGUOUS');
+assert.equal(assessConversationRelation(unhyphenatedPriorYearInvoiceTx, employeeCpfScenario), 'AMBIGUOUS');
+assert.equal(assessConversationRelation(earlierPeriodUtilityTx, employeeCpfScenario), 'AMBIGUOUS');
+
+// Finding 1, 2 & 3 (review fixes): Clause-scoped hypothetical/indirect-if, general negation scope, and negated reset directives.
+// Finding 1: Disjoint hypothetical and affirmative indirect-question "if" start new scenarios; same-domain hypothetical stays RELATED.
+assert.equal(startsNewAccountingScenario('What if we bought a new machine for SGD 5,000?', employeeCpfScenario), true);
+assert.equal(assessConversationRelation('What if we bought a new machine for SGD 5,000?', employeeCpfScenario, employeeCpfScenario), 'NEW');
+assert.equal(startsNewAccountingScenario('What if the company bought a new machine for SGD 5,000 instead?', employeeCpfScenario), true);
+assert.equal(assessConversationRelation('What if the company bought a new machine for SGD 5,000 instead?', employeeCpfScenario, employeeCpfScenario), 'NEW');
+assert.equal(startsNewAccountingScenario('What if we leased that machine instead?', ppeMachineScenario), false);
+assert.equal(assessConversationRelation('What if we leased that machine instead?', ppeMachineScenario, ppeMachineScenario), 'RELATED');
+assert.equal(startsNewAccountingScenario('We asked if the candidate needed a work permit and hired another employee for SGD 5,000.', employeeCpfScenario), true);
+assert.equal(assessConversationRelation('We asked if the candidate needed a work permit and hired another employee for SGD 5,000.', employeeCpfScenario, employeeCpfScenario), 'NEW');
+assert.equal(startsNewAccountingScenario('We asked the candidate if he needed a work permit and hired another employee for SGD 5,000.50.', employeeCpfScenario), true);
+assert.equal(assessConversationRelation('We asked the candidate if he needed a work permit and hired another employee for SGD 5,000.50.', employeeCpfScenario, employeeCpfScenario), 'NEW');
+assert.equal(startsNewAccountingScenario('What if we hired another employee for SGD 5,000 per month?', ppeMachineScenario), true);
+assert.equal(assessConversationRelation('What if we hired another employee for SGD 5,000 per month?', ppeMachineScenario, ppeMachineScenario), 'NEW');
+
+// Finding 2: General negation scope with arbitrary -ly adverbs and coordinated modifiers.
+for (const generalNegatedActionQuery of [
+  'We have not previously hired another employee for SGD 5,000 per month.',
+  'We have not formally hired another employee for SGD 5,000 per month.',
+  'We have not officially or formally hired another employee for SGD 5,000 per month.',
+  'We have never previously acquired another machine for SGD 5,000.'
+]) {
+  assert.equal(startsNewAccountingScenario(generalNegatedActionQuery, employeeCpfScenario), false,
+    `general negated action does not start a new scenario: ${generalNegatedActionQuery}`);
+  assert.equal(assessConversationRelation(generalNegatedActionQuery, employeeCpfScenario, employeeCpfScenario), 'RELATED',
+    `general negated action stays RELATED: ${generalNegatedActionQuery}`);
+}
+
+// Finding 3: Negated reset directives with bare-infinitive causatives and contracted state negations.
+for (const negatedCausativeOrContractedReset of [
+  "Does that CPF rule apply? Don't let me forget the earlier employee details.",
+  "Does that CPF rule apply? I'm not asking you to forget the earlier employee details.",
+  "Don't let me forget the earlier employee details.",
+  "I'm not asking you to forget the earlier employee details.",
+  "Don't let me forget the earlier salary details.",
+  "I'm not asking you to forget the earlier salary details.",
+  "I'm not going to let you forget the earlier employee details.",
+  "I'm not saying we should forget the earlier employee details.",
+  "Please don't make us disregard the earlier employee details.",
+  "We're not telling you to ignore the earlier employee details."
+]) {
+  assert.equal(hasAffirmativeResetDirective(negatedCausativeOrContractedReset), false,
+    `negated causative/contracted reset directive is not affirmative: ${negatedCausativeOrContractedReset}`);
+  assert.equal(isShortSemanticFollowUp(negatedCausativeOrContractedReset, employeeCpfScenario), true,
+    `negated causative/contracted reset directive stays a short semantic follow-up: ${negatedCausativeOrContractedReset}`);
+  assert.equal(assessConversationRelation(negatedCausativeOrContractedReset, employeeCpfScenario, employeeCpfScenario), 'RELATED',
+    `negated causative/contracted reset directive stays RELATED: ${negatedCausativeOrContractedReset}`);
+}
+
+// Finding 4: Hiring another employee or another worker starts a new accounting scenario; hypothetical or negated hiring stays RELATED.
+for (const anotherHireQuery of [
+  'We hired another employee for SGD 5,000 per month. What CPF rate applies?',
+  'We hired another worker for SGD 4,500 per month. What CPF rate applies?'
+]) {
+  assert.equal(startsNewAccountingScenario(anotherHireQuery, employeeCpfScenario), true,
+    `hiring another employee/worker starts a new accounting scenario: ${anotherHireQuery}`);
+  assert.equal(assessConversationRelation(anotherHireQuery, employeeCpfScenario, employeeCpfScenario), 'NEW',
+    `hiring another employee/worker is classified as NEW: ${anotherHireQuery}`);
+}
+for (const hypotheticalOrNegatedHireQuery of [
+  'What if we hired another employee for SGD 5,000 per month?',
+  'Suppose we hired another employee for SGD 5,000 per month. What CPF rate applies?',
+  'We never hired another employee for SGD 5,000 per month.'
+]) {
+  assert.equal(startsNewAccountingScenario(hypotheticalOrNegatedHireQuery, employeeCpfScenario), false,
+    `hypothetical or negated hire does not start a new accounting scenario: ${hypotheticalOrNegatedHireQuery}`);
+  assert.equal(assessConversationRelation(hypotheticalOrNegatedHireQuery, employeeCpfScenario, employeeCpfScenario), 'RELATED',
+    `hypothetical or negated hire stays RELATED: ${hypotheticalOrNegatedHireQuery}`);
+}
+
+// Journal context review fixes (Findings 1–4):
+const unpaidSupplierInvoiceScenario = {
+  scenarioType: 'GENERAL_EXPENSE',
+  rawQuery: 'We received an unpaid supplier invoice of SGD 1,200 plus GST.',
+  transactionTitle: 'Unpaid supplier invoice',
+  amount: 1200,
+  functionalCurrency: 'SGD',
+  transactionCurrency: 'SGD',
+  directGroups: [],
+  missingFields: [],
+  isComplete: true
+};
+
+// Finding 1: Primary transaction subject determined from direct object rather than purpose/beneficiary adjuncts.
+for (const purposeAdjunctMachineQuery of [
+  'What if we bought a new machine for SGD 5,000 to assist payroll?',
+  'What if we purchased new equipment for SGD 8,000 for our payroll team?',
+  'What if we bought software to manage payroll?',
+  'What if we entered into a contract for a new machine to assist payroll?',
+  'What if we borrowed SGD 10,000 for payroll?',
+  'What if a new machine was bought for SGD 5,000 to assist payroll?',
+  'What if we bought a machine to use in payroll?'
+]) {
+  assert.equal(startsNewAccountingScenario(purposeAdjunctMachineQuery, employeeCpfScenario), true,
+    `machine purchase with payroll purpose/beneficiary adjunct starts a new scenario: ${purposeAdjunctMachineQuery}`);
+  assert.equal(assessConversationRelation(purposeAdjunctMachineQuery, employeeCpfScenario, employeeCpfScenario), 'NEW',
+    `machine purchase with payroll purpose/beneficiary adjunct is NEW against payroll: ${purposeAdjunctMachineQuery}`);
+}
+const hireToOperateMachineQuery = 'What if we hired another employee for SGD 5,000 to operate the new machine?';
+assert.equal(startsNewAccountingScenario(hireToOperateMachineQuery, employeeCpfScenario), false);
+assert.equal(assessConversationRelation(hireToOperateMachineQuery, employeeCpfScenario, employeeCpfScenario), 'RELATED');
+assert.equal(startsNewAccountingScenario(hireToOperateMachineQuery, ppeMachineScenario), true);
+assert.equal(assessConversationRelation(hireToOperateMachineQuery, ppeMachineScenario, ppeMachineScenario), 'NEW');
+
+// Finding 2: Conditional & modal hypothetical scope preserved across coordinated clauses with numeric commas.
+for (const coordinatedSameDomainHypothetical of [
+  'If we hired another employee for SGD 5,000, and then hired a second employee for SGD 4,500, what are the CPF rates?',
+  'If we hired another employee for SGD 5,000, hired a second employee for SGD 4,500, and hired a third employee for SGD 4,000, what are the CPF rates?',
+  'Suppose we hired an employee for SGD 5,000, and also hired another worker for SGD 4,000, what CPF contribution rates apply?',
+  'Could we have hired another employee for SGD 5,000, and then hired a second worker for SGD 4,500?'
+]) {
+  assert.equal(startsNewAccountingScenario(coordinatedSameDomainHypothetical, employeeCpfScenario), false,
+    `coordinated same-domain hypothetical does not start a new scenario: ${coordinatedSameDomainHypothetical}`);
+  assert.equal(assessConversationRelation(coordinatedSameDomainHypothetical, employeeCpfScenario, employeeCpfScenario), 'RELATED',
+    `coordinated same-domain hypothetical stays RELATED: ${coordinatedSameDomainHypothetical}`);
+}
+for (const coordinatedNewScenario of [
+  'If we hired another employee for SGD 5,000, and then bought a new machine for SGD 4,500, what is the accounting treatment?',
+  'We asked if the candidate needed a work permit, and then hired another employee for SGD 5,000.',
+  "We weren't sure if the candidate needed a work permit, and then hired another employee for SGD 5,000.",
+  'If the candidate accepts, we hired a second employee for SGD 4,500.'
+]) {
+  assert.equal(startsNewAccountingScenario(coordinatedNewScenario, employeeCpfScenario), true,
+    `coordinated cross-domain or indirect-if action starts a new scenario: ${coordinatedNewScenario}`);
+  assert.equal(assessConversationRelation(coordinatedNewScenario, employeeCpfScenario, employeeCpfScenario), 'NEW',
+    `coordinated cross-domain or indirect-if action is NEW: ${coordinatedNewScenario}`);
+}
+
+// Finding 3: Preference-based negation ("rather not", "sooner not", "prefer not to") in reset directives and negated actions.
+for (const preferenceNegatedReset of [
+  'I would rather not forget the earlier employee details.',
+  "I'd rather not forget the earlier employee details.",
+  'We would prefer not to ignore the earlier employee details.',
+  "Does that CPF rule apply? I'd rather not disregard the earlier employee details.",
+  "We'd sooner not ignore the earlier employee details.",
+  "We'd rather not also forget the earlier employee details."
+]) {
+  assert.equal(hasAffirmativeResetDirective(preferenceNegatedReset), false,
+    `preference-negated reset directive is not affirmative: ${preferenceNegatedReset}`);
+  assert.equal(isShortSemanticFollowUp(preferenceNegatedReset, employeeCpfScenario), true,
+    `preference-negated reset directive remains a short semantic follow-up: ${preferenceNegatedReset}`);
+  assert.equal(assessConversationRelation(preferenceNegatedReset, employeeCpfScenario, employeeCpfScenario), 'RELATED',
+    `preference-negated reset directive stays RELATED: ${preferenceNegatedReset}`);
+}
+assert.equal(startsNewAccountingScenario("We'd rather not have hired another employee for SGD 5,000 per month.", employeeCpfScenario), false);
+assert.equal(assessConversationRelation("We'd rather not have hired another employee for SGD 5,000 per month.", employeeCpfScenario, employeeCpfScenario), 'RELATED');
+for (const affirmativePreferenceReset of [
+  'I would rather forget the earlier employee details.',
+  "I'd rather ignore the earlier case and start fresh."
+]) {
+  assert.equal(hasAffirmativeResetDirective(affirmativePreferenceReset), true,
+    `affirmative preference reset directive triggers reset: ${affirmativePreferenceReset}`);
+  assert.equal(isShortSemanticFollowUp(affirmativePreferenceReset, employeeCpfScenario), false);
+  assert.equal(assessConversationRelation(affirmativePreferenceReset, employeeCpfScenario, employeeCpfScenario), 'NEW',
+    `affirmative preference reset directive is classified as NEW: ${affirmativePreferenceReset}`);
+}
+
+// Finding 4: Accounting-state adjectives ("unpaid", "overdue") allowed as prior-subject modifiers without breaking historical-period exclusion.
+for (const priorInvoiceFollowUp of [
+  'What is the GST treatment for our previous unpaid invoice?',
+  'What is the GST treatment for the earlier overdue supplier invoice?'
+]) {
+  assert.equal(hasExplicitPriorFactReference(priorInvoiceFollowUp), true,
+    `unpaid/overdue prior invoice is recognized without scenario: ${priorInvoiceFollowUp}`);
+  assert.equal(hasExplicitPriorFactReference(priorInvoiceFollowUp, unpaidSupplierInvoiceScenario), true,
+    `unpaid/overdue prior invoice is compatible with unpaidSupplierInvoiceScenario: ${priorInvoiceFollowUp}`);
+  assert.equal(isShortSemanticFollowUp(priorInvoiceFollowUp, unpaidSupplierInvoiceScenario), true,
+    `unpaid/overdue prior invoice is short semantic follow-up with unpaidSupplierInvoiceScenario: ${priorInvoiceFollowUp}`);
+  assert.equal(assessConversationRelation(priorInvoiceFollowUp, unpaidSupplierInvoiceScenario, unpaidSupplierInvoiceScenario), 'RELATED',
+    `unpaid/overdue prior invoice stays RELATED against unpaidSupplierInvoiceScenario: ${priorInvoiceFollowUp}`);
+  assert.equal(hasExplicitPriorFactReference(priorInvoiceFollowUp, employeeCpfScenario), false,
+    `unpaid/overdue prior invoice is rejected against disjoint employeeCpfScenario: ${priorInvoiceFollowUp}`);
+  assert.equal(isShortSemanticFollowUp(priorInvoiceFollowUp, employeeCpfScenario), false);
+  assert.equal(assessConversationRelation(priorInvoiceFollowUp, employeeCpfScenario, employeeCpfScenario), 'AMBIGUOUS',
+    `unpaid/overdue prior invoice is AMBIGUOUS against disjoint employeeCpfScenario: ${priorInvoiceFollowUp}`);
+}
+for (const historicalPeriodControl of [
+  'What IRAS deduction rules apply to prior unpaid expenses for YA 2026?',
+  'What IRAS deduction rules apply to the prior unpaid expenses for YA 2026?',
+  'What IRAS deduction rules apply to the prior unpaid expenses for the financial year 2025?',
+  'What is the GST treatment for the previous March expenses?',
+  'What is the GST treatment for the prior unpaid invoice for YA 2026?'
+]) {
+  assert.equal(hasExplicitPriorFactReference(historicalPeriodControl), false,
+    `historical-period control query remains excluded from prior-fact reference: ${historicalPeriodControl}`);
+  assert.equal(isShortSemanticFollowUp(historicalPeriodControl), false,
+    `historical-period control query remains excluded from short follow-up: ${historicalPeriodControl}`);
+}
+
+// Finding 3: Detailed (>260 chars) contextual statutory follow-up vs >300-char separate new employee transaction.
+const detailedEmployeeFollowUp =
+  'What CPF contribution rates apply to the employee we discussed if her monthly ordinary wages are SGD 5,000 and she also receives an annual bonus, and which employee facts from our earlier discussion still need to be confirmed before calculating the exact employer and employee CPF contributions for the year?';
+assert.ok(detailedEmployeeFollowUp.length > 300);
+assert.equal(isShortSemanticFollowUp(detailedEmployeeFollowUp), false);
+assert.equal(hasExplicitPriorFactReference(detailedEmployeeFollowUp), true);
+assert.equal(assessConversationRelation(detailedEmployeeFollowUp, employeeCpfScenario), 'RELATED');
+
+const longSeparateNewEmployeeQuery =
+  'We hired a new employee on a monthly salary of SGD 5,000, separate from the employee we discussed earlier, and she will also receive a fixed monthly transport allowance and an annual performance bonus once her probation period ends. Which CPF contribution rates and wage ceiling rules apply to this new employment arrangement in Singapore?';
+assert.ok(longSeparateNewEmployeeQuery.length > 300);
+assert.equal(hasExplicitPriorFactReference(longSeparateNewEmployeeQuery), false);
+assert.equal(startsNewAccountingScenario(longSeparateNewEmployeeQuery, employeeCpfScenario), true);
+assert.equal(assessConversationRelation(longSeparateNewEmployeeQuery, employeeCpfScenario), 'NEW');
+
+// Latest review findings (1–3): New laptop lease after machinery purchase, separate staff laptop purchase,
+// and payroll software licence purchase after unrelated supplier invoice.
+for (const leasedLaptopQuery of [
+  'We leased a laptop for SGD 2,000.',
+  'What if we leased a laptop for SGD 2,000?',
+  'What if we leased a new laptop instead?'
+]) {
+  assert.equal(startsNewAccountingScenario(leasedLaptopQuery, ppeMachineScenario), true,
+    `new laptop lease starts a new scenario after machinery purchase: ${leasedLaptopQuery}`);
+  assert.equal(assessConversationRelation(leasedLaptopQuery, ppeMachineScenario, ppeMachineScenario), 'NEW',
+    `new laptop lease is classified as NEW after machinery purchase: ${leasedLaptopQuery}`);
+}
+assert.equal(startsNewAccountingScenario('What if we leased that machine instead?', ppeMachineScenario), false);
+assert.equal(assessConversationRelation('What if we leased that machine instead?', ppeMachineScenario, ppeMachineScenario), 'RELATED');
+
+for (const staffLaptopQuery of [
+  'We bought a staff laptop for SGD 2,000.',
+  'We purchased an employee computer for SGD 2,500.',
+  'What if we bought a staff laptop?'
+]) {
+  assert.equal(startsNewAccountingScenario(staffLaptopQuery, employeeCpfScenario), true,
+    `staff laptop purchase starts a new scenario against payroll: ${staffLaptopQuery}`);
+  assert.equal(assessConversationRelation(staffLaptopQuery, employeeCpfScenario, employeeCpfScenario), 'NEW',
+    `staff laptop purchase is NEW against payroll: ${staffLaptopQuery}`);
+}
+const priorStaffLaptopQuery = 'What is the GST treatment for our previous staff laptop purchase?';
+assert.equal(hasConflictingPriorSubject(priorStaffLaptopQuery, employeeCpfScenario), true);
+assert.equal(hasExplicitPriorFactReference(priorStaffLaptopQuery, employeeCpfScenario), false);
+assert.equal(isShortSemanticFollowUp(priorStaffLaptopQuery, employeeCpfScenario), false);
+assert.equal(assessConversationRelation(priorStaffLaptopQuery, employeeCpfScenario, employeeCpfScenario), 'AMBIGUOUS');
+assert.equal(hasConflictingPriorSubject(priorStaffLaptopQuery, ppeMachineScenario), false);
+assert.equal(hasExplicitPriorFactReference(priorStaffLaptopQuery, ppeMachineScenario), true);
+assert.equal(assessConversationRelation(priorStaffLaptopQuery, ppeMachineScenario, ppeMachineScenario), 'RELATED');
+
+for (const softwareLicenceQuery of [
+  'We purchased a payroll software licence for SGD 3,000.',
+  'We bought a licence for payroll software.',
+  'What if we bought a licence for payroll software?',
+  'What if we bought a software subscription for our staff?'
+]) {
+  assert.equal(startsNewAccountingScenario(softwareLicenceQuery, unpaidSupplierInvoiceScenario), true,
+    `payroll software licence purchase starts a new scenario after unpaid invoice: ${softwareLicenceQuery}`);
+  assert.equal(assessConversationRelation(softwareLicenceQuery, unpaidSupplierInvoiceScenario, unpaidSupplierInvoiceScenario), 'NEW',
+    `payroll software licence purchase is NEW after unpaid invoice: ${softwareLicenceQuery}`);
+  assert.equal(startsNewAccountingScenario(softwareLicenceQuery, employeeCpfScenario), true,
+    `payroll software licence purchase starts a new scenario against payroll: ${softwareLicenceQuery}`);
+  assert.equal(assessConversationRelation(softwareLicenceQuery, employeeCpfScenario, employeeCpfScenario), 'NEW',
+    `payroll software licence purchase is NEW against payroll: ${softwareLicenceQuery}`);
+}
+const priorSoftwareLicenceQuery = 'What is the GST treatment for our previous payroll software licence?';
+assert.equal(hasConflictingPriorSubject(priorSoftwareLicenceQuery, employeeCpfScenario), true);
+assert.equal(hasExplicitPriorFactReference(priorSoftwareLicenceQuery, employeeCpfScenario), false);
+assert.equal(assessConversationRelation(priorSoftwareLicenceQuery, employeeCpfScenario, employeeCpfScenario), 'AMBIGUOUS');
+assert.equal(hasAffirmativeResetDirective('Please proceed without letting us forget the earlier employee details.'), false);
+assert.equal(startsNewAccountingScenario('If the candidate accepts, we hired a second employee for SGD 4,500.', employeeCpfScenario), true);
+for (const nonNegatedActionQuery of [
+  'We are not GST-registered and bought a laptop for SGD 2,000.',
+  'Without GST we bought a machine for SGD 5,000.',
+  'We did not lease the equipment and purchased a server for SGD 5,000.'
+]) {
+  assert.equal(startsNewAccountingScenario(nonNegatedActionQuery, employeeCpfScenario), true,
+    `predicate-scoped negation does not suppress new scenario: ${nonNegatedActionQuery}`);
+  assert.equal(assessConversationRelation(nonNegatedActionQuery, employeeCpfScenario, employeeCpfScenario), 'NEW',
+    `predicate-scoped negation classifies as NEW: ${nonNegatedActionQuery}`);
+}
+assert.equal(startsNewAccountingScenario('We did not buy or lease a machine for SGD 5,000.', employeeCpfScenario), false);
+assert.equal(startsNewAccountingScenario('We have not bought or leased a machine for SGD 5,000.', ppeMachineScenario), false);
+assert.equal(assessConversationRelation('We have not bought or leased a machine for SGD 5,000.', ppeMachineScenario, ppeMachineScenario), 'RELATED');
 const followUpUnderstanding = semantic({ domain: 'IRAS_GST', population: 'COMPANY', primarySubject: 'input tax eligibility for the purchase',
   concepts: [{ concept: 'GST input tax', role: 'PRIMARY' }], requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true });
 const followUpContext = await buildGroundedReasoningContext(shortAnaphoricFollowUp, priorPpe, {
@@ -806,6 +2232,227 @@ try {
 assert.equal(processInterpretationCalls, 1, 'The production processing and grounding path reuses one validated semantic call.');
 assert.deepEqual(productionContext.classification.authorities, ['IRAS']);
 assert.equal(productionContext.questionUnderstanding.mode, 'SEMANTIC_PLUS_RULES');
+
+const momSalaryOvertimeMeaning = {
+  schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['MOM'], contextualAuthorities: ['SSO'],
+  domain: 'MOM_EMPLOYMENT', population: 'EMPLOYER',
+  primarySubject: 'ordinary salary and overtime payment deadlines',
+  concepts: [
+    { concept: 'ordinary salary payment deadline', role: 'PRIMARY' },
+    { concept: 'overtime eligibility and payment deadline', role: 'RELATED' },
+    { concept: 'Employment Act coverage', role: 'RELATED' }
+  ],
+  requestedOperation: 'EXPLAIN_RULE',
+  factsExplicitlyProvided: ['employee is covered by the Employment Act', 'employee is not covered by the overtime provisions'],
+  confidence: 0.97,
+  issues: [
+    { subject: 'ordinary salary payment deadline after the salary period and practical payroll steps', population: 'EMPLOYER',
+      domain: 'MOM_EMPLOYMENT', governingAuthorities: ['MOM'], contextualAuthorities: ['SSO'], operation: 'EXPLAIN_RULE',
+      mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.97 },
+    { subject: 'overtime eligibility and payment deadline for an employee outside the Part IV overtime provisions', population: 'EMPLOYER',
+      domain: 'MOM_EMPLOYMENT', governingAuthorities: ['MOM'], contextualAuthorities: ['SSO'], operation: 'EXPLAIN_RULE',
+      mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.97 }
+  ]
+};
+let momProductionPrompt;
+let momProductionSystem;
+let momProductionWorkstreams;
+const fetchBeforeMomContextTest = globalThis.fetch;
+const payrollQueryForJournalState = 'currently the company has one singaporean employees earning 60k a month he is 60 years old show me the relevant double entries';
+const existingPayrollScenario = await parseAccountingQuery(payrollQueryForJournalState);
+const initialJournalSnapshot = updateCommittedJournalScenario(null, existingPayrollScenario, 'SFRS_I');
+assert.ok(initialJournalSnapshot, 'the initial payroll scenario produces a validated journal snapshot');
+const initialJournalGroups = calculateDoubleEntries(initialJournalSnapshot, 'SFRS_I').groups;
+assert.equal(initialJournalGroups.length, 1);
+assert.equal(initialJournalGroups[0].isBalanced, true);
+const journalFollowUpContext = selectAccountingScenarioForRequest(
+  momSalaryOvertimeFollowUp, existingPayrollScenario, initialJournalSnapshot
+);
+assert.equal(journalFollowUpContext, existingPayrollScenario,
+  'a statutory follow-up continues with its active conversation context, not the separately preserved journal snapshot');
+globalThis.fetch = async (url, init) => {
+  if (String(url).includes('generateContent')) {
+    const body = JSON.parse(String(init?.body || '{}'));
+    const systemText = body.systemInstruction?.parts?.[0]?.text || '';
+    if (systemText.includes('Interpret the user question only')) {
+      momProductionSystem = systemText;
+      momProductionPrompt = body.contents?.flatMap(item => item.parts || []).map(part => part.text || '').join('\n') || '';
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(momSalaryOvertimeMeaning) }] } }] }), { status: 200 });
+    }
+  }
+  return new Response('', { status: 503 });
+};
+let momFollowUpResponse;
+try {
+  momFollowUpResponse = await processAccountingQuery(momSalaryOvertimeFollowUp, journalFollowUpContext, 'SFRS_I', provider,
+    'gemini-3.5-flash-lite', momConversation, { journal: false, statutory: true }, {
+      onAuthorityWorkstreams(result) { momProductionWorkstreams = result; }
+    });
+} finally {
+  globalThis.fetch = fetchBeforeMomContextTest;
+}
+assert.deepEqual(momFollowUpResponse.scenarioState.directGroups, [],
+  'the authority-only response carries no payroll journal into the advisory state');
+const journalAfterAdvisory = updateCommittedJournalScenario(
+  initialJournalSnapshot, momFollowUpResponse.scenarioState, 'SFRS_I'
+);
+assert.deepEqual(calculateDoubleEntries(journalAfterAdvisory, 'SFRS_I').groups, initialJournalGroups,
+  'the last balanced payroll journal, including its date, currency and line amounts, remains available separately');
+assert.equal(journalAfterAdvisory.functionalCurrency, initialJournalSnapshot.functionalCurrency,
+  'the preserved journal retains its functional currency');
+const journalRecallContext = selectAccountingScenarioForRequest(
+  'Show last journal', momFollowUpResponse.scenarioState, journalAfterAdvisory
+);
+assert.equal(journalRecallContext, initialJournalSnapshot,
+  'after the advisory turn, the third turn retrieves the first payroll scenario for journal display');
+let journalRecallResponse;
+let journalRecallTransportCalls = 0;
+const fetchBeforeJournalRecall = globalThis.fetch;
+globalThis.fetch = async () => {
+  journalRecallTransportCalls++;
+  throw new Error('journal display must not call a model');
+};
+try {
+  journalRecallResponse = await processAccountingQuery('Show last journal', journalRecallContext, 'SFRS_I', provider,
+    'gemini-3.5-flash-lite', [], { journal: false, statutory: true });
+} finally {
+  globalThis.fetch = fetchBeforeJournalRecall;
+}
+assert.equal(journalRecallTransportCalls, 0,
+  'public journal recall bypasses advisory synthesis even when a provider is configured');
+assert.match(journalRecallResponse.messageText, /most recent committed journal/i);
+assert.doesNotMatch(journalRecallResponse.messageText, /No Double Entry Available Yet/i);
+assert.deepEqual(journalRecallResponse.scenarioState.directGroups, initialJournalGroups,
+  'the recalled journal matches the first turn’s balanced payroll groups');
+const correctionQuery = 'Actually the monthly salary for CPF is 72k a month';
+const correctionContext = selectAccountingScenarioForRequest(
+  correctionQuery, momFollowUpResponse.scenarioState, journalAfterAdvisory
+);
+assert.equal(correctionContext?.scenarioType, 'PAYROLL_CPF_SALARY',
+  'an affirmative CPF salary correction after an advisory recovers the payroll context');
+const correctedPayrollResponse = await processAccountingQuery(correctionQuery, correctionContext, 'SFRS_I');
+const correctedPayroll = correctedPayrollResponse.scenarioState;
+assert.equal(correctedPayroll.scenarioType, 'PAYROLL_CPF_SALARY',
+  'public offline processing retains the original payroll scenario for the correction');
+assert.equal(correctedPayroll.amount, 72000,
+  'public offline processing applies the correction to the existing salary');
+for (const query of [
+  'Actually the CPF contribution rate is 17%',
+  'Actually the CPF monthly salary ceiling is 8k',
+  'Actually employees earning 72k qualify for CPF',
+  'Actually the monthly salary for CPF is 72k a month and employees earning 72k qualify for CPF'
+]) {
+  assert.equal(selectAccountingScenarioForRequest(
+    query, momFollowUpResponse.scenarioState, journalAfterAdvisory
+  ), momFollowUpResponse.scenarioState,
+  `statutory rate, ceiling, eligibility and compound claims do not inherit payroll facts: ${query}`);
+}
+const correctedJournal = updateCommittedJournalScenario(journalAfterAdvisory, {
+  ...correctedPayroll,
+  committedDirectGroups: initialJournalGroups
+}, 'SFRS_I');
+assert.equal(correctedJournal?.amount, 72000);
+assert.notDeepEqual(correctedJournal?.directGroups, initialJournalGroups,
+  'the recalculated corrected payroll replaces stale committed journal groups');
+const editedPayrollScenario = await parseAccountingQuery(payrollQueryForJournalState.replace('60k a month', '72k a month'));
+const replacedJournalSnapshot = updateCommittedJournalScenario(initialJournalSnapshot, editedPayrollScenario, 'SFRS_I');
+assert.equal(replacedJournalSnapshot?.amount, 72000,
+  'a new balanced payroll input replaces the displayed journal snapshot');
+assert.notDeepEqual(calculateDoubleEntries(replacedJournalSnapshot, 'SFRS_I').groups, initialJournalGroups);
+const incompleteScenario = {
+  ...editedPayrollScenario, scenarioType: 'UNRECOGNIZED', directGroups: [], amount: undefined,
+  isComplete: false, missingFields: [{ fieldKey: 'salary', fieldName: 'Salary', prompt: 'Please confirm salary.', whyNeeded: 'Salary is needed.' }]
+};
+assert.equal(updateCommittedJournalScenario(replacedJournalSnapshot, incompleteScenario, 'SFRS_I'), replacedJournalSnapshot,
+  'an incomplete new answer leaves the last valid journal snapshot intact');
+const separateEquipmentQuery = 'New transaction: The company purchased equipment, but its cost is not yet known. Please prepare its journal.';
+assert.equal(assessConversationRelation(separateEquipmentQuery, momFollowUpResponse.scenarioState), 'NEW',
+  'an explicit new incomplete equipment transaction starts a new accounting scope');
+const separateEquipmentScenario = await parseAccountingQuery(separateEquipmentQuery);
+assert.equal(separateEquipmentScenario.isComplete, false,
+  'the separate equipment case remains incomplete while its cost is unknown');
+const clearedJournalSnapshot = updateCommittedJournalScenario(
+  journalAfterAdvisory, separateEquipmentScenario, 'SFRS_I', true
+);
+assert.equal(clearedJournalSnapshot, null,
+  'the NEW scope clears the old payroll journal even when the new scenario has no entries');
+const separateRecallContext = selectAccountingScenarioForRequest(
+  'Show last journal', separateEquipmentScenario, clearedJournalSnapshot
+);
+const noOldJournalResponse = await processAccountingQuery('Show last journal', separateRecallContext, 'SFRS_I');
+assert.match(noOldJournalResponse.messageText, /No Double Entry Available Yet/i,
+  'journal recall in the separate incomplete case cannot resurrect the old payroll entries');
+assert.equal(updateCommittedJournalScenario(journalAfterAdvisory, separateEquipmentScenario, 'SFRS_I', true), null,
+  'the forced separate-analysis decision uses the same journal reset path');
+assert.ok(momProductionPrompt?.includes(momSalaryOvertimeParent),
+  'The production caller supplies the earlier user turn to semantic understanding.');
+assert.ok(momProductionPrompt?.includes(momSalaryOvertimeFollowUp),
+  'The production semantic call retains the exact current follow-up.');
+assert.match(momProductionSystem || '', /current question takes precedence/i);
+assert.match(momProductionSystem || '', /assistant messages as user-provided facts or official evidence/i);
+assert.ok(momProductionWorkstreams, 'The contextual interpretation reaches the actual authority issue-planning path.');
+const momProductionIssues = momProductionWorkstreams.issuePlan.issues;
+assert.ok(momProductionIssues.some(issue => issue.status === 'MAPPED' && issue.domain === 'MOM_EMPLOYMENT' &&
+  issue.population === 'EMPLOYER' && issue.governingAuthorities.includes('MOM') && issue.mappedTopicIds.includes('mom-salary-payment')),
+  `The inherited ordinary-salary deadline retains its MOM salary-payment issue: ${JSON.stringify(momProductionIssues)}`);
+assert.ok(momProductionIssues.some(issue => issue.status === 'MAPPED' && issue.domain === 'MOM_EMPLOYMENT' &&
+  issue.population === 'EMPLOYER' && issue.governingAuthorities.includes('MOM') &&
+  issue.mappedTopicIds.some(topicId => ['mom_overtime', 'mom-part-iv-overtime'].includes(topicId))),
+  'The current overtime-coverage amendment remains a distinct MOM overtime issue.');
+const momMeaningUnderstanding = { mode: 'SEMANTIC_INTERPRETATION', interpretation: momSalaryOvertimeMeaning };
+const findMomSalaryIssue = plan => plan.issues.find(issue => issue.domain === 'MOM_EMPLOYMENT' &&
+  /ordinary salary payment deadline/i.test(issue.subject));
+const noHistoryMomPlan = reconcileQuestionUnderstanding(momSalaryOvertimeFollowUp,
+  classifyQuestion(momSalaryOvertimeFollowUp), momMeaningUnderstanding);
+assert.equal(findMomSalaryIssue(noHistoryMomPlan.issuePlan)?.status, 'UNRESOLVED',
+  'Without prior user context, the current follow-up cannot establish the inherited salary-payment topic.');
+const unrelatedPriorUserContext = buildAdvisoryConversation([
+  { id: 'old-cpf-user', sender: 'user', text: 'We are hiring a Singapore permanent resident. What CPF contribution rates apply?', timestamp: '2026-01-01T00:00:00Z' },
+  { id: 'current-mom-user', sender: 'user', text: momSalaryOvertimeFollowUp, timestamp: '2026-01-02T00:00:00Z' }
+], momSalaryOvertimeFollowUp);
+const unrelatedPriorMomPlan = reconcileQuestionUnderstanding(momSalaryOvertimeFollowUp,
+  classifyQuestion(momSalaryOvertimeFollowUp), momMeaningUnderstanding, undefined, unrelatedPriorUserContext);
+assert.equal(findMomSalaryIssue(unrelatedPriorMomPlan.issuePlan)?.status, 'UNRESOLVED',
+  'An unrelated earlier user topic cannot establish MOM salary-payment coverage.');
+assert.equal(unrelatedPriorMomPlan.issuePlan.issues.some(issue => issue.domain === 'CPF_PAYROLL'), false,
+  'An unrelated prior CPF question cannot add a CPF issue to the current MOM question.');
+const assistantOnlyTopicContext = buildAdvisoryConversation([
+  { id: 'assistant-only-salary-topic', sender: 'assistant',
+    text: 'The employee is covered by the Employment Act. Ordinary salary is due after the salary period.', timestamp: '2026-01-01T00:00:00Z' },
+  { id: 'current-mom-user-2', sender: 'user', text: momSalaryOvertimeFollowUp, timestamp: '2026-01-02T00:00:00Z' }
+], momSalaryOvertimeFollowUp);
+const assistantOnlyMomPlan = reconcileQuestionUnderstanding(momSalaryOvertimeFollowUp,
+  classifyQuestion(momSalaryOvertimeFollowUp), momMeaningUnderstanding, undefined, assistantOnlyTopicContext);
+assert.equal(findMomSalaryIssue(assistantOnlyMomPlan.issuePlan)?.status, 'UNRESOLVED',
+  'Assistant-only topic context cannot authorize MOM salary-payment routing.');
+
+const newPayrollScenarioQuery = 'We hired a new employee for SGD 5,000 monthly. What is the MOM salary payment deadline? No journal is required.';
+const newPayrollScenarioHistory = [...momConversation, {
+  id: 'new-payroll-current', sender: 'user', text: newPayrollScenarioQuery, timestamp: '2026-01-03T00:00:00Z'
+}];
+const priorAssetScenario = { ...priorPpe, semanticUnderstanding: { transactionType: 'asset_purchase' } };
+let newScenarioSemanticPrompt;
+const fetchBeforeNewScenarioContextTest = globalThis.fetch;
+globalThis.fetch = async (url, init) => {
+  if (String(url).includes('generateContent')) {
+    const body = JSON.parse(String(init?.body || '{}'));
+    if ((body.systemInstruction?.parts?.[0]?.text || '').includes('Interpret the user question only')) {
+      newScenarioSemanticPrompt = body.contents?.flatMap(item => item.parts || []).map(part => part.text || '').join('\n') || '';
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{malformed' }] } }] }), { status: 200 });
+    }
+  }
+  return new Response('', { status: 503 });
+};
+try {
+  await processAccountingQuery(newPayrollScenarioQuery, priorAssetScenario, 'SFRS_I', provider,
+    'gemini-3.5-flash-lite', newPayrollScenarioHistory, { journal: false, statutory: true });
+} finally {
+  globalThis.fetch = fetchBeforeNewScenarioContextTest;
+}
+assert.ok(newScenarioSemanticPrompt?.includes(newPayrollScenarioQuery),
+  'A standalone payroll scenario remains the current semantic question.');
+assert.doesNotMatch(newScenarioSemanticPrompt || '', /Our employee is covered by the Employment Act|vintage-software-4481|Unverified assistant claim/,
+  'A new payroll scenario excludes unrelated earlier statutory and assistant context.');
 
 const stalePpeChat = [
   { id: 'old-ppe-query', sender: 'user', text: 'We bought a machine for SGD 90,000 and need to depreciate it.', timestamp: new Date('2026-01-01T00:00:00Z') },
