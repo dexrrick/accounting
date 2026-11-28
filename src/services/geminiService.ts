@@ -1118,7 +1118,9 @@ async function processAccountingQueryCore(
       /^\s*(?:he|she|they|it|i|we|(?:the|our|this)\s+(?:employee|worker|company|business))\b[\s\S]*\b(?:is|are|was|were|has|have|earns?|receives?|started|aged)\b/i.test(userInput));
   const retainConversationContext = isContextualFollowUp ||
     (!explicitNewQuestion && (isPayrollSalaryAmendment || isFactualClarificationReply));
-  const isBasicBookkeepingTransaction = !hasImages && Boolean(matchBasicTransaction(userInput));
+  const isBasicBookkeepingTransaction = !hasImages &&
+    (!/[?]/.test(userInput) || journalRequested || outputJournalRequested) &&
+    Boolean(matchBasicTransaction(userInput));
   const independentStatutoryRequest = deterministicClassification.intent === 'STATUTORY_ADVISORY' &&
     deterministicClassification.authorities.some(authority => authority !== 'UNKNOWN') &&
     !deterministicClassification.accountingAnalysisRequired && !deterministicClassification.journalEntryRequired &&

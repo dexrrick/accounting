@@ -761,7 +761,7 @@ function resolvePayrollSettlementStatus(query: string): PayrollSettlementStatus 
 }
 
 function hasStatutoryPayrollCalcCues(query: string): boolean {
-  return /\b(?:cpf|calculat\w*|comput\w*|how\s+much|what\s+is\s+(?:his|her|the)|years?\s+old|\baged?\s+\d+|singaporean|citizen|permanent\s+resident|\bpr\b|foreign\w*|work\s+permit|employment\s+pass|\bs\s+pass\b|\bep\s+holder\b|last\s+day|prorat\w*|resign\w*|incomplete\s+month|earning|earns|ordinary\s+wage|aw\s+ceiling|sdl|skills\s+development|employment\s+act|overtime|\bmom\b|\d+\s*k\s*(?:a\s+month|\/month|monthly|per\s+month))\b/i.test(query);
+  return /\b(?:cpf|calculat\w*|comput\w*|how\s+much|what\s+is\s+(?:his|her|the)|when\s+(?:is|are|must|should)|payslips?|itemised|refund\w*|due\s+date|years?\s+old|\baged?\s+\d+|singaporean|citizen|permanent\s+resident|\bpr\b|foreign\w*|work\s+permit|employment\s+pass|\bs\s+pass\b|\bep\s+holder\b|last\s+day|prorat\w*|resign\w*|incomplete\s+month|earning|earns|ordinary\s+wage|aw\s+ceiling|sdl|skills\s+development|employment\s+act|overtime|\bmom\b|\d+\s*k\s*(?:a\s+month|\/month|monthly|per\s+month))\b/i.test(query);
 }
 
 function isAccruedExpenseSettlement(query: string): boolean {
@@ -804,7 +804,7 @@ function hasUnspecifiedIrasOrTaxPaymentTarget(query: string): boolean {
 }
 
 function isPayrollAccrual(query: string): boolean {
-  if (/\b(?:calculat\w*|comput\w*|how\s+much|what\s+is\s+(?:his|her|the)\s+(?:cpf|salary|prorat\w*)|years?\s+old|\baged?\s+\d+|singaporean|citizen|permanent\s+resident|\bpr\b|foreigner|work\s+permit|employment\s+pass|\bs\s+pass\b|last\s+day|prorat\w*|resign\w*|incomplete\s+month|ordinary\s+wage|aw\s+ceiling|cpf\s+ceiling|cpf\s+rate|skills\s+development\s+levy|\bsdl\b)\b/i.test(query)) {
+  if (/\b(?:calculat\w*|comput\w*|how\s+much|what\s+is\s+(?:his|her|the)\s+(?:cpf|salary|prorat\w*)|when\s+(?:is|are|must|should)|refund\w*|payslips?|years?\s+old|\baged?\s+\d+|singaporean|citizen|permanent\s+resident|\bpr\b|foreigner|work\s+permit|employment\s+pass|\bs\s+pass\b|last\s+day|prorat\w*|resign\w*|incomplete\s+month|ordinary\s+wage|aw\s+ceiling|cpf\s+ceiling|cpf\s+rate|skills\s+development\s+levy|\bsdl\b)\b/i.test(query)) {
     return false;
   }
   return Boolean(extractPayrollAmounts(query)) || Boolean(extractPayrollLiabilitySettlementAmounts(query));
@@ -813,14 +813,14 @@ function isPayrollAccrual(query: string): boolean {
 function isPayrollNetPaySettlement(query: string): boolean {
   const paymentVerb = /\b(?:pay|paid|paying|settle[ds]?|settling|settlements?|disburse[ds]?|disbursements?|transfer(?:red)?|remit(?:ted|ting|tances?)?|clear(?:ed|ing)?|payments?)\b/i.test(query);
   const target = /\b(?:net\s+(?:salar(?:y|ies)|wages?|pay|payroll)|salar(?:y|ies)\s+payable|wages?\s+payable|accrued\s+(?:salar(?:y|ies)|wages?)|staff\s+salaries\s+payable)\b/i.test(query);
-  const notCpfOrCalc = !/\b(?:cpf|gross\s+(?:salar(?:y|ies)|wages?|pay)|calculat\w*|comput\w*|how\s+much|years?\s+old|singaporean|\bpr\b|last\s+day|prorat\w*|resign\w*|employment\s+act|salary\s+deadline)\b/i.test(query);
+  const notCpfOrCalc = !/\b(?:cpf|gross\s+(?:salar(?:y|ies)|wages?|pay)|calculat\w*|comput\w*|how\s+much|when\s+(?:is|are|must|should)|payslips?|itemised|refund\w*|due\s+date|years?\s+old|singaporean|\bpr\b|last\s+day|prorat\w*|resign\w*|employment\s+act|salary\s+deadline)\b/i.test(query);
   return paymentVerb && target && notCpfOrCalc;
 }
 
 function isCpfRemittance(query: string): boolean {
   const paymentVerb = /\b(?:pay|paid|paying|remit(?:ted|ting|tances?)?|settle[ds]?|settling|settlements?|transfer(?:red)?|disburse[ds]?|disbursements?|clear(?:ed|ing)?|payments?)\b/i.test(query);
   const target = /\b(?:cpf\s+(?:payable|liability)|(?:accrued\s+)?cpf\s+(?:liability|contributions?|payable)|cpf\s+to\s+(?:the\s+)?cpf\s+board|(?:the\s+)?cpf\s+board)\b/i.test(query);
-  const notAccrualOrCalc = !/\b(?:gross\s+(?:salar(?:y|ies)|wages?)|earning|earns|years?\s+old|singaporean|\bpr\b|last\s+day|prorat\w*|resign\w*|calculat\w*|comput\w*|how\s+much|cpf\s+ceiling|ordinary\s+wage|aw\s+ceiling|cpf\s+rate|senior\s+worker|deadline|late\s+payment)\b/i.test(query);
+  const notAccrualOrCalc = !/\b(?:gross\s+(?:salar(?:y|ies)|wages?)|earning|earns|years?\s+old|singaporean|\bpr\b|last\s+day|prorat\w*|resign\w*|calculat\w*|comput\w*|how\s+much|when\s+(?:is|are|must|should)|refund\w*|rectif\w*|overpay\w*|wrongly\s+submitted|due\s+date|cpf\s+ceiling|ordinary\s+wage|aw\s+ceiling|cpf\s+rate|senior\s+worker|deadline|late\s+payment)\b/i.test(query);
   return paymentVerb && target && notAccrualOrCalc;
 }
 
