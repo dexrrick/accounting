@@ -4,6 +4,7 @@ import type { ProviderSettings } from '../types/provider';
 import type { TransactionUnderstanding } from './transactionUnderstandingService';
 import type { AuthorityWorkstreamsResult } from '../types/authorityEvidence';
 import { parseAccountingQuery, isDeterministicFixture } from '../engine/scenarioParser';
+import { matchBasicTransaction } from '../engine/basicTransactions';
 import { calculateDoubleEntries } from '../engine/accountingEngine';
 import { defaultAccountingGuardrails, type GuardrailViolation } from '../engine/accountingGuardrails';
 import { validateJournalGroups } from '../verification/journalIntegrity';
@@ -1117,9 +1118,13 @@ async function processAccountingQueryCore(
       /^\s*(?:he|she|they|it|i|we|(?:the|our|this)\s+(?:employee|worker|company|business))\b[\s\S]*\b(?:is|are|was|were|has|have|earns?|receives?|started|aged)\b/i.test(userInput));
   const retainConversationContext = isContextualFollowUp ||
     (!explicitNewQuestion && (isPayrollSalaryAmendment || isFactualClarificationReply));
+  const isBasicBookkeepingTransaction = !hasImages &&
+    (!/[?]/.test(userInput) || journalRequested || outputJournalRequested) &&
+    Boolean(matchBasicTransaction(userInput));
   const independentStatutoryRequest = deterministicClassification.intent === 'STATUTORY_ADVISORY' &&
     deterministicClassification.authorities.some(authority => authority !== 'UNKNOWN') &&
     !deterministicClassification.accountingAnalysisRequired && !deterministicClassification.journalEntryRequired &&
+    !isBasicBookkeepingTransaction &&
     !journalRequested && !outputJournalRequested && !retainConversationContext;
   const conflictingPriorSubject = !retainConversationContext && hasConflictingPriorSubject(userInput, activeScenario);
   if (explicitNewQuestion || independentStatutoryRequest || conflictingPriorSubject) {
@@ -1275,7 +1280,9 @@ async function processAccountingQueryCore(
     hasImages,
     isShortSemanticFollowUp: isContextualFollowUp
   });
-  const authorityEvidenceRuntimeEnabled = !isPayrollSalaryAmendment && (shouldUseAuthorityEvidenceRuntime({
+  const bypassAuthorityForBasicBookkeeping = isBasicBookkeepingTransaction &&
+    !hasMomRulesAndUnresolvedAccountingJournal(reconciledQuestionUnderstanding.issuePlan, classification);
+  const authorityEvidenceRuntimeEnabled = !isPayrollSalaryAmendment && !bypassAuthorityForBasicBookkeeping && (shouldUseAuthorityEvidenceRuntime({
     issuePlan: reconciledQuestionUnderstanding.issuePlan,
     classification,
     explicitIrasEvidenceRequest,
