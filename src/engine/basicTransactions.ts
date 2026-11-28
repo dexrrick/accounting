@@ -2421,7 +2421,7 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
       (item.id !== 'PAYROLL_ACCRUAL' || isPayrollAccrual(query)) &&
       (item.id !== 'PAYROLL_NET_PAY_SETTLEMENT' || isPayrollNetPaySettlement(query)) &&
       (item.id !== 'SALARY_ACCRUAL' || (!hasStatutoryPayrollCalcCues(query) && isExpenseAccrualRecognition(query) && /\b(?:salar(?:y|ies)|wages?|payroll)\b/i.test(query))) &&
-      (item.id !== 'SALARY_PAYMENT' || (!hasStatutoryPayrollCalcCues(query) && !isExpenseAccrualRecognition(query) && /\b(?:paid|pay|disburse[ds]?)\b/i.test(query) && /\b(?:salar(?:y|ies)|wages?)\b/i.test(query) && !/\b(?:net\s+(?:salar(?:y|ies)|wages?|pay|payroll)|payable|accrue[ds]?|accrual|unpaid|outstanding)\b/i.test(query))) &&
+      (item.id !== 'SALARY_PAYMENT' || (!hasStatutoryPayrollCalcCues(query) && !isExpenseAccrualRecognition(query) && /\b(?:paid|pay|disburse[ds]?)\b/i.test(query) && /\b(?:salar(?:y|ies)|wages?)\b/i.test(query) && /\b(?:in\s+cash|with\s+cash|by\s+cash|cash\s+payment|cash\s+paid|from\s+petty\s+cash|physical\s+cash|by\s+bank|via\s+bank|through\s+bank|from\s+(?:the\s+|our\s+)?bank|bank\s+transfer|bank\s+payment|bank\s+account|by\s+cheque|by\s+check|via\s+giro|by\s+giro|via\s+paynow|by\s+paynow|wire\s+transfer|paid\s+(?:online|electronically))\b/i.test(query) && !/\b(?:net\s+(?:salar(?:y|ies)|wages?|pay|payroll)|payable|accrue[ds]?|accrual|unpaid|outstanding|processing|administration|disbursement\s+fees?)\b/i.test(query))) &&
       (item.id !== 'CPF_REMITTANCE' || isCpfRemittance(query)) &&
       (item.id !== 'PREPAID_EXPENSE_RECOGNITION' || isPrepaidExpenseRecognition(query)) &&
       (item.id !== 'DEPRECIATION_CHARGE' || isDepreciationCharge(query)) &&
