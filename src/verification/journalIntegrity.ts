@@ -44,9 +44,30 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
   if (n === 'discount allowed' || n === 'expected credit loss' || n === 'expected credit losses' || n.startsWith('impairment loss')) {
     return 'EXPENSE';
   }
+  if ((n.includes('amortisation') || n.includes('amortization')) && !n.includes('accumulated') && !n.startsWith('unamorti')) {
+    return 'EXPENSE';
+  }
+  if (n.startsWith('employer cpf') && !n.includes('payable')) {
+    return 'EXPENSE';
+  }
+  if (n.startsWith('income tax expense')) {
+    return 'EXPENSE';
+  }
+  if (n === 'salaries and wages' || (n.startsWith('staff costs') && !n.includes('accrued') && !n.includes('payable'))) {
+    return 'EXPENSE';
+  }
 
   // ASSET
   if (n.startsWith('prepaid ') || n === 'prepayments' || n === 'prepayment') {
+    return 'ASSET';
+  }
+  if (
+    n.startsWith('accumulated depreciation') ||
+    n.startsWith('accumulated amortisation') ||
+    n.startsWith('accumulated amortization') ||
+    n === 'deferred tax asset' ||
+    n === 'deferred tax assets'
+  ) {
     return 'ASSET';
   }
   const assetNames = [
@@ -58,7 +79,8 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
     'cheque account', 'operating account', 'business account', 'inventory',
     'merchandise inventory', 'right-of-use asset', 'right-of-use assets',
     'allowance for doubtful debts', 'allowance for doubtful accounts',
-    'loss allowance — trade receivables', 'loss allowance - trade receivables'
+    'loss allowance — trade receivables', 'loss allowance - trade receivables',
+    'current tax asset', 'current tax assets', 'income tax recoverable', 'tax recoverable'
   ];
   if (assetNames.includes(n)) {
     return 'ASSET';
@@ -79,7 +101,17 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
     n === 'contract liability' ||
     n === 'provisions' ||
     n === 'warranty provision' ||
-    (n.startsWith('provision for ') && !n.includes('doubtful') && !n.includes('bad debt'))
+    (n.startsWith('provision for ') && !n.includes('doubtful') && !n.includes('bad debt')) ||
+    n.startsWith('cpf payable') ||
+    n.includes('salaries payable') ||
+    n.includes('wages payable') ||
+    n === 'sdl payable' ||
+    n === 'skills development levy payable' ||
+    n === 'current tax payable' ||
+    n === 'income tax payable' ||
+    n === 'corporate tax payable' ||
+    n === 'deferred tax liability' ||
+    n === 'deferred tax liabilities'
   ) {
     return 'LIABILITY';
   }
@@ -88,7 +120,7 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
   if (!n.includes('unpaid') && !n.includes('receivable') && !n.includes('due from')) {
     const equityNames = [
       'share capital', 'ordinary share capital', "owner's capital", "owner's drawings",
-      'drawings', 'retained earnings'
+      'drawings', 'retained earnings', 'capital reserve', 'convertible debt equity reserve'
     ];
     if (equityNames.includes(n)) {
       return 'EQUITY';
@@ -110,6 +142,11 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
     n === 'discount received'
   ) {
     return 'REVENUE';
+  }
+
+  // OTHER COMPREHENSIVE INCOME
+  if (n.startsWith('oci —') || n.startsWith('oci -') || n.startsWith('oci ') || n.endsWith('(oci)')) {
+    return 'OTHER_COMPREHENSIVE_INCOME';
   }
 
   return undefined;
@@ -358,8 +395,14 @@ export function validateJournalGroups(
         continue;
       }
 
-      // One-sided non-zero amount: (debitCents > 0) !== (creditCents > 0)
-      if ((debitCents > 0) === (creditCents > 0)) {
+      // One-sided non-zero amount: (debitCents > 0) !== (creditCents > 0),
+      // except for the explicit IAS 21 zero-FX-fluctuation bifurcation disclosure line in a non-zero disposal entry.
+      const isExplicitZeroFxBifurcation =
+        debitCents === 0 &&
+        creditCents === 0 &&
+        line.id === 'line-sell-fx-gain-zero' &&
+        group.lines.length >= 3;
+      if (!isExplicitZeroFxBifurcation && (debitCents > 0) === (creditCents > 0)) {
         issues.push({
           code: 'INVALID_LINE',
           message: `Line '${lineAccountName}' in group '${groupTitle}' must have a single-sided non-zero amount (cannot have both debit and credit, or both zero).`,

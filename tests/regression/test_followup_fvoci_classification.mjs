@@ -30,7 +30,7 @@ function assert(condition, message) {
 // --------------------------------------------------------------------------
 console.log('--- TEST A: Full End-to-End User Turn 1 -> Turn 2 (FVOCI Follow-Up) ---');
 {
-  const q1 = "A company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026, subsequently the company sold 300 shares for USD400k on 15/12/2026. What are the double entries and FX gain?";
+  const q1 = "A company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026 at USD/SGD spot rate of 1.34, subsequently the company sold 300 shares for USD400k on 15/12/2026 at USD/SGD spot rate of 1.36. What are the double entries and FX gain?";
   const r1 = await processAccountingQuery(q1, null, 'SFRS_I');
 
   assert(r1.scenarioState.actualMeasurementBasis === 'FVTPL', `Turn 1 actual measurement basis must be FVTPL, got ${r1.scenarioState.actualMeasurementBasis}`);
@@ -59,6 +59,8 @@ console.log('--- TEST A: Full End-to-End User Turn 1 -> Turn 2 (FVOCI Follow-Up)
   assert(acqGroup.isBalanced, 'Turn 2 acq group must be balanced');
   assert(dispGroup.totalDebit > 0, `Turn 2 disp totalDebit must be > 0, got ${dispGroup.totalDebit}`);
   assert(dispGroup.isBalanced, 'Turn 2 disp group must be balanced');
+  assert(acqGroup.rationalePoints?.some(point => point.includes('1 USD = SGD 1.34')));
+  assert(dispGroup.lines.some(line => line.lineExplanation?.includes('1 USD = SGD 1.36')));
 
   // Invariant 5: All lines must have non-zero debits and credits
   for (const line of acqGroup.lines) {
@@ -101,7 +103,7 @@ console.log('--- TEST A: Full End-to-End User Turn 1 -> Turn 2 (FVOCI Follow-Up)
 // --------------------------------------------------------------------------
 console.log('--- TEST B: Semantic and Journal Consistency for FVOCI (Zero P&L Recycling) ---');
 {
-  const q1 = "A company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026, subsequently the company sold 300 shares for USD400k on 15/12/2026. What are the double entries and FX gain?";
+  const q1 = "A company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026 at USD/SGD spot rate of 1.34, subsequently the company sold 300 shares for USD400k on 15/12/2026 at USD/SGD spot rate of 1.36. What are the double entries and FX gain?";
   const r1 = await processAccountingQuery(q1, null, 'SFRS_I');
 
   const q2 = "what if the investment is FVOCI show me the double entry";
@@ -137,7 +139,7 @@ console.log('--- TEST B: Semantic and Journal Consistency for FVOCI (Zero P&L Re
 // --------------------------------------------------------------------------
 console.log('--- TEST C: Non-Mutating Hypothetical Projections ---');
 {
-  const q1 = "A company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026, subsequently the company sold 300 shares for USD400k on 15/12/2026. What are the double entries and FX gain?";
+  const q1 = "A company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026 at USD/SGD spot rate of 1.34, subsequently the company sold 300 shares for USD400k on 15/12/2026 at USD/SGD spot rate of 1.36. What are the double entries and FX gain?";
   const r1 = await processAccountingQuery(q1, null, 'SFRS_I');
 
   const priorCommittedGroups = r1.scenarioState.committedDirectGroups || r1.scenarioState.directGroups;
@@ -167,7 +169,7 @@ console.log('--- TEST C: Non-Mutating Hypothetical Projections ---');
 console.log('--- TEST D: Multi-Alternating Projections (FVTPL -> FVOCI -> FVTPL -> FVOCI) ---');
 {
   // Turn 1: Actual (FVTPL)
-  const q1 = "A company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026, subsequently the company sold 300 shares for USD400k on 15/12/2026. What are the double entries and FX gain?";
+  const q1 = "A company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026 at USD/SGD spot rate of 1.34, subsequently the company sold 300 shares for USD400k on 15/12/2026 at USD/SGD spot rate of 1.36. What are the double entries and FX gain?";
   const r1 = await processAccountingQuery(q1, null, 'SFRS_I');
   assert(r1.scenarioState.actualMeasurementBasis === 'FVTPL', 'Turn 1 must be FVTPL');
 
@@ -203,7 +205,7 @@ console.log('--- TEST D: Multi-Alternating Projections (FVTPL -> FVOCI -> FVTPL 
 // --------------------------------------------------------------------------
 console.log('--- TEST E: Exact Amounts Preservation with User Specified Rates ---');
 {
-  const q1 = "A company primary currency is SGD, it invested USD300k into 300 apple shares at 1.3004 on 13/11/2025, subsequently sold for USD400k at 1.2889 on 15/12/2025. What are the entries?";
+  const q1 = "A company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2025 at USD/SGD spot rate of 1.3004, subsequently sold for USD400k on 15/12/2025 at USD/SGD spot rate of 1.2889. What are the entries?";
   const r1 = await processAccountingQuery(q1, null, 'SFRS_I');
 
   const q2 = "what if the investment is FVOCI show me the double entry";
@@ -515,7 +517,7 @@ console.log('--- TEST K: Controlled Diagnostic Notice on Unsupported/Unknown Bas
 // --------------------------------------------------------------------------
 console.log('--- TEST L: Explicit Balance Assertion (validateJournalBalance) Across All Groups ---');
 {
-  const q1 = "A company primary currency is SGD, it invested USD300k into 300 apple shares at 1.3004 on 13/11/2025, subsequently sold for USD400k at 1.2889 on 15/12/2025. What are the entries?";
+  const q1 = "A company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2025 at USD/SGD spot rate of 1.3004, subsequently sold for USD400k on 15/12/2025 at USD/SGD spot rate of 1.2889. What are the entries?";
   const r1 = await processAccountingQuery(q1, null, 'SFRS_I');
 
   const q2 = "what if the investment is FVOCI show me the double entry";

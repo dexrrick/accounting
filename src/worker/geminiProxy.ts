@@ -7,6 +7,8 @@ export interface GeminiProxyEnvironment {
 
 const GEMINI_PATH = /^\/api\/gemini\/v1beta\/models\/(gemini-[a-z0-9.-]+):(generateContent|streamGenerateContent)$/;
 const MAX_BODY_BYTES = 12 * 1024 * 1024;
+const DEFAULT_UPSTREAM_TIMEOUT_MS = 45_000;
+const MAX_UPSTREAM_TIMEOUT_MS = 90_000;
 
 function reply(message: string, status: number): Response {
   return new Response(JSON.stringify({ error: { message } }), {
@@ -15,11 +17,13 @@ function reply(message: string, status: number): Response {
   });
 }
 
-async function boundedBody(request: Request): Promise<Uint8Array | null> {
+async function boundedBody(request: Request, signal: AbortSignal): Promise<Uint8Array | null> {
   if (!request.body) return null;
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
+  const onAbort = () => { void reader.cancel(); };
+  signal.addEventListener('abort', onAbort, { once: true });
   try {
     for (;;) {
       const { done, value } = await reader.read();
@@ -31,7 +35,11 @@ async function boundedBody(request: Request): Promise<Uint8Array | null> {
       }
       chunks.push(value);
     }
+  } catch (error) {
+    if (!signal.aborted) throw error;
+    return null;
   } finally {
+    signal.removeEventListener('abort', onAbort);
     reader.releaseLock();
   }
   const combined = new Uint8Array(total);
@@ -81,12 +89,47 @@ export async function handleGeminiProxyRequest(request: Request, env: GeminiProx
   const { success } = await env.GEMINI_RATE_LIMITER.limit({ key: `gemini:${clientIp}` });
   if (!success) return reply('Gemini rate limit exceeded.', 429);
 
-  const body = await boundedBody(request);
-  if (!body) return reply('Request body too large or empty.', 413);
+  const requestedTimeoutMs = Number(request.headers.get('x-gemini-request-timeout-ms'));
+  const timeoutMs = Number.isFinite(requestedTimeoutMs) && requestedTimeoutMs > 0
+    ? Math.min(Math.floor(requestedTimeoutMs), MAX_UPSTREAM_TIMEOUT_MS)
+    : DEFAULT_UPSTREAM_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const onClientAbort = () => controller.abort();
+  request.signal.addEventListener('abort', onClientAbort, { once: true });
+  const cleanup = () => {
+    clearTimeout(timeoutId);
+    request.signal.removeEventListener('abort', onClientAbort);
+  };
+
+  if (request.signal.aborted) {
+    cleanup();
+    return reply('Request canceled.', 499);
+  }
+  let body: Uint8Array | null;
+  try {
+    body = await boundedBody(request, controller.signal);
+  } catch {
+    cleanup();
+    return reply('Unable to read Gemini request.', 400);
+  }
+  if (request.signal.aborted) {
+    cleanup();
+    return reply('Request canceled.', 499);
+  }
+  if (controller.signal.aborted) {
+    cleanup();
+    return reply('Gemini request timed out.', 504);
+  }
+  if (!body) {
+    cleanup();
+    return reply('Request body too large or empty.', 413);
+  }
   const decodedBody = new TextDecoder().decode(body);
   try {
     JSON.parse(decodedBody);
   } catch {
+    cleanup();
     return reply('Invalid JSON request.', 400);
   }
 
@@ -101,10 +144,39 @@ export async function handleGeminiProxyRequest(request: Request, env: GeminiProx
         'content-type': 'application/json',
         'x-goog-api-key': env.GEMINI_API_KEY
       },
-      body: decodedBody
+      body: decodedBody,
+      signal: controller.signal
     });
-    if (!result.ok) return reply(`Gemini API returned HTTP ${result.status}.`, result.status);
-    return new Response(result.body, {
+    if (!result.ok) {
+      cleanup();
+      return reply(`Gemini API returned HTTP ${result.status}.`, result.status);
+    }
+    if (!result.body) {
+      cleanup();
+      return reply('Gemini API returned an empty response.', 502);
+    }
+    const reader = result.body.getReader();
+    const body = new ReadableStream<Uint8Array>({
+      async pull(streamController) {
+        try {
+          const { done, value } = await reader.read();
+          if (done) {
+            cleanup();
+            streamController.close();
+          } else {
+            streamController.enqueue(value);
+          }
+        } catch (error) {
+          cleanup();
+          streamController.error(error);
+        }
+      },
+      async cancel(reason) {
+        try { await reader.cancel(reason); }
+        finally { cleanup(); }
+      }
+    });
+    return new Response(body, {
       status: result.status,
       headers: {
         'content-type': result.headers.get('content-type') || (match[2] === 'streamGenerateContent' ? 'text/event-stream' : 'application/json'),
@@ -113,6 +185,10 @@ export async function handleGeminiProxyRequest(request: Request, env: GeminiProx
       }
     });
   } catch {
-    return reply('Unable to reach Gemini API.', 502);
+    const wasCanceled = request.signal.aborted;
+    cleanup();
+    return wasCanceled
+      ? reply('Request canceled.', 499)
+      : reply(controller.signal.aborted ? 'Gemini request timed out.' : 'Unable to reach Gemini API.', controller.signal.aborted ? 504 : 502);
   }
 }

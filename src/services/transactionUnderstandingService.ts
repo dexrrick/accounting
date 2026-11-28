@@ -27,6 +27,7 @@ import type {
 } from '../types/conversationState';
 import { startsNewAccountingScenario } from './conversationBoundary';
 import { executeStructuredLlmCall } from './aiTransport';
+import { getRequestTimeoutMs, throwIfRequestAborted } from './requestDeadline';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
 import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
 
@@ -1341,7 +1342,8 @@ export class AISemanticExtractor {
     providerOrApiKey?: ProviderSettings | string,
     _functionalCurrency: string = 'SGD',
     _jurisdiction: string = 'SG',
-    conversationContext?: ConversationAccountingContext
+    conversationContext?: ConversationAccountingContext,
+    signal?: AbortSignal
   ): Promise<any> {
     let contextPrompt = '';
     if (
@@ -1364,7 +1366,11 @@ export class AISemanticExtractor {
       `Analyze the following commercial query and extract structured economic facts:\n\nQuery: "${query}"\n${contextPrompt}\nReturn strictly valid JSON conforming to the schema.`,
       SEMANTIC_EXTRACTION_SYSTEM_PROMPT,
       providerOrApiKey,
-      { jsonMode: true, temperature: 0.1 }
+      {
+        jsonMode: true,
+        temperature: 0.1,
+        ...(signal ? { signal, timeoutMs: getRequestTimeoutMs(signal, 45_000) } : {})
+      }
     );
 
     const parsed = repairAndParseAIJson(rawJsonText);
@@ -1419,7 +1425,8 @@ export class TransactionUnderstandingService {
     functionalCurrency: string = 'SGD',
     jurisdiction: string = 'SG',
     providerOrApiKey?: ProviderSettings | string,
-    conversationContext?: ConversationAccountingContext
+    conversationContext?: ConversationAccountingContext,
+    signal?: AbortSignal
   ): Promise<TransactionUnderstanding> {
     const hasProvider = Boolean(
       (typeof providerOrApiKey === 'string' && providerOrApiKey.trim().length > 10) ||
@@ -1432,13 +1439,14 @@ export class TransactionUnderstandingService {
 
     if (hasProvider) {
       try {
-        const rawAi = await this.aiExtractor.extract(query, providerOrApiKey, functionalCurrency, jurisdiction, conversationContext);
+        const rawAi = await this.aiExtractor.extract(query, providerOrApiKey, functionalCurrency, jurisdiction, conversationContext, signal);
         const validation = validateAndNormalizeUnderstanding(rawAi, jurisdiction, 'ai', conversationContext, query);
         if (validation.isValid) {
           return validation.normalizedUnderstanding;
         }
         console.warn('[SemanticExtractor] AI extraction failed schema validation gate:', validation.errors);
       } catch (err: any) {
+        throwIfRequestAborted(signal);
         console.warn('[SemanticExtractor] AI extraction call failed, falling back to deterministic extractor:', err?.message || err);
       }
     }

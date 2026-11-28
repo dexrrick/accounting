@@ -268,6 +268,20 @@ export function shouldUseAuthorityEvidenceRuntime(input: {
   // generic path when any additional material issue is unresolved, even if
   // its authority/topic cannot be grouped into a second canonical stream.
   if (issuePlan.source === 'SEMANTIC_ISSUES') {
+    const requestedIssues = issuePlan.issues.filter(issue => issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC');
+    // A taxonomy residual is not an independent user request. Let the
+    // deterministic journal path handle its own missing transaction facts.
+    const onlyJournalRequestWithTaxonomyResidual = issuePlan.issues.length > requestedIssues.length &&
+      requestedIssues.length === 1 &&
+      requestedIssues[0].domain === 'ACCOUNTING' &&
+      requestedIssues[0].operation === 'PREPARE_JOURNAL' &&
+      classification.intent === 'TRANSACTION' &&
+      classification.accountingAnalysisRequired &&
+      classification.journalEntryRequired &&
+      !classification.taxAnalysisRequired &&
+      !classification.regulatoryAnalysisRequired &&
+      !input.explicitIrasEvidenceRequest;
+    if (onlyJournalRequestWithTaxonomyResidual) return false;
     return issuePlan.issues.length > 1 && (
       requestedScopeCount(issuePlan) > 1 || issuePlan.hasUnmappedResidual ||
       issuePlan.issues.some(issue => issue.status !== 'MAPPED' || issue.domain === 'UNKNOWN')

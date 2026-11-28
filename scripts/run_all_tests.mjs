@@ -8,6 +8,7 @@ const tsxCli = path.join(projectRoot, 'node_modules', 'tsx', 'dist', 'cli.mjs');
 
 const testSuites = [
   { name: 'AI-first Advisory Foundation', file: 'test_ai_first_advisory_phase1.mjs', layer: 'provider-resilience', tier: 'smoke' },
+  { name: 'Whole-Request Deadline and Gemini Proxy Cancellation', file: 'test_request_deadline.mjs', layer: 'provider-resilience', tier: 'smoke' },
   { name: 'Evidence-Grounded Synthesis Claim Review', file: 'test_evidence_grounded_synthesis.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Evidence-Grounded Synthesis Production Pipeline', file: 'test_evidence_grounded_synthesis_pipeline.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Synthesis Numeric Provenance', file: 'test_synthesis_numeric_provenance.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
@@ -18,6 +19,7 @@ const testSuites = [
   { name: 'Step 1 PPE, Trade Discount & Integrity Validation', file: 'test_step1_ppe_discount_integrity.mjs', layer: 'accounting-invariants', tier: 'smoke' },
   { name: 'Step 1 Payroll & CPF Rate Accuracy', file: 'test_step1_payroll_cpf_accuracy.mjs', layer: 'accounting-invariants', tier: 'smoke' },
   { name: 'Step 1 Lease Dates & IFRS 16 Accuracy', file: 'test_step1_lease_dates.mjs', layer: 'accounting-invariants', tier: 'smoke' },
+  { name: 'FX Missing Facts and Rate Provenance', file: 'test_fx_missing_fact_integrity.mjs', layer: 'accounting-invariants', tier: 'smoke' },
   { name: 'AI Semantic Extraction & Schema Validation Gate', file: 'test_ai_semantic_extraction.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Semantic Question Understanding & Guarded Routing', file: 'test_semantic_question_understanding.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Statutory Review Topic Routing', file: 'test_statutory_review_topic_routing_20261028.mjs', layer: 'input-understanding', tier: 'smoke' },

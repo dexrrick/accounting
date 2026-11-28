@@ -157,6 +157,7 @@ export async function handleOfficialSourceProxyRequest(
   }
 
   const bodyResult = await readBoundedBody(request, requestLimit, requestTimeoutMs);
+  if (request.signal.aborted) return jsonResponse({ transportFailure: 'NETWORK_ERROR' }, 499);
   if (bodyResult.kind === 'TIMEOUT') return transportFailure('TIMEOUT');
   if (bodyResult.kind === 'TOO_LARGE') return new Response('Request too large', { status: 413 });
   if (bodyResult.kind === 'READ_ERROR') return new Response('Invalid request', { status: 400 });
@@ -184,9 +185,19 @@ export async function handleOfficialSourceProxyRequest(
 
   const controller = new AbortController();
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  let timedOut = false;
   let resolveTimeout!: (response: Response) => void;
   const timeoutPromise = new Promise<Response>(resolve => { resolveTimeout = resolve; });
+  let resolveCancellation!: (response: Response) => void;
+  const cancellationPromise = new Promise<Response>(resolve => { resolveCancellation = resolve; });
+  const onRequestAbort = () => {
+    controller.abort();
+    resolveCancellation(jsonResponse({ transportFailure: 'NETWORK_ERROR' }, 499));
+  };
+  if (request.signal.aborted) return jsonResponse({ transportFailure: 'NETWORK_ERROR' }, 499);
+  request.signal.addEventListener('abort', onRequestAbort, { once: true });
   timeoutId = setTimeout(() => {
+    timedOut = true;
     controller.abort();
     resolveTimeout(transportFailure('TIMEOUT'));
   }, timeoutMs);
@@ -211,6 +222,10 @@ export async function handleOfficialSourceProxyRequest(
         signal: controller.signal,
         headers: upstreamHeaders
       });
+      if (controller.signal.aborted) {
+        void upstream.body?.cancel().catch(() => undefined);
+        return transportFailure(timedOut ? 'TIMEOUT' : 'NETWORK_ERROR');
+      }
       if (upstream.status >= 300 && upstream.status < 400 && upstream.status !== 304) {
         const location = upstream.headers.get('location');
         if (!location) return transportFailure('REDIRECT_REJECTED');
@@ -253,12 +268,13 @@ export async function handleOfficialSourceProxyRequest(
           : { body: new TextDecoder().decode(responseBody) })
       });
     } catch {
-      return transportFailure(controller.signal.aborted ? 'TIMEOUT' : 'NETWORK_ERROR');
+      return transportFailure(timedOut ? 'TIMEOUT' : 'NETWORK_ERROR');
     }
   })();
   try {
-    return await Promise.race([upstreamWork, timeoutPromise]);
+    return await Promise.race([upstreamWork, timeoutPromise, cancellationPromise]);
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
+    request.signal.removeEventListener('abort', onRequestAbort);
   }
 }

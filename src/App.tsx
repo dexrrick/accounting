@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type {
   AccountingStandard,
   AccountingScenarioState,
@@ -80,6 +80,8 @@ export const App: React.FC = () => {
   const [analysisStartMessageId, setAnalysisStartMessageId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'entries' | 'compliance'>('entries');
   const [isLoading, setIsLoading] = useState(false);
+  const requestControllerRef = useRef<AbortController | null>(null);
+  const retainedCommittedJournalRef = useRef<AccountingScenarioState | null>(null);
   const [outputPreference, setOutputPreference] = useState<OutputPreference>({ journal: false, statutory: false });
   const [appliedOutputPreference, setAppliedOutputPreference] = useState<OutputPreference>({ journal: false, statutory: false });
   const [pendingRelation, setPendingRelation] = useState<{ text: string; userMessage: ChatMessage } | null>(null);
@@ -100,6 +102,18 @@ export const App: React.FC = () => {
     retryHistory?: ChatMessage[],
     options?: { startNewScenario?: boolean; useProvidedScenario?: boolean }
   ) => {
+    if (requestControllerRef.current) return;
+    const requestBoundaryMessageId = options?.startNewScenario || !analysisStartMessageId
+      ? userMsg.id
+      : analysisStartMessageId;
+    const requestController = new AbortController();
+    requestControllerRef.current = requestController;
+    if (requestBoundaryMessageId !== analysisStartMessageId) setAnalysisStartMessageId(requestBoundaryMessageId);
+    if (options?.startNewScenario) {
+      retainedCommittedJournalRef.current = committedJournalScenario;
+      setScenario(null);
+      if (committedJournalScenario) setActiveTab('entries');
+    }
     setIsLoading(true);
     const isJournalRecall = isJournalDisplayRequest(text);
     setAppliedOutputPreference(isJournalRecall ? { ...outputPreference, journal: true } : outputPreference);
@@ -108,11 +122,20 @@ export const App: React.FC = () => {
         ? getDisplayableUncommittedJournalGroups(activeScenario, standard)
         : [];
       const journalRecallProposal = journalRecallGroups.length > 0 ? activeScenario || undefined : undefined;
+      const retainedJournalIsCurrent = Boolean(committedJournalScenario &&
+        retainedCommittedJournalRef.current === committedJournalScenario);
       const requestScenario = journalRecallProposal
         ? null
         : options?.useProvidedScenario
           ? activeScenario
-          : selectAccountingScenarioForRequest(text, activeScenario, committedJournalScenario, options?.startNewScenario);
+          : selectAccountingScenarioForRequest(
+            text,
+            activeScenario,
+            !isJournalRecall && (retainedJournalIsCurrent || (analysisStartMessageId && !activeScenario))
+              ? null
+              : committedJournalScenario,
+            options?.startNewScenario
+          );
       const history = retryHistory || (options?.startNewScenario
         ? [userMsg]
         : messages.some(message => message.id === userMsg.id)
@@ -120,7 +143,7 @@ export const App: React.FC = () => {
           : [...messages, userMsg]);
       const relevantChatHistory = buildAnalysisConversationHistory(
         history,
-        options?.startNewScenario ? userMsg.id : analysisStartMessageId
+        requestBoundaryMessageId
       );
       const response = await processAccountingQuery(
         text,
@@ -131,29 +154,66 @@ export const App: React.FC = () => {
         relevantChatHistory,
         outputPreference,
         undefined,
-        journalRecallProposal
+        journalRecallProposal,
+        requestController.signal
       );
+      if (requestControllerRef.current !== requestController) return;
+      if (requestController.signal.aborted) {
+        const cancellationError = new Error('This request was canceled.');
+        cancellationError.name = 'AbortError';
+        throw cancellationError;
+      }
+
+      const responseBoundaryMessageId = response.conversationBoundaryMessageId || requestBoundaryMessageId;
+      const responseChangedBoundary = responseBoundaryMessageId !== requestBoundaryMessageId;
+      if (response.conversationBoundaryMessageId) setAnalysisStartMessageId(response.conversationBoundaryMessageId);
+      if (responseChangedBoundary) {
+        retainedCommittedJournalRef.current = committedJournalScenario;
+      }
+
+      if (response.providerStatus === 'FAILED' || response.advisoryFailureStatus) {
+        if (responseChangedBoundary) {
+          setScenario(null);
+          if (committedJournalScenario) setActiveTab('entries');
+        }
+        const failureScenario = responseChangedBoundary ? null : requestScenario;
+        setMessages((prev) => [...prev, {
+          id: `asst-${Date.now()}`, sender: 'assistant', timestamp: getSingaporeTimestamp(),
+          text: response.messageText,
+          fullText: response.messageText,
+          displayFullAnswer: response.displayFullAnswer,
+          scenarioSnapshot: failureScenario || undefined,
+          advisoryFailureStatus: response.advisoryFailureStatus,
+          advisoryRetryPayload: response.advisoryFailureStatus
+            ? { text, scenarioSnapshot: failureScenario, originalUserMessageId: userMsg.id }
+            : undefined,
+          retryPayload: response.imageAnalysisFailed ? { text, images: userMsg.images || [] } : undefined
+        }]);
+        return;
+      }
 
       const answerState: AccountingScenarioState = {
         ...response.scenarioState,
         officialAnswerLinks: response.scenarioState.officialAnswerLinks || extractOfficialAnswerLinks(response.messageText)
       };
-      if (response.conversationBoundaryMessageId) {
-        setAnalysisStartMessageId(response.conversationBoundaryMessageId);
+      if (!response.conversationBoundaryMessageId && options?.startNewScenario) {
+        setAnalysisStartMessageId(userMsg.id);
       }
-      setScenario(answerState);
-      setCommittedJournalScenario(previous => updateCommittedJournalScenario(
-        previous,
-        answerState,
-        standard,
-        options?.startNewScenario,
-        {
-          rawQuery: text,
-          evidenceTexts: relevantChatHistory
-            .filter(message => message.sender === 'user')
-            .map(message => message.text)
-        }
-      ));
+      if (!isJournalRecall) {
+        setScenario(answerState);
+        setCommittedJournalScenario(previous => updateCommittedJournalScenario(
+          previous,
+          answerState,
+          standard,
+          options?.startNewScenario,
+          {
+            rawQuery: text,
+            evidenceTexts: relevantChatHistory
+              .filter(message => message.sender === 'user')
+              .map(message => message.text)
+          }
+        ));
+      }
 
       if (isJournalRecall) setActiveTab('entries');
       else if (outputPreference.journal && !outputPreference.statutory) setActiveTab('entries');
@@ -178,14 +238,25 @@ export const App: React.FC = () => {
         retryPayload: response.imageAnalysisFailed ? { text, images: userMsg.images || [] } : undefined
       }]);
     } catch (err: any) {
+      if (requestControllerRef.current !== requestController) return;
+      if (requestController.signal.aborted || err?.name === 'RequestTimeoutError' || err?.name === 'AbortError') {
+        const message = err?.name === 'RequestTimeoutError'
+          ? 'This request exceeded its processing deadline. Your last committed journal was preserved.'
+          : 'This request was canceled. Your last committed journal was preserved.';
+        setMessages((prev) => [...prev, { id: `err-${Date.now()}`, sender: 'assistant', timestamp: getSingaporeTimestamp(), text: message }]);
+        return;
+      }
       setMessages((prev) => [...prev, { id: `err-${Date.now()}`, sender: 'assistant', timestamp: getSingaporeTimestamp(), text: `⚠️ **Processing Error**: ${err?.message || 'Unable to process query'}` }]);
     } finally {
-      setIsLoading(false);
+      if (requestControllerRef.current === requestController) {
+        requestControllerRef.current = null;
+        setIsLoading(false);
+      }
     }
   };
 
   const handleRetryAiAnswer = (text: string, scenarioSnapshot: AccountingScenarioState | null, originalUserMessageId: string) => {
-    if (isLoading || !canRetryFailedAnswer(messages, originalUserMessageId)) return;
+    if (requestControllerRef.current || pendingRelation || isLoading || !canRetryFailedAnswer(messages, originalUserMessageId)) return;
     const currentAnalysisHistory = buildAnalysisConversationHistory(messages, analysisStartMessageId);
     if (!currentAnalysisHistory.some(message => message.id === originalUserMessageId && message.sender === 'user')) return;
     const retryHistory = buildRetryConversationHistory(messages, originalUserMessageId);
@@ -196,6 +267,7 @@ export const App: React.FC = () => {
   };
 
   const handleSendMessage = async (text: string, images: ChatImageAttachment[] = []) => {
+    if (requestControllerRef.current || pendingRelation || isLoading) return;
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       sender: 'user',
@@ -205,7 +277,23 @@ export const App: React.FC = () => {
     };
 
     setMessages((prev) => [...prev, userMsg]);
-    const relation = assessConversationRelation(text, scenario, committedJournalScenario);
+    const currentAnalysisHistory = buildAnalysisConversationHistory(messages, analysisStartMessageId);
+    const latestAnalysisQuestion = [...currentAnalysisHistory].reverse().find(message => message.sender === 'user');
+    const relationScenario: AccountingScenarioState | null = scenario || (latestAnalysisQuestion ? {
+      scenarioType: 'UNRECOGNIZED',
+      rawQuery: latestAnalysisQuestion.text,
+      transactionTitle: 'Current analysis',
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      directGroups: [],
+      missingFields: [],
+      isComplete: false
+    } : null);
+    const relation = assessConversationRelation(
+      text,
+      relationScenario,
+      analysisStartMessageId ? null : committedJournalScenario
+    );
     if (relation === 'AMBIGUOUS') {
       setPendingRelation({ text, userMessage: userMsg });
       setMessages((prev) => [...prev, {
@@ -215,28 +303,18 @@ export const App: React.FC = () => {
       return;
     }
     const startNewScenario = relation === 'NEW';
-    if (startNewScenario) {
-      setAnalysisStartMessageId(userMsg.id);
-      setScenario(null);
-      setCommittedJournalScenario(null);
-    }
     await processMessage(text, scenario, userMsg, undefined, { startNewScenario });
   };
 
   const handleResolveRelation = (isRelated: boolean) => {
-    if (!pendingRelation || isLoading) return;
+    if (!pendingRelation || requestControllerRef.current || isLoading) return;
     const pending = pendingRelation;
     setPendingRelation(null);
-    if (!isRelated) {
-      setAnalysisStartMessageId(pending.userMessage.id);
-      setScenario(null);
-      setCommittedJournalScenario(null);
-    }
     void processMessage(pending.text, isRelated ? scenario : null, pending.userMessage, undefined, { startNewScenario: !isRelated });
   };
 
   const handleSelectSuggestion = (fieldKey: string, value: number | string) => {
-    if (!scenario) return;
+    if (!scenario || requestControllerRef.current || pendingRelation || isLoading) return;
     void fieldKey;
     void handleSendMessage(String(value));
   };
@@ -247,11 +325,16 @@ export const App: React.FC = () => {
   };
 
   const handleResetToDefaults = () => {
-    if (isLoading) return;
+    if (requestControllerRef.current || isLoading) return;
     setScenario(null);
     setCommittedJournalScenario(null);
+    retainedCommittedJournalRef.current = null;
     setAnalysisStartMessageId(null);
     setPendingRelation(null);
+  };
+
+  const handleCancelRequest = () => {
+    requestControllerRef.current?.abort();
   };
 
   const computed = scenario
@@ -275,6 +358,14 @@ export const App: React.FC = () => {
   const currentAuthorityPresentation = scenario && hasCurrentAuthorityEvidencePresentation(
     scenario.authorityEvidencePresentation, scenario.rawQuery
   ) ? scenario.authorityEvidencePresentation : undefined;
+  const hasScenarioPanel = Boolean(scenario && (
+    (scenario.statutoryAdvisory && scenario.statutoryAdvisory.length > 0) ||
+    currentAuthorityPresentation ||
+    hasCurrentIrasEvidencePresentation(scenario.irasEvidencePresentation, scenario.rawQuery, scenario.primaryDomain, scenario.queryIntent) ||
+    scenario.accountingTreatmentSummary ||
+    scenario.singaporeTaxTreatmentSummary ||
+    scenario.regulatoryMandatesSummary
+  ));
 
   return (
     <div className="min-h-screen bg-workspace-canvas text-workspace-text flex flex-col font-sans transition-colors duration-200">
@@ -304,6 +395,7 @@ export const App: React.FC = () => {
               onRetryAiAnswer={handleRetryAiAnswer}
               onSelectSuggestion={handleSelectSuggestion}
               onResolveRelation={handleResolveRelation}
+              onCancelRequest={handleCancelRequest}
               isLoading={isLoading}
               isAwaitingRelation={Boolean(pendingRelation)}
               outputPreference={outputPreference}
@@ -312,27 +404,21 @@ export const App: React.FC = () => {
           </div>
 
           <div className="min-w-0">
-            {scenario ? (
+            {scenario || committedJournalScenario ? (
               <div className="space-y-5 sm:space-y-6">
                 {/* Structured Parameters Panel */}
-                <InputHandlerPanel
-                  scenario={scenario}
-                  onScenarioChange={handleScenarioChange}
-                  onResetToDefaults={handleResetToDefaults}
-                  resetDisabled={isLoading}
-                />
+                {scenario && (
+                  <InputHandlerPanel
+                    scenario={scenario}
+                    onScenarioChange={handleScenarioChange}
+                    onResetToDefaults={handleResetToDefaults}
+                    resetDisabled={isLoading}
+                  />
+                )}
                 {scenario?.imageEvidence && scenario.imageEvidence.length > 0 && <ImageEvidencePanel evidence={scenario.imageEvidence} />}
 
                 {/* View Switcher Tabs */}
-                {scenario && (
-                  showJournal ||
-                  (scenario.statutoryAdvisory && scenario.statutoryAdvisory.length > 0) ||
-                  Boolean(currentAuthorityPresentation) ||
-                  hasCurrentIrasEvidencePresentation(scenario.irasEvidencePresentation, scenario.rawQuery, scenario.primaryDomain, scenario.queryIntent) ||
-                  Boolean(scenario.accountingTreatmentSummary) ||
-                  Boolean(scenario.singaporeTaxTreatmentSummary) ||
-                  Boolean(scenario.regulatoryMandatesSummary)
-                ) && (
+                {(showJournal || hasScenarioPanel) && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-1 sm:gap-2 border-b border-workspace-border dark:border-workspace-border bg-workspace-panel px-2 sm:px-3 pt-2 rounded-t-xl overflow-x-auto no-scrollbar shadow-xs">
                       {showJournal && (
@@ -368,11 +454,12 @@ export const App: React.FC = () => {
                         groups={displayedJournal.groups}
                         standard={standard}
                         functionalCurrency={displayedJournalScenario?.functionalCurrency || 'SGD'}
+                        scenarioType={displayedJournalScenario?.scenarioType}
                         assumptions={displayedJournalScenario?.assumptions}
                       />
                     )}
 
-                    {showStatutory && (activeTab === 'compliance' || !showJournal) && (
+                    {showStatutory && scenario && (activeTab === 'compliance' || !showJournal) && (
                       <ComplianceRationale
                         citations={(() => {
                           const all = [

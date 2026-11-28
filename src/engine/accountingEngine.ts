@@ -8,6 +8,7 @@ import type {
 } from '../types/accounting';
 import { getCitation } from '../standards/standardsKnowledge';
 import { formatSingaporeDate } from '../utils/dateUtils';
+import { formatFxRateEquation } from '../utils/fxRatePresentation';
 
 export function calculateDoubleEntries(
   scenario: AccountingScenarioState,
@@ -30,6 +31,40 @@ export function calculateDoubleEntries(
     (scenario.scenarioType === 'UNRECOGNIZED'
       ? 'AI_PROPOSED'
       : (scenario.missingFacts && scenario.missingFacts.length > 0 ? 'CONDITIONAL' : 'DETERMINISTIC'));
+
+  const saleRequested = scenario.saleAmountForeign !== undefined ||
+    /\b(?:sold|sell|selling|disposed|disposal|derecognised|derecognition|sale)\b/i.test(scenario.rawQuery);
+  const isValidSingaporeDate = (value?: string): boolean => {
+    const match = value?.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) return false;
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    const year = Number(match[3]);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+  };
+  const hasCompleteFxFacts = Boolean(
+    isValidSingaporeDate(scenario.purchaseDate) &&
+    Number.isFinite(scenario.purchaseAmountForeign) && (scenario.purchaseAmountForeign ?? 0) > 0 &&
+    Number.isFinite(scenario.purchaseFxRate) && (scenario.purchaseFxRate ?? 0) > 0 &&
+    (!saleRequested || (isValidSingaporeDate(scenario.saleDate) &&
+      Number.isFinite(scenario.saleAmountForeign) && (scenario.saleAmountForeign ?? 0) > 0 &&
+      Number.isFinite(scenario.saleFxRate) && (scenario.saleFxRate ?? 0) > 0))
+  );
+  if ((scenario.scenarioType === 'EQUITY_INVESTMENT_FX' || (scenario.purchaseAmountForeign ?? 0) > 0) &&
+      (!scenario.isComplete || scenario.missingFields.length > 0 || !hasCompleteFxFacts)) {
+    return {
+      groups: [],
+      financialImpact: {
+        totalAssetsDelta: 0,
+        totalLiabilitiesDelta: 0,
+        totalEquityDelta: 0,
+        pnlImpact: 0,
+        ociImpact: 0,
+        functionalCurrency: func
+      }
+    };
+  }
 
   // =========================================================================
   // SCENARIO 0: UNIVERSAL DIRECT GROUPS (From Gemini API or Smart Engine)
@@ -334,8 +369,9 @@ export function calculateDoubleEntries(
   // SCENARIO 3: EQUITY INVESTMENTS IN FOREIGN CURRENCY (IFRS 9 / IAS 21)
   // =========================================================================
   else if (scenario.scenarioType === 'EQUITY_INVESTMENT_FX' || ((scenario.purchaseAmountForeign ?? 0) > 0)) {
-    const purchaseAmountForeign = scenario.purchaseAmountForeign ?? 0;
-    const buyRate = scenario.purchaseFxRate ?? 1.34;
+    const purchaseAmountForeign = scenario.purchaseAmountForeign!;
+    const buyRate = scenario.purchaseFxRate!;
+    const buyRateEquation = formatFxRateEquation(buyRate, foreign, func);
     const purchaseFunctional = Math.round((purchaseAmountForeign * buyRate) * 100) / 100;
     const classification = scenario.classification || 'FVTPL';
 
@@ -351,7 +387,7 @@ export function calculateDoubleEntries(
         foreignCurrency: isForeign ? foreign : undefined,
         foreignDebit: isForeign ? purchaseAmountForeign : undefined,
         exchangeRate: isForeign ? buyRate : undefined,
-        lineExplanation: `Initial fair value recognition of ${scenario.quantity ? `${scenario.quantity.toLocaleString()} shares of ` : ''}${scenario.assetName} (${foreign} ${purchaseAmountForeign.toLocaleString()}) translated at spot rate of ${buyRate} ${func}/${foreign}.`
+        lineExplanation: `Initial fair value recognition of ${scenario.quantity ? `${scenario.quantity.toLocaleString()} shares of ` : ''}${scenario.assetName} (${foreign} ${purchaseAmountForeign.toLocaleString()}) translated at the spot rate (${buyRateEquation}).`
       },
       {
         id: 'line-buy-cr',
@@ -369,9 +405,9 @@ export function calculateDoubleEntries(
 
     groups.push({
       id: 'grp-purchase',
-      eventDate: formatSingaporeDate(scenario.purchaseDate || '13/11/2026'),
+      eventDate: formatSingaporeDate(scenario.purchaseDate!),
       title: `Initial Recognition of ${scenario.assetName || 'Investment'}`,
-      summary: `Acquisition of ${foreign} ${purchaseAmountForeign.toLocaleString()} shares at spot rate ${buyRate} ${func}/${foreign}`,
+      summary: `Acquisition of ${foreign} ${purchaseAmountForeign.toLocaleString()} shares at spot rate (${buyRateEquation})`,
       lines: buyLines,
       totalDebit: purchaseFunctional,
       totalCredit: purchaseFunctional,
@@ -383,13 +419,14 @@ export function calculateDoubleEntries(
       ],
       rationalePoints: [
         `Under ${stdPrefix} 9 §5.1.1: Financial assets are initially recorded at fair value. FVTPL applies by default for equities unless irrevocable FVTOCI is elected.`,
-        `Under ${stdPrefix21} §21: Foreign currency transactions are recorded using the spot rate on transaction date (${buyRate}). Source: ${scenario.fxSource || 'Frankfurter API / ECB Reference'}.`
+        `Under ${stdPrefix21} §21: Foreign currency transactions are recorded using the spot rate on transaction date (${buyRateEquation}). Source: ${scenario.fxSource || 'Frankfurter API / ECB Reference'}.`
       ]
     });
 
     // Entry 2: Sale / Derecognition
     if (scenario.saleAmountForeign && scenario.saleAmountForeign > 0) {
-      const sellRate = scenario.saleFxRate ?? 1.36;
+      const sellRate = scenario.saleFxRate!;
+      const sellRateEquation = formatFxRateEquation(sellRate, foreign, func);
       const saleFunctional = Math.round((scenario.saleAmountForeign * sellRate) * 100) / 100;
       const totalNetGainLoss = Math.round((saleFunctional - purchaseFunctional) * 100) / 100;
 
@@ -409,7 +446,7 @@ export function calculateDoubleEntries(
         foreignCurrency: isForeign ? foreign : undefined,
         foreignDebit: isForeign ? scenario.saleAmountForeign : undefined,
         exchangeRate: isForeign ? sellRate : undefined,
-        lineExplanation: `Gross disposal proceeds of ${foreign} ${scenario.saleAmountForeign.toLocaleString()} received, translated at disposal spot rate of ${sellRate} ${func}/${foreign}.`
+        lineExplanation: `Gross disposal proceeds of ${foreign} ${scenario.saleAmountForeign.toLocaleString()} received, translated at the disposal spot rate (${sellRateEquation}).`
       });
 
       sellLines.push({
@@ -435,7 +472,7 @@ export function calculateDoubleEntries(
             category: 'REVENUE',
             debit: 0,
             credit: stockGainFunctional,
-            lineExplanation: `Stock appreciation gain of ${foreign} ${stockGainForeign.toLocaleString()} translated at disposal spot rate of ${sellRate} ${func}/${foreign}.`
+            lineExplanation: `Stock appreciation gain of ${foreign} ${stockGainForeign.toLocaleString()} translated at the disposal spot rate (${sellRateEquation}).`
           });
         }
 
@@ -447,7 +484,7 @@ export function calculateDoubleEntries(
             category: 'REVENUE',
             debit: 0,
             credit: fxGainFunctional,
-            lineExplanation: `Realized foreign currency appreciation on initial capital of ${foreign} ${purchaseAmountForeign.toLocaleString()} from rate ${buyRate} to ${sellRate} (+${(sellRate - buyRate).toFixed(4)} ${func}/${foreign}).`
+            lineExplanation: `Realized foreign currency appreciation on initial capital of ${foreign} ${purchaseAmountForeign.toLocaleString()} as the spot rate moved from ${buyRateEquation} to ${sellRateEquation} (${func} ${(sellRate - buyRate).toFixed(4)} increase per ${foreign}).`
           });
         } else if (fxGainFunctional < 0) {
           sellLines.push({
@@ -468,7 +505,7 @@ export function calculateDoubleEntries(
             category: 'REVENUE',
             debit: 0,
             credit: 0,
-            lineExplanation: `No currency exchange fluctuation occurred between purchase and sale (Spot rate remained ${sellRate} ${func}/${foreign}).`
+            lineExplanation: `No currency exchange fluctuation occurred between purchase and sale (spot rate remained ${sellRateEquation}).`
           });
         }
       } else {
@@ -500,9 +537,9 @@ export function calculateDoubleEntries(
 
       groups.push({
         id: 'grp-sale',
-        eventDate: formatSingaporeDate(scenario.saleDate || '15/12/2026'),
+        eventDate: formatSingaporeDate(scenario.saleDate!),
         title: `Derecognition / Disposal of ${scenario.assetName || 'Investment'}`,
-        summary: `Sale of ${foreign} ${scenario.saleAmountForeign.toLocaleString()} shares at spot rate ${sellRate} ${func}/${foreign}`,
+        summary: `Sale of ${foreign} ${scenario.saleAmountForeign.toLocaleString()} shares at spot rate (${sellRateEquation})`,
         lines: sellLines,
         totalDebit: totalDr,
         totalCredit: totalCr,
@@ -513,7 +550,7 @@ export function calculateDoubleEntries(
           getCitation('IFRS9_EQUITY_CLASSIFICATION', standard)
         ],
         rationalePoints: [
-          `Realized FX Gain Double Entry: Initial capital of ${foreign} ${purchaseAmountForeign.toLocaleString()} translated at spot rate change from ${buyRate} to ${sellRate} (FX movement: ${func} ${fxGainFunctional.toLocaleString()}).`,
+          `Realized FX Gain Double Entry: Initial capital of ${foreign} ${purchaseAmountForeign.toLocaleString()} translated at spot rate change from ${buyRateEquation} to ${sellRateEquation} (FX movement: ${func} ${fxGainFunctional.toLocaleString()}).`,
           `Stock Appreciation Double Entry: Share price gain equals ${func} ${stockGainFunctional.toLocaleString()}.`,
           `Statutory Compliance (${stdPrefix21} §23(c)): Companies may present this either as a combined Fair Value Gain or bifurcated into Fair Value Gain and Realized FX Gain.`
         ]

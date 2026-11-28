@@ -241,6 +241,37 @@ const timedOut = await handleOfficialSourceProxyRequest(endpointRequest(irasUrl)
 }), { timeoutMs: 10 });
 assert.equal((await decodeEnvelope(timedOut)).transportFailure, 'TIMEOUT');
 
+const sourceRequestController = new AbortController();
+let sourceRequestUpstreamSignal;
+let releaseLateSourceResponse;
+let markSourceRequestStarted;
+const sourceRequestStarted = new Promise(resolve => { markSourceRequestStarted = resolve; });
+const canceledSourceRequest = handleOfficialSourceProxyRequest(new Request(endpointUrl, {
+  method: 'POST',
+  signal: sourceRequestController.signal,
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ url: irasUrl })
+}), async (_input, init) => {
+  sourceRequestUpstreamSignal = init.signal;
+  markSourceRequestStarted();
+  return new Promise(resolve => { releaseLateSourceResponse = resolve; });
+});
+await sourceRequestStarted;
+sourceRequestController.abort();
+const canceledSourceResponse = await canceledSourceRequest;
+assert.equal(canceledSourceResponse.status, 499,
+  'a disconnected official-source request completes as canceled without waiting for a late upstream response');
+assert.equal(sourceRequestUpstreamSignal.aborted, true,
+  'the incoming request signal aborts the official-source proxy upstream controller');
+let lateSourceBodyCanceled = false;
+releaseLateSourceResponse(new Response(new ReadableStream({
+  cancel() { lateSourceBodyCanceled = true; }
+}), { status: 200, headers: { 'content-type': 'text/html' } }));
+await new Promise(resolve => setImmediate(resolve));
+assert.equal(canceledSourceResponse.status, 499,
+  'a late successful upstream response cannot replace the canceled proxy result');
+assert.equal(lateSourceBodyCanceled, true, 'the worker discards the late upstream body');
+
 let stalledRequestUpstreamCalls = 0;
 const stalledRequest = new Request(endpointUrl, {
   method: 'POST',
